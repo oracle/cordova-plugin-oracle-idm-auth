@@ -1,0 +1,11 @@
+{
+  "name": "cordova-plugin-oracle-idm-auth",
+  "version": "1.0.0",
+  "description": "Cordova plugin for integrating hybrid apps with Oracle IDM authentication.",
+  "cordova": {
+    "id": "cordova-plugin-oracle-idm-auth",
+    "platforms": [
+      "android", "ios"
+    ]
+  }
+}

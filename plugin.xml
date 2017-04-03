@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright (c) 2016, Oracle and/or its affiliates.
+  The Universal Permissive License (UPL), Version 1.0
+-->
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        id="cordova-plugin-oracle-idm-auth"
+        version="1.0.0">
+  <name>cordova-plugin-oracle-idm-auth</name>
+  <description>Authentication plugin using IDM SDK</description>
+  <keywords>cordova,idm,authentication,auth</keywords>
+  <js-module src="www/IdmAuthFlows.js" name="IdmAuthFlows">
+    <clobbers target="cordova.plugins.IdmAuthFlows"/>
+  </js-module>
+
+  <!-- android -->
+  <platform name="android">
+    <config-file target="res/xml/config.xml" parent="/*">
+      <feature name="IdmAuthFlows">
+        <param name="android-package" value="oracle.maf.security.idm.IdmAuthenticationPlugin"/>
+      </feature>
+    </config-file>
+    <config-file target="AndroidManifest.xml" parent="/*">
+      <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+      <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+      <uses-permission android:name="android.permission.INTERNET"/>
+      <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    </config-file>
+    <config-file target="AndroidManifest.xml" parent="/manifest/application">
+      <activity android:name="oracle.maf.security.idm.WebViewActivity"/>
+    </config-file>
+
+    <source-file src="src/android/oracle/maf/security/idm/IdmAuthenticationPlugin.java" target-dir="src/oracle/maf/security/idm"/>
+    <source-file src="src/android/oracle/maf/security/idm/IdmAuthenticationFactory.java" target-dir="src/oracle/maf/security/idm"/>
+    <source-file src="src/android/oracle/maf/security/idm/IdmAuthentication.java" target-dir="src/oracle/maf/security/idm"/>
+    <source-file src="src/android/oracle/maf/security/idm/WebViewActivity.java" target-dir="src/oracle/maf/security/idm"/>
+    <source-file src="src/android/libs/oamms_sdk_for_android_headless.jar" target-dir="libs"/>
+    <source-file src="src/android/res/layout/activity_web_view.xml" target-dir="res/layout"/>
+  </platform>
+
+  <!-- ios -->
+  <platform name="ios">
+
+    <config-file target="config.xml" parent="/*">
+      <feature name="IdmAuthFlows">
+        <param name="ios-package" value="IdmAuthenticationPlugin"/>
+      </feature>
+    </config-file>
+    <source-file src="src/ios/IdmAuthenticationPlugin.m"/>
+    <header-file src="src/ios/IdmAuthenticationPlugin.h"/>
+    <source-file src="src/ios/IdmAuthentication.m"/>
+    <header-file src="src/ios/IdmAuthentication.h"/>
+    <source-file src="src/ios/AuthViewController.m"/>
+    <header-file src="src/ios/AuthViewController.h"/>
+    <resource-file src="src/ios/AuthWebView.storyboard"/>
+
+    <header-file src="src/ios/sdk/Public Headers/IDMMobileSDKv2Library.h"/>
+    <header-file src="src/ios/sdk/Public Headers/NSData+OMBase32.h"/>
+    <header-file src="src/ios/sdk/Public Headers/NSData+OMBase64.h"/>
+    <header-file src="src/ios/sdk/Public Headers/OMAuthenticationChallenge.h"/>
+    <header-file src="src/ios/sdk/Public Headers/OMAuthenticationContext.h"/>
+    <header-file src="src/ios/sdk/Public Headers/OMAuthenticationRequest.h"/>
+    <header-file src="src/ios/sdk/Public Headers/OMCertInfo.h"/>
+    <header-file src="src/ios/sdk/Public Headers/OMCertService.h"/>
+    <header-file src="src/ios/sdk/Public Headers/OMCredential.h"/>
+    <header-file src="src/ios/sdk/Public Headers/OMCredentialStore.h"/>
+    <header-file src="src/ios/sdk/Public Headers/OMCryptoService.h"/>
+    <header-file src="src/ios/sdk/Public Headers/OMDefinitions.h"/>
+    <header-file src="src/ios/sdk/Public Headers/OMMobileSecurityConfiguration.h"/>
+    <header-file src="src/ios/sdk/Public Headers/OMMobileSecurityService.h"/>
+    <header-file src="src/ios/sdk/Public Headers/OMObject.h"/>
+    <header-file src="src/ios/sdk/Public Headers/OMOTPService.h"/>
+    <header-file src="src/ios/sdk/Public Headers/OMToken.h"/>
+
+    <source-file src="src/ios/sdk/libIDMMobileSDKv2Library.a" framework="true"/>
+  </platform>
+
+</plugin>

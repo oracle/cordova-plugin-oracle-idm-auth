@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Copyright (c) 2016, Oracle and/or its affiliates.
+  The Universal Permissive License (UPL), Version 1.0
+-->
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                xmlns:tools="http://schemas.android.com/tools"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                tools:context="com.oracle.maf.idm.integration">
+  <RelativeLayout
+      android:layout_width="match_parent"
+      android:layout_height="match_parent"
+      android:layout_alignParentTop="true"
+      android:layout_alignParentLeft="true"
+      android:layout_alignParentStart="true"
+      android:layout_above="@+id/button_layout">
+    <WebView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/idmWebView"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentBottom="true"/>
+  </RelativeLayout>
+  <LinearLayout android:id="@+id/button_layout"
+                android:orientation="horizontal"
+                android:weightSum="4"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_alignParentBottom="true"
+                android:layout_alignParentTop="false"
+                android:layout_alignParentLeft="false"
+                android:layout_alignParentRight="false"
+                android:layout_alignWithParentIfMissing="false">
+    <Button android:id="@+id/webViewBackBtn"
+            android:layout_weight="1"
+            android:layout_height="50dp"
+            android:layout_width="wrap_content"
+            android:layout_gravity="center"
+            android:text="Back"
+            android:textSize="15dp"
+            android:clickable="false"
+            android:gravity="center_vertical|center_horizontal"/>
+    <Button android:id="@+id/webViewFwdBtn"
+            android:layout_weight="1"
+            android:layout_height="50dp"
+            android:layout_width="wrap_content"
+            android:layout_gravity="center"
+            android:text="Forward"
+            android:textSize="15dp"
+            android:gravity="center_vertical|center_horizontal"/>
+    <Button android:id="@+id/webViewReloadBtn"
+            android:layout_weight="1"
+            android:layout_height="50dp"
+            android:layout_width="wrap_content"
+            android:layout_gravity="center"
+            android:text="Reload"
+            android:textSize="15dp"
+            android:gravity="center_vertical|center_horizontal"/>
+    <Button android:id="@+id/webViewCancelBtn"
+            android:layout_weight="1"
+            android:layout_height="50dp"
+            android:layout_width="wrap_content"
+            android:layout_gravity="center"
+            android:textSize="15dp"
+            android:text="Cancel"
+            android:gravity="center_vertical|center_horizontal"/>
+  </LinearLayout>
+</RelativeLayout>
