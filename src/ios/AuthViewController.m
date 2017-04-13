@@ -48,8 +48,11 @@
     // Loading shared process pool from wkwebview plugin, if it exists.
     Class processPoolFactory = NSClassFromString(@"CDVWKProcessPoolFactory");
     if (processPoolFactory != nil) {
+      #pragma clang diagnostic push
+      #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
       self.processPool =  [[processPoolFactory performSelector:NSSelectorFromString(@"sharedFactory")]
                             performSelector:NSSelectorFromString(@"sharedPool")];
+      #pragma clang diagnostic pop
     } else {
       self.processPool = [[WKProcessPool alloc] init];
     }

@@ -469,7 +469,7 @@ withCallbackId:(NSString *)callbackId {
   }
 
   dispatch_async(dispatch_get_main_queue(), ^{
-    NSObject* webView = nil;
+    NSObject* webView __unused = nil;
     UIStoryboard *mainStoryboard = [UIStoryboard storyboardWithName:AUTH_WEB_VIEW bundle:nil];
     self.authViewController = (AuthViewController*) [mainStoryboard instantiateViewControllerWithIdentifier:AUTH_VIEW];
     [self.authViewController setAuthenticationInstance:self.ommss];
