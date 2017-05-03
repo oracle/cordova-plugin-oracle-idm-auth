@@ -143,17 +143,17 @@ See detailed [documentation](docs/plugin.md) for the plugin.
 [Error codes](docs/error-codes.md) for the plugin are documented.
 
 ### Known Issues
-## Basic auth issues
-# App crashes intermittently (very rarely) on android while logging out.
-# Offline mode behavior for basic auth is not consistent between android and iOS.
-# Offline mode login does not work after user tries to login with wrong credentials. Needs app restart to work again.
-# User is authenticated without challenge when idle timeout happens a second time in iOS.
-# Auto login after idle timeout does not work on iOS. Thows max retry exceeded error.
-# Wrong error code returned while accessing server, when device is offline on iOS.
-# Android and iOS have inconsistent behavior when blank password is provided for login.
+#### Basic auth issues
+1. App crashes intermittently (very rarely) on android while logging out.
+1. Offline mode behavior for basic auth is not consistent between android and iOS.
+1. Offline mode login does not work after user tries to login with wrong credentials. Needs app restart to work again.
+1. User is authenticated without challenge when idle timeout happens a second time in iOS.
+1. Auto login after idle timeout does not work on iOS. Thows max retry exceeded error.
+1. Wrong error code returned while accessing server, when device is offline on iOS.
+1. Android and iOS have inconsistent behavior when blank password is provided for login.
 
-## Others
-# External browser is not supported for webSSO and OAUTH login.
+#### Others
+1. External browser is not supported for webSSO and OAUTH login.
 
 ### [Contributing](CONTRIBUTING.md)
 This is an open source project maintained by Oracle Corp. Pull Requests are currently not being accepted. See [CONTRIBUTING](CONTRIBUTING.md) for details.
