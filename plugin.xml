@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright (c) 2016, Oracle and/or its affiliates.
+  Copyright (c) 2017, Oracle and/or its affiliates.
   The Universal Permissive License (UPL), Version 1.0
 -->
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
         xmlns:android="http://schemas.android.com/apk/res/android"
         id="cordova-plugin-oracle-idm-auth"
         version="1.0.0">
-  <name>cordova-plugin-oracle-idm-auth</name>
-  <description>Authentication plugin using IDM SDK</description>
+  <name>Cordova Oracle IDM Authentication Plugin</name>
+  <description>Provides authentication and authorization functionality using the Oracle IDM SDK, supporting standard protocols like Basic Auth, OAUTH, OpenID Connect and WebSSO</description>
   <keywords>cordova,idm,authentication,auth</keywords>
   <js-module src="www/IdmAuthFlows.js" name="IdmAuthFlows">
     <clobbers target="cordova.plugins.IdmAuthFlows"/>
@@ -16,9 +16,13 @@
 
   <!-- android -->
   <platform name="android">
+    <framework src="org.slf4j:slf4j-api:1.7.25"/>
+    <framework src="com.nimbusds:nimbus-jose-jwt:4.26@jar"/>
+    <framework src="net.minidev:json-smart:2.3"/>
+    <framework src="src/android/IdmAuthFlows.gradle" custom="true" type="gradleReference" />
     <config-file target="res/xml/config.xml" parent="/*">
       <feature name="IdmAuthFlows">
-        <param name="android-package" value="oracle.maf.security.idm.IdmAuthenticationPlugin"/>
+        <param name="android-package" value="oracle.idm.auth.plugin.IdmAuthenticationPlugin"/>
       </feature>
     </config-file>
     <config-file target="AndroidManifest.xml" parent="/*">
@@ -28,52 +32,195 @@
       <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     </config-file>
     <config-file target="AndroidManifest.xml" parent="/manifest/application">
-      <activity android:name="oracle.maf.security.idm.WebViewActivity"/>
+      <activity android:name="oracle.idm.auth.plugin.WebViewActivity"/>
     </config-file>
-
-    <source-file src="src/android/oracle/maf/security/idm/IdmAuthenticationPlugin.java" target-dir="src/oracle/maf/security/idm"/>
-    <source-file src="src/android/oracle/maf/security/idm/IdmAuthenticationFactory.java" target-dir="src/oracle/maf/security/idm"/>
-    <source-file src="src/android/oracle/maf/security/idm/IdmAuthentication.java" target-dir="src/oracle/maf/security/idm"/>
-    <source-file src="src/android/oracle/maf/security/idm/WebViewActivity.java" target-dir="src/oracle/maf/security/idm"/>
-    <source-file src="src/android/libs/oamms_sdk_for_android_headless.jar" target-dir="libs"/>
+    <source-file src="src/android/src/oracle" target-dir="src"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile" target-dir="src/oracle/idm"/>
     <source-file src="src/android/res/layout/activity_web_view.xml" target-dir="res/layout"/>
+    <resource-file src="src/android/lib-proguard-rules.pro" target="lib-proguard-rules.pro"/>
   </platform>
 
   <!-- ios -->
   <platform name="ios">
-
     <config-file target="config.xml" parent="/*">
       <feature name="IdmAuthFlows">
         <param name="ios-package" value="IdmAuthenticationPlugin"/>
       </feature>
     </config-file>
-    <source-file src="src/ios/IdmAuthenticationPlugin.m"/>
-    <header-file src="src/ios/IdmAuthenticationPlugin.h"/>
-    <source-file src="src/ios/IdmAuthentication.m"/>
-    <header-file src="src/ios/IdmAuthentication.h"/>
-    <source-file src="src/ios/AuthViewController.m"/>
-    <header-file src="src/ios/AuthViewController.h"/>
-    <resource-file src="src/ios/AuthWebView.storyboard"/>
 
-    <header-file src="src/ios/sdk/Public Headers/IDMMobileSDKv2Library.h"/>
-    <header-file src="src/ios/sdk/Public Headers/NSData+OMBase32.h"/>
-    <header-file src="src/ios/sdk/Public Headers/NSData+OMBase64.h"/>
-    <header-file src="src/ios/sdk/Public Headers/OMAuthenticationChallenge.h"/>
-    <header-file src="src/ios/sdk/Public Headers/OMAuthenticationContext.h"/>
-    <header-file src="src/ios/sdk/Public Headers/OMAuthenticationRequest.h"/>
-    <header-file src="src/ios/sdk/Public Headers/OMCertInfo.h"/>
-    <header-file src="src/ios/sdk/Public Headers/OMCertService.h"/>
-    <header-file src="src/ios/sdk/Public Headers/OMCredential.h"/>
-    <header-file src="src/ios/sdk/Public Headers/OMCredentialStore.h"/>
-    <header-file src="src/ios/sdk/Public Headers/OMCryptoService.h"/>
-    <header-file src="src/ios/sdk/Public Headers/OMDefinitions.h"/>
-    <header-file src="src/ios/sdk/Public Headers/OMMobileSecurityConfiguration.h"/>
-    <header-file src="src/ios/sdk/Public Headers/OMMobileSecurityService.h"/>
-    <header-file src="src/ios/sdk/Public Headers/OMObject.h"/>
-    <header-file src="src/ios/sdk/Public Headers/OMOTPService.h"/>
-    <header-file src="src/ios/sdk/Public Headers/OMToken.h"/>
+    <!-- Plugin sources -->
+    <header-file src="src/ios/src/AuthViewController.h"/>
+    <header-file src="src/ios/src/IdmAuthentication.h"/>
+    <header-file src="src/ios/src/IdmAuthenticationPlugin.h"/>
+    <source-file src="src/ios/src/AuthViewController.m"/>
+    <source-file src="src/ios/src/IdmAuthentication.m"/>
+    <source-file src="src/ios/src/IdmAuthenticationPlugin.m"/>
+    <resource-file src="src/ios/src/AuthWebView.storyboard"/>
 
-    <source-file src="src/ios/sdk/libIDMMobileSDKv2Library.a" framework="true"/>
+    <!-- IDM SDK files -->
+    <header-file src="src/ios/sdk/IDMMobileSDKv2Library/IDMMobileSDKv2Library.h"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2Library/IDMMobileSDKv2Library.m"/>
+
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/BaseClass/OMDefinitions.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/BaseClass/OMErrorCodes.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/Common/NSData+OMBase32.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/Common/NSData+OMBase64.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMASN1Node.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMClientCertChallangeHandler.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMCryptoService.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMIdentityContext.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMJSONUtlity.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMOTPService.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMReachability.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMTimer/NSTimer+OMTimes.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMTimer/OMTimeEvent.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMTimer/OMTimer.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMURLProtocol.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMWebViewClient.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/CredentialStoreService/KeychainItemWrapper.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/CredentialStoreService/OMCredential.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/CredentialStoreService/OMCredentialStore.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/CredentialStoreService/OMKeyChain.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/JailBroken/OMJailBrokenDetector.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/KeyManager/OMKeyManager.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/KeyManager/OMKeyStore.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/LocalAuthentication/OMAuthData.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/LocalAuthentication/OMAuthenticator.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/LocalAuthentication/OMDefaultAuthenticator.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/LocalAuthentication/OMLocalAuthenticationManager.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/LocalAuthentication/OMPinAuthenticator.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/LocalAuthentication/OMTouchIDAuthenticator.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMAssertionGrant.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMAuthenticationChallenge.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMAuthenticationContext.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMAuthenticationDelegate.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMAuthenticationManager.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMAuthenticationRequest.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMAuthenticationService.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMAuthorizationCodeGrant.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMAuthorizationGrant.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMCertInfo.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMCertService.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMClientCertAuthenticationService.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMClientCertConfiguration.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMClientCertLogoutService.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMClientCredentialGrant.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMConnectionHandler.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMFedAuthAuthenticationService.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMFedAuthConfiguration.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMFedAuthLogoutService.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMHTTPBasicAuthenticationService.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMHTTPBasicConfiguration.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMHTTPBasicLogoutService.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMIDCSClientRegistrationGrant.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMIDCSClientRegistrationService.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMIDCSClientRegistrationToken.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMImplicitGrant.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMLogoutService.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMMobileSecurityConfiguration.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMMobileSecurityService.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMOAMOAuthClientAssertionService.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMOAMOAuthClientRegistrationService.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMOAMOAuthConfiguration.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMOAMUserAssertionService.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMOAuthAuthenticationService.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMOAuthConfiguration.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMOAuthLogoutService.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMOAuthWebViewHandler.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMObject.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMOIDCAuthenticationService.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMOIDCConfiguration.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMOIDCLogoutService.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMOpenIDCAuthenticationService.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMOpenIDCConfiguration.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMOpenIDCServiceDiscovery.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMResourceOwnerGrant.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMServiceDiscoveryHandler.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMToken.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMVersion.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/OMWKWebViewClient.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/SecureStorage/OMDataSerializationHelper.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/SecureStorage/OMSecureCrypto.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/SecureStorage/OMSecureStorage.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/SecureStorage/OMUtilities.h"/>
+
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/Common/NSData+OMBase32.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/Common/NSData+OMBase64.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMASN1Node.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMClientCertChallangeHandler.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMCryptoService.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMIdentityContext.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMJSONUtlity.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMOTPService.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMReachability.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMTimer/NSTimer+OMTimes.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMTimer/OMTimeEvent.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMTimer/OMTimer.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMURLProtocol.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMWebViewClient.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/CredentialStoreService/KeychainItemWrapper.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/CredentialStoreService/OMCredential.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/CredentialStoreService/OMCredentialStore.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/CredentialStoreService/OMKeyChain.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/JailBroken/OMJailBrokenDetector.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/KeyManager/OMKeyManager.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/KeyManager/OMKeyStore.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/LocalAuthentication/OMAuthData.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/LocalAuthentication/OMAuthenticator.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/LocalAuthentication/OMDefaultAuthenticator.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/LocalAuthentication/OMLocalAuthenticationManager.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/LocalAuthentication/OMPinAuthenticator.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/LocalAuthentication/OMTouchIDAuthenticator.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMAssertionGrant.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMAuthenticationChallenge.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMAuthenticationContext.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMAuthenticationManager.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMAuthenticationRequest.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMAuthenticationService.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMAuthorizationCodeGrant.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMAuthorizationGrant.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMCertInfo.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMCertService.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMClientCertAuthenticationService.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMClientCertConfiguration.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMClientCertLogoutService.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMClientCredentialGrant.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMConnectionHandler.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMFedAuthAuthenticationService.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMFedAuthConfiguration.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMFedAuthLogoutService.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMHTTPBasicAuthenticationService.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMHTTPBasicConfiguration.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMHTTPBasicLogoutService.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMIDCSClientRegistrationGrant.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMIDCSClientRegistrationService.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMIDCSClientRegistrationToken.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMImplicitGrant.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMLogoutService.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMMobileSecurityConfiguration.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMMobileSecurityService.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMOAMOAuthClientAssertionService.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMOAMOAuthClientRegistrationService.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMOAMOAuthConfiguration.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMOAMUserAssertionService.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMOAuthAuthenticationService.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMOAuthConfiguration.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMOAuthLogoutService.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMOAuthWebViewHandler.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMObject.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMOIDCAuthenticationService.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMOIDCConfiguration.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMOIDCLogoutService.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMOpenIDCAuthenticationService.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMOpenIDCConfiguration.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMOpenIDCServiceDiscovery.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMResourceOwnerGrant.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMServiceDiscoveryHandler.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMToken.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/OMWKWebViewClient.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/SecureStorage/OMDataSerializationHelper.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/SecureStorage/OMSecureCrypto.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/SecureStorage/OMSecureStorage.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/SecureStorage/OMUtilities.m"/>
   </platform>
-
 </plugin>

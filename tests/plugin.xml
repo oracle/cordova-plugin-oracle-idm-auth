@@ -7,7 +7,7 @@
     <name>cordova-plugin-oracle-idm-auth-tests</name>
     <description>JasmineJS tests written for cordova-plugin-oracle-idm-auth plugin</description>
 
-    <!-- The trick to add multiple files is to have a unique name that ends with '.tests' -->
+     The trick to add multiple files is to have a unique name that ends with '.tests'
     <js-module src="basic-tests.js" name="basic.tests">
     </js-module>
     <js-module src="init-tests.js" name="init.tests">
@@ -16,16 +16,18 @@
     </js-module>
     <js-module src="logout-tests.js" name="logout.tests">
     </js-module>
-    <js-module src="basic-auth-tests.js" name="basic.auth.tests">
-    </js-module>
-    <js-module src="basic-auth-with-headers-tests.js" name="basic.auth.with.headers.tests">
-    </js-module>
     <js-module src="is-authenticated-tests.js" name="is.authenticated.tests">
     </js-module>
     <js-module src="timeout-tests.js" name="timeout.tests">
     </js-module>
+    <js-module src="basic-auth-tests.js" name="basic.auth.tests">
+    </js-module>
+    <js-module src="basic-auth-with-headers-tests.js" name="basic.auth.with.headers.tests">
+    </js-module>
     <js-module src="web-sso-tests.js" name="web.sso.tests">
     </js-module>
     <js-module src="oauth-tests.js" name="oauth.tests">
+    </js-module>
+    <js-module src="open-id-tests.js" name="openid.tests">
     </js-module>
 </plugin>

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, Oracle and/or its affiliates.
+ * Copyright (c) 2017, Oracle and/or its affiliates.
  * The Universal Permissive License (UPL), Version 1.0
  */
 /* jshint esversion: 6 */
@@ -8,6 +8,13 @@ exports.defineAutoTests = function () {
 
   describe('idmAuthFlowPlugin.logout', function () {
     var logoutFlow;
+    beforeAll(function() {
+      defaultJasmineTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
+      jasmine.DEFAULT_TIMEOUT_INTERVAL = 60000;
+    });
+    afterAll(function() {
+      jasmine.DEFAULT_TIMEOUT_INTERVAL = defaultJasmineTimeout;
+    });
     beforeEach(function(done) {
       var challengeCallback = function (fields, proceedHandler) {
         fields[idmAuthFlowPlugin.AuthChallenge.UserName] = 'neelu';

@@ -1,14 +1,17 @@
 # cordova-plugin-oracle-idm-auth 1.0.0
 
 ## About the cordova-plugin-oracle-idm-auth
-This cordova plugin lets you perform authentication and access secured resources from cordova applications. 
+The plugin provides authentication and authorization functionality for cordova based mobile applications, 
+supporting standard protocols like Basic Auth, OAUTH, OpenID Connect and webSSO. 
+The plugin abstracts all aspects of authentication and authorization and enforces security best practices for mobile application developers.
 The plugin is designed to handle multiple authentication flows in parallel.
-Android 5.0 or later with WebView v39.0.0.0 is required for this plugin. 
 
-This is an open source project maintained by Oracle Corp.
+## Supported platforms
+- Android 5.0 or later with Android System WebView v39.0.0.0.0 minimum.
+- iOS 8.4 and above.
 
 ### Installation
-Execute this command to install cordova-plugin-oracle-idm-auth from your cordova application. 
+Execute this command to install cordova-plugin-oracle-idm-auth into your cordova application. 
 
 ```bash
 cordova plugin add cordova-plugin-oracle-idm-auth
@@ -103,57 +106,17 @@ var logoutBasicAuth = function() {
 }    
 ```
 
-### Extra step for Android
-Add org.slf4j dependency to cordova application's build.gradle file.
-
-```
-<app>/hybrid/platforms/android/build.gradle
-```
-
-Add this line inside the dependency section:
-
-```
-dependencies {
-  ...
-  compile group: 'org.slf4j', name:'slf4j-api', version: '1.7.13'
-  ...
-}
-```
-
-### Common gotchas
-#### Ensure that the server accesses and redirects are secured using HTTPS. 
-During authentication, if there are redirects from secured to non-secured, the plugin will throw P1001 error. 
-The authentication servers are expected to be configured using secured HTTP.
-#### gap://ready javascript error with iOS 10
-The following javascript error can occur while using this plugin on iOS 10:
-```
-[Error] Refused to load gap://ready because it appears in neither the child-src directive nor the default-src directive of the Content Security Policy. (x5)
-```
-Solution is to add gap://ready to CSP meta tag, similar to the following in your html page:
-```
-<meta http-equiv="Content-Security-Policy" content="img-src 'self' data:; default-src * gap://ready; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' cdvfile://*">
-```
-#### WkWebView support
-Applications can use WkWebView for iOS 10+ by installing [cordova-plugin-wkwebview-engine](https://github.com/apache/cordova-plugin-wkwebview-engine/) cordova plugin. 
-This impacts usecases where server login page is used to login, such as FederatedAuthentication or OAUTH2 3-legged. In this case application should set `enableWkWebView` to `true`
-while initializing the authentication flow.
-
 ### Documentation
-See detailed [documentation](docs/plugin.md) for the plugin.
-[Error codes](docs/error-codes.md) for the plugin are documented.
+- Detailed documentation for the plugin are in the [doc](docs/plugin.md).
+- Error codes are documented in the [error codes](docs/error-codes.md).
+- Frequently asked questions are answered in the [FAQ](docs/faq.md).
 
 ### Known Issues
-#### Basic auth issues
-1. App crashes intermittently (very rarely) on android while logging out.
-1. Offline mode behavior for basic auth is not consistent between android and iOS.
-1. Offline mode login does not work after user tries to login with wrong credentials. Needs app restart to work again.
-1. User is authenticated without challenge when idle timeout happens a second time in iOS.
-1. Auto login after idle timeout does not work on iOS. Thows max retry exceeded error.
-1. Wrong error code returned while accessing server, when device is offline on iOS.
-1. Android and iOS have inconsistent behavior when blank password is provided for login.
+1. OpenID does not support implicit flow.
+1. Unable to login if the app is deployed to the device before it is connect to Wifi and VPN.
+1. Empty username and password login behavior is not consistent on Android and iOS.
+1. iOS simulator only issue - Crashes with ```Assertion failure in -[KeychainItemWrapper writeToKeychain]```. This is an apple issue discussed [here](https://stackoverflow.com/questions/39561041/keychainitemwrapper-crash-on-ios10) and [here](https://forums.developer.apple.com/thread/51071). Work around for this issue is to [enable keychain sharing from xcode](https://developer.apple.com/library/content/documentation/IDEs/Conceptual/AppDistributionGuide/AddingCapabilities/AddingCapabilities.html).
 
-#### Others
-1. External browser is not supported for webSSO and OAUTH login.
 
 ### [Contributing](CONTRIBUTING.md)
 This is an open source project maintained by Oracle Corp. Pull Requests are currently not being accepted. See [CONTRIBUTING](CONTRIBUTING.md) for details.

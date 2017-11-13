@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, Oracle and/or its affiliates.
+ * Copyright (c) 2017, Oracle and/or its affiliates.
  * The Universal Permissive License (UPL), Version 1.0
  */
 /* jshint esversion: 6 */
@@ -95,22 +95,28 @@ exports.defineAutoTests = function() {
       done();
     });
   });
-  /*
-  // OAUTH setup is invalid now.
+
   describe('idmAuthFlowPlugin.isAuthenticated', function () {
     var isAuth, isAuthAfterLogout, headers;
+    beforeAll(function() {
+     defaultJasmineTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
+     jasmine.DEFAULT_TIMEOUT_INTERVAL = 60000;
+    });
+    afterAll(function() {
+     jasmine.DEFAULT_TIMEOUT_INTERVAL = defaultJasmineTimeout;
+    });
     beforeEach(function(done) {
       var challengeCallback = function (fields, proceedHandler) {
         fields[idmAuthFlowPlugin.AuthChallenge.UserName] = 'hcr';
         fields[idmAuthFlowPlugin.AuthChallenge.Password] = 'Welcome1*';
         proceedHandler(fields);
       };
-      var authProps = idmAuthFlowPlugin.newOAuthPropertiesBuilder('JasmineJsTests',
+        var authProps = idmAuthFlowPlugin.newOAuthPropertiesBuilder('JasmineJsTests',
           idmAuthFlowPlugin.OAuthAuthorizationGrantTypes.OAuthResourceOwner,
-          'http://slc09kia.us.oracle.com:14100/oam/oauth2/tokens',
-          'cbcfad96-2b6e-47ca-b2eb-89cf170f7a2b')
-        .oAuthClientSecret('VuRlCGAJXSxJsBaycgh7')
-        .customAuthHeaders({'X-User-Identity-Domain-Name': 'bender'})
+          'http://den00ozt.us.oracle.com:14100/oam/oauth2/tokens',
+          '02775b62-6709-42a8-aea1-58ca86243704')
+        .oAuthClientSecret('tvwCbJMkTmNquOQSbnC6')
+        .customAuthHeaders({'X-User-Identity-Domain-Name': 'yoda'})
         .build();
       idmAuthFlowPlugin.init(authProps).then(function (flow) {
         flow.login(challengeCallback).then(function (loginFlow) {
@@ -138,16 +144,8 @@ exports.defineAutoTests = function() {
       expect(isAuth).toBe(true);
       expect(isAuthAfterLogout).toBe(false);
       expect(headers).toBeDefined();
-      expect(headers.oauth_access_token1).toBeDefined();
-
-      // TODO: Android returns expires, iOS returns expiryDate.
-      // expect(headers.oauth_access_token1.expiryDate).toBeDefined();
-      // expect(headers.oauth_access_token1.expires).toBeDefined();
-
-      expect(headers.oauth_access_token1.value).toBeDefined();
-      expect(headers.oauth_access_token1.name).toBeDefined();
+      expect(headers.Authorization).toBeDefined();
       done();
     });
   });
-  */
 };

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, Oracle and/or its affiliates.
+ * Copyright (c) 2017, Oracle and/or its affiliates.
  * The Universal Permissive License (UPL), Version 1.0
  */
 /* jshint esversion: 6 */
@@ -17,7 +17,12 @@ exports.defineAutoTests = function() {
     });
 
     it('with no auth properties.', function(done) {
-      expect(result).toBe('P1005');
+      expect(result).toBeDefined();
+      expect(result[idmAuthFlowPlugin.Error.ErrorCode]).toBeDefined();
+      expect(result[idmAuthFlowPlugin.Error.ErrorSource]).toBeDefined();
+      expect(result[idmAuthFlowPlugin.Error.TranslatedErrorMessage]).toBe("");
+      expect(result[idmAuthFlowPlugin.Error.ErrorCode]).toBe("P1005");
+      expect(result[idmAuthFlowPlugin.Error.ErrorSource]).toBe(idmAuthFlowPlugin.ErrorSources.Plugin);
       done();
     });
   });
@@ -33,7 +38,11 @@ exports.defineAutoTests = function() {
 
     it('with empty auth properties.', function(done) {
       expect(result).toBeDefined();
-      expect(result).toBe('10115');
+      expect(result[idmAuthFlowPlugin.Error.ErrorCode]).toBeDefined();
+      expect(result[idmAuthFlowPlugin.Error.ErrorSource]).toBeDefined();
+      expect(result[idmAuthFlowPlugin.Error.TranslatedErrorMessage]).toBe("");
+      expect(result[idmAuthFlowPlugin.Error.ErrorCode]).toBe("10115");
+      expect(result[idmAuthFlowPlugin.Error.ErrorSource]).toBe(idmAuthFlowPlugin.ErrorSources.Plugin);
       done();
     });
   });
@@ -49,7 +58,11 @@ exports.defineAutoTests = function() {
 
     it('with invalid auth properties.', function(done) {
       expect(result).toBeDefined();
-      expect(result).toBe('10115');
+      expect(result[idmAuthFlowPlugin.Error.ErrorCode]).toBeDefined();
+      expect(result[idmAuthFlowPlugin.Error.ErrorSource]).toBeDefined();
+      expect(result[idmAuthFlowPlugin.Error.TranslatedErrorMessage]).toBe("");
+      expect(result[idmAuthFlowPlugin.Error.ErrorCode]).toBe("10115");
+      expect(result[idmAuthFlowPlugin.Error.ErrorSource]).toBe(idmAuthFlowPlugin.ErrorSources.Plugin);
       done();
     });
   });

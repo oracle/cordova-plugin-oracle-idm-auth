@@ -1,12 +1,10 @@
 /**
- * Copyright (c) 2016, Oracle and/or its affiliates.
+ * Copyright (c) 2017, Oracle and/or its affiliates.
  * The Universal Permissive License (UPL), Version 1.0
  */
 /* jshint esversion: 6 */
 exports.defineAutoTests = function() {
   var idmAuthFlowPlugin = cordova.plugins.IdmAuthFlows;
-  /*
-  // MBE is invalid
   describe('HTTPBasicAuthentication with headers test.', function () {
     var httpCallResult, authFlow, loginRespFlow, logoutRespFlow, defaultJasmineTimeout, headers, isAuth;
     beforeAll(function() {
@@ -19,21 +17,22 @@ exports.defineAutoTests = function() {
     beforeEach(function(done) {
       var makeBasicHttpRequest = function()
       {
-        // console.log('[BAMCS] In makeBasicHttpRequest, setting headers: ' + JSON.stringify(headers));
         var request = new XMLHttpRequest();
         request.withCredentials = true;
-        request.open('GET', 'http://slc09fdf.us.oracle.com:7201/mobile/custom/ifixitfast/customers');
+        request.open('GET', 'http://slc09fdf.us.oracle.com:7777/mobile/custom/Greetings/sayhello');
         for (var key in headers)
         {
           if (headers.hasOwnProperty(key))
           {
+            // console.log('[BAMCS] In makeBasicHttpRequest, setting header: ' + key);
             request.setRequestHeader(key, headers[key]);
           }
         }
         request.onload = function()
         {
+          // console.log("[BAMCS] makeBasicHttpRequest request.onload invoked.request.readyState: " + request.response);
           if (request.readyState == 4) {
-            httpCallResult = JSON.parse(request.response);
+            httpCallResult = request.response;
           } else {
             httpCallResult = request.readyState;
           }
@@ -45,6 +44,7 @@ exports.defineAutoTests = function() {
           }, done);
         };
 
+        // console.log("[BAMCS] makeBasicHttpRequest sending request.");
         request.send();
       };
 
@@ -57,10 +57,10 @@ exports.defineAutoTests = function() {
       };
 
       var authProps = idmAuthFlowPlugin.newHttpBasicAuthPropertiesBuilder('JasmineJsTests',
-          'http://slc09fdf.us.oracle.com:7201/mobile/platform/users/login',
-          'http://slc09fdf.us.oracle.com:7201/mobile/platform/users/logout')
+          'http://slc09fdf.us.oracle.com:7777/mobile/platform/users/login',
+          'http://slc09fdf.us.oracle.com:7777/mobile/platform/users/logout')
+        .customAuthHeaders({"oracle-mobile-backend-id": "db5f6e86-184e-4b19-8c68-dfd9206dbe98"})
         .offlineAuthAllowed(true)
-        .customAuthHeaders({"oracle-mobile-backend-id": "4c3d57a7-c419-443c-8010-09c5c4e7beb7"})
         .build();
       idmAuthFlowPlugin.init(authProps).then(function (flow) {
         // console.log('[BAMCS] init complete: ' + JSON.stringify(flow));
@@ -83,7 +83,7 @@ exports.defineAutoTests = function() {
         }, done);
       }, done);
     });
-  
+
     it('Make a request and verify result.', function(done) {
       expect(authFlow).toBeDefined();
       expect(authFlow.login).toBeDefined();
@@ -102,8 +102,6 @@ exports.defineAutoTests = function() {
       expect(headers.Authorization).toBeDefined();
       expect(headers['oracle-mobile-backend-id']).toBeDefined();
       expect(httpCallResult).toBeDefined();
-      expect(httpCallResult.count).toBeDefined();
-      expect(httpCallResult.result).toBeDefined();
       expect(logoutRespFlow).toBeDefined();
       expect(logoutRespFlow.login).toBeDefined();
       expect(logoutRespFlow.logout).toBeDefined();
@@ -113,5 +111,4 @@ exports.defineAutoTests = function() {
       done();
     });
   });
-  */
 };

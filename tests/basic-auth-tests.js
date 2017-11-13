@@ -1,12 +1,13 @@
 /**
- * Copyright (c) 2016, Oracle and/or its affiliates.
+ * Copyright (c) 2017, Oracle and/or its affiliates.
  * The Universal Permissive License (UPL), Version 1.0
  */
 /* jshint esversion: 6 */
 exports.defineAutoTests = function() {
   var idmAuthFlowPlugin = cordova.plugins.IdmAuthFlows;
+
   describe('HTTPBasicAuthentication test.', function () {
-    var httpCallResult, authFlow, loginResFlow, logoutResFlow, defaultJasmineTimeout;
+    var httpCallResult, authFlow, loginResFlow, logoutResFlow, defaultJasmineTimeout, basicHeaders;
     beforeAll(function() {
       defaultJasmineTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
       jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000;
@@ -25,6 +26,7 @@ exports.defineAutoTests = function() {
       var authProps = idmAuthFlowPlugin.newHttpBasicAuthPropertiesBuilder('JasmineJsTests',
           'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo',
           'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo')
+        .offlineAuthAllowed(true)
         .build();
       // console.log('[BA] auth props: ' + JSON.stringify(authProps));
       idmAuthFlowPlugin.init(authProps).then(function(flow) {
@@ -33,28 +35,41 @@ exports.defineAutoTests = function() {
         flow.login(challengeCallback).then(function(logFlow) {
           // console.log('[BA] loginCallback executed: ' + JSON.stringify(logFlow));
           loginResFlow = logFlow;
-          // console.log('[BA] makeBasicHttpRequest executed.');
-          var request = new XMLHttpRequest();
-          request.onload = function()
-          {
-            if (request.readyState == 4) {
-              httpCallResult = request.response;
-            } else {
-              httpCallResult = request.readyState;
+          flow.getHeaders().then(function(headers) {
+            basicHeaders = headers;
+            // console.log('[BA] getHeaders executed: ' + JSON.stringify(basicHeaders));
+            var request = new XMLHttpRequest();
+            request.open('GET', 'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo/invokeEcho/HTTPBasicAuthentication');
+
+            for (var key in basicHeaders)
+            {
+              if (headers.hasOwnProperty(key))
+              {
+                request.setRequestHeader(key, headers[key]);
+              }
             }
-            // console.log('[BA] makeBasicHttpRequest result: ' + httpCallResult);
-            logFlow.logout().then(function(resp) {
-              logoutResFlow = resp;
-              // console.log('[BA] logout success.');
-              done();
-            }, done);
-          };
-          request.open('GET', 'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo/invokeEcho/HTTPBasicAuthentication');
-          request.send();
+
+            request.onload = function()
+            {
+              // console.log('[BA] makeBasicHttpRequest executed.');
+              if (request.readyState == 4) {
+                httpCallResult = request.response;
+              } else {
+                httpCallResult = request.readyState;
+              }
+              // console.log('[BA] makeBasicHttpRequest result: ' + httpCallResult);
+              logFlow.logout().then(function(resp) {
+                logoutResFlow = resp;
+                // console.log('[BA] logout success.');
+                done();
+              }, done);
+            };
+            request.send();
+          }, done);
         }, done);
       }, done);
     });
-  
+
     it('Make a request and verify result.', function(done) {
       expect(authFlow).toBeDefined();
       expect(authFlow.login).toBeDefined();
@@ -68,6 +83,8 @@ exports.defineAutoTests = function() {
       expect(loginResFlow.getHeaders).toBeDefined();
       expect(loginResFlow.isAuthenticated).toBeDefined();
       expect(loginResFlow.resetIdleTimeout).toBeDefined();
+      expect(basicHeaders).toBeDefined();
+      expect(basicHeaders.Authorization).toBeDefined();
       expect(httpCallResult).toContain('HTTPBasicAuthentication');
       expect(logoutResFlow).toBeDefined();
       expect(logoutResFlow.login).toBeDefined();

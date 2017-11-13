@@ -147,3 +147,5 @@ P1008 | Null or empty AuthFlowKey passed.
 P1009 | Invalid AuthFlowKey passed.
 P1010 | No auth context available to fetch headers.
 P1011 | Add org.slf4j dependency to cordova application's build.gradle file. See plugin documentation for more details.
+P1012 | Error while launching external browser.
+P1013 | Error while setting up authentication flow.

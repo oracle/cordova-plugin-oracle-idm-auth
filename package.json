@@ -1,11 +1,18 @@
 {
   "name": "cordova-plugin-oracle-idm-auth",
   "version": "1.0.0",
-  "description": "Cordova plugin for integrating hybrid apps with Oracle IDM authentication.",
+  "description": "Provides authentication and authorization functionality using the Oracle IDM SDK, supporting standard protocols like Basic Auth, OAUTH, OpenID Connect and WebSSO.",
   "cordova": {
     "id": "cordova-plugin-oracle-idm-auth",
     "platforms": [
       "android", "ios"
     ]
-  }
+  },
+  "keywords": [
+    "cordova",
+    "device",
+    "ecosystem:cordova",
+    "cordova-android",
+    "cordova-ios"
+  ]
 }

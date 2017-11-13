@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, Oracle and/or its affiliates.
+ * Copyright (c) 2017, Oracle and/or its affiliates.
  * The Universal Permissive License (UPL), Version 1.0
  */
 /* jshint esversion: 6 */
@@ -7,13 +7,21 @@ exports.defineAutoTests = function() {
   var idmAuthFlowPlugin = cordova.plugins.IdmAuthFlows;
 
   describe('idmAuthFlowPlugin.login', function () {
-    var loginResult, challengeCount = 0, loginErr;
+    var loginResult, challengeCount = 0, loginErr, defaultJasmineTimeout;
+    beforeAll(function() {
+      defaultJasmineTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
+      jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000;
+    });
+    afterAll(function() {
+      jasmine.DEFAULT_TIMEOUT_INTERVAL = defaultJasmineTimeout;
+    });
     beforeEach(function(done) {
       var challengeCallback = function (fields, proceedHandler) {
         challengeCount++;
+        // console.log('[Login] Challenge count: ' + challengeCount);
         fields[idmAuthFlowPlugin.AuthChallenge.UserName] = 'neelu1';
         fields[idmAuthFlowPlugin.AuthChallenge.Password] = 'Welcome1';
-        loginErr = fields[idmAuthFlowPlugin.AuthChallenge.ErrorCode];
+        loginErr = fields[idmAuthFlowPlugin.AuthChallenge.Error];
         proceedHandler(fields);
       };
       var authProps = idmAuthFlowPlugin.newHttpBasicAuthPropertiesBuilder('JasmineJsTests',
@@ -27,22 +35,42 @@ exports.defineAutoTests = function() {
           loginResult = resp;
           done();
         }).catch(function(err) {
+          // console.log('[Login] err: ' + JSON.stringify(err));
           loginResult = err;
           done();
         });
       }, done);
     });
     it('with wrong user name.', function(done) {
+      // console.log('[Login] Login error: ' + JSON.stringify(loginResult));
+      // console.log('[Login] Login challenge error: ' + JSON.stringify(loginErr));
       expect(loginResult).toBeDefined();
-      expect(loginResult).toBe('10418');
+      expect(loginResult[idmAuthFlowPlugin.Error.ErrorCode]).toBeDefined();
+      expect(loginResult[idmAuthFlowPlugin.Error.ErrorSource]).toBeDefined();
+      expect(loginResult[idmAuthFlowPlugin.Error.TranslatedErrorMessage]).toBe("");
+      expect(loginResult[idmAuthFlowPlugin.Error.ErrorCode]).toBe("10418");
+      expect(loginResult[idmAuthFlowPlugin.Error.ErrorSource]).toBe(idmAuthFlowPlugin.ErrorSources.Plugin);
+
       expect(loginErr).toBeDefined();
-      expect(loginErr).toBe('10003');
+      expect(loginErr[idmAuthFlowPlugin.Error.ErrorCode]).toBeDefined();
+      expect(loginErr[idmAuthFlowPlugin.Error.ErrorSource]).toBeDefined();
+      expect(loginErr[idmAuthFlowPlugin.Error.TranslatedErrorMessage]).toBe("");
+      expect(loginErr[idmAuthFlowPlugin.Error.ErrorCode]).toBe("10003");
+      expect(loginErr[idmAuthFlowPlugin.Error.ErrorSource]).toBe(idmAuthFlowPlugin.ErrorSources.Plugin);
+
       expect(challengeCount).toBe(2);
       done();
     });
   });
   describe('idmAuthFlowPlugin.login', function () {
-    var loginResult, challengeCount = 0, loginErr;
+    var loginResult, challengeCount = 0, loginErr, defaultJasmineTimeout;
+    beforeAll(function() {
+      defaultJasmineTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
+      jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000;
+    });
+    afterAll(function() {
+      jasmine.DEFAULT_TIMEOUT_INTERVAL = defaultJasmineTimeout;
+    });
     beforeEach(function(done) {
       var errCallback = function (resp) {
        // console.log('[Login] wrong pwd err: ' + JSON.stringify(resp));
@@ -57,7 +85,7 @@ exports.defineAutoTests = function() {
         // console.log('[Login] wrong pwd challenge: ' + JSON.stringify(fields));
         fields[idmAuthFlowPlugin.AuthChallenge.UserName] = 'neelu';
         fields[idmAuthFlowPlugin.AuthChallenge.Password] = 'Welcom';
-        loginErr = fields[idmAuthFlowPlugin.AuthChallenge.ErrorCode];
+        loginErr = fields[idmAuthFlowPlugin.AuthChallenge.Error];
         // console.log('[Login] wrong pwd challenge filled and proceed: ' + JSON.stringify(fields));
         proceedHandler(fields);
       };
@@ -78,17 +106,35 @@ exports.defineAutoTests = function() {
       }, done);
     });
     it('with wrong password.', function(done) {
-      // console.log('[Login] wrong pwd before compare: ' + JSON.stringify(loginResult));
+      // console.log('[Login] wrong pwd Login error: ' + JSON.stringify(loginResult));
+      // console.log('[Login] wrong pwd Login challenge error: ' + JSON.stringify(loginErr));
       expect(loginResult).toBeDefined();
-      expect(loginResult).toBe('10418');
+      expect(loginResult[idmAuthFlowPlugin.Error.ErrorCode]).toBeDefined();
+      expect(loginResult[idmAuthFlowPlugin.Error.ErrorSource]).toBeDefined();
+      expect(loginResult[idmAuthFlowPlugin.Error.TranslatedErrorMessage]).toBe("");
+      expect(loginResult[idmAuthFlowPlugin.Error.ErrorCode]).toBe("10418");
+      expect(loginResult[idmAuthFlowPlugin.Error.ErrorSource]).toBe(idmAuthFlowPlugin.ErrorSources.Plugin);
+
       expect(loginErr).toBeDefined();
-      expect(loginErr).toBe('10003');
+      expect(loginErr[idmAuthFlowPlugin.Error.ErrorCode]).toBeDefined();
+      expect(loginErr[idmAuthFlowPlugin.Error.ErrorSource]).toBeDefined();
+      expect(loginErr[idmAuthFlowPlugin.Error.TranslatedErrorMessage]).toBe("");
+      expect(loginErr[idmAuthFlowPlugin.Error.ErrorCode]).toBe("10003");
+      expect(loginErr[idmAuthFlowPlugin.Error.ErrorSource]).toBe(idmAuthFlowPlugin.ErrorSources.Plugin);
+
       expect(challengeCount).toBe(2);
       done();
     });
   });
   describe('idmAuthFlowPlugin.login', function () {
-    var loginResult, logoutResult, attempt = 0;
+    var loginResult, logoutResult, attempt = 0, defaultJasmineTimeout;
+    beforeAll(function() {
+      defaultJasmineTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
+      jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000;
+    });
+    afterAll(function() {
+      jasmine.DEFAULT_TIMEOUT_INTERVAL = defaultJasmineTimeout;
+    });
     beforeEach(function(done) {
       var challengeCallback = function (fields, proceedHandler) {
         if (attempt === 0)
@@ -143,7 +189,14 @@ exports.defineAutoTests = function() {
   });
 
   describe('idmAuthFlowPlugin.login', function () {
-    var loginResp, loginLogoutLoginResp;
+    var loginResp, loginLogoutLoginResp, defaultJasmineTimeout;
+    beforeAll(function() {
+      defaultJasmineTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
+      jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000;
+    });
+    afterAll(function() {
+      jasmine.DEFAULT_TIMEOUT_INTERVAL = defaultJasmineTimeout;
+    });
     beforeEach(function(done) {
       var challengeCallback = function (fields, proceedHandler) {
         fields[idmAuthFlowPlugin.AuthChallenge.UserName] = 'neelu';
@@ -185,7 +238,14 @@ exports.defineAutoTests = function() {
     );
   });
   describe('idmAuthFlowPlugin.login', function () {
-    var loginResp, loginLoginResp;
+    var loginResp, loginLoginResp, defaultJasmineTimeout;
+    beforeAll(function() {
+      defaultJasmineTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
+      jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000;
+    });
+    afterAll(function() {
+      jasmine.DEFAULT_TIMEOUT_INTERVAL = defaultJasmineTimeout;
+    });
     beforeEach(function(done) {
       var challengeCallback = function (fields, proceedHandler) {
         fields[idmAuthFlowPlugin.AuthChallenge.UserName] = 'neelu';
