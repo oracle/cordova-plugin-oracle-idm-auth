@@ -77,8 +77,8 @@ If there is any properties to be set that is not supported by the builder, use p
 
 ```js
 var authProps = cordova.plugins.IdmAuthFlows.newHttpBasicAuthPropertiesBuilder('appName',
-           'http://basic/auth/login/url',
-           'http://basic/auth/logout/url')
+        'http://basic/auth/login/url',
+        'http://basic/auth/logout/url')
     .idleTimeOutInSeconds(300)
     .sessionTimeOutInSeconds(6000)
     .percentageToIdleTimeout(80)
@@ -148,10 +148,10 @@ If there is any properties to be set that is not supported by the builder, use p
 
 ```js
 var authProps = cordova.plugins.IdmAuthFlows.newFedAuthPropertiesBuilder('appName',
-                                                         'http://login/url',
-                                                         'http://logout/url',
-                                                         'http://login/success',
-                                                         'http://logout/failed')
+        'http://login/url',
+        'http://logout/url',
+        'http://login/success',
+        'http://logout/failed')
     .logoutSuccessURL('http://logout/success')
     .logoutFailureUrl('http://logout/failed')
     .confirmLogoutAutomatically(true)
@@ -209,9 +209,9 @@ the builder, use put(k, v) on the builder.
 
 ```js
 var authProps = cordova.plugins.IdmAuthFlows.newOAuthPropertiesBuilder('appName',
-                                                       cordova.plugins.IdmAuthFlows.OAuthAuthorizationGrantTypes.OAuthResourceOwner,
-                                                       'http://token/endpoint',
-                                                       'clientId')
+        cordova.plugins.IdmAuthFlows.OAuthAuthorizationGrantTypes.OAuthResourceOwner,
+        'http://token/endpoint',
+        'clientId')
     .idleTimeOutInSeconds(300)
     .sessionTimeOutInSeconds(6000)
     .percentageToIdleTimeout(80)
@@ -265,9 +265,9 @@ the builder, use put(k, v) on the builder.
 
 ```js
 var authProps = cordova.plugins.IdmAuthFlows.newOpenIDConnectPropertiesBuilder('appName',
-                                                        cordova.plugins.IdmAuthFlows.OAuthAuthorizationGrantTypes.OAuthResourceOwner,
-                                                        'http://discovery/endpoint',
-                                                        'clientId')
+        cordova.plugins.IdmAuthFlows.OAuthAuthorizationGrantTypes.OAuthResourceOwner,
+        'http://discovery/endpoint',
+        'clientId')
     .oAuthClientSecret('clientSecret')
     .oAuthScope(['scope1', 'scope2'])
     .idleTimeOutInSeconds(300)
@@ -312,11 +312,11 @@ The method returns a `Promise` on to which success and error callbacks can be at
 
 ```js
 var authProps = cordova.plugins.IdmAuthFlows.newHttpBasicAuthPropertiesBuilder('appName',
-           'http://basic/auth/login/url',
-           'http://basic/auth/logout/url')
-           ...
-           ...
-           .build();
+    'http://basic/auth/login/url',
+    'http://basic/auth/logout/url')
+    ...
+    ...
+    .build();
 var initPromise = cordova.plugins.IdmAuthFlows.init(authProps);
 initPromise.then(...).catch(...);
 ```
@@ -330,8 +330,8 @@ Timeout callback will look like this:
 
 ```js
 var timeoutCallback = function(response) {
-    var timeoutType = response[cordova.plugins.IdmAuthFlows.TimeoutResponse.TimeoutType];
-    var timeLeftInSeconds = response[cordova.plugins.IdmAuthFlows.TimeoutResponse.TimeLeftToTimeout];
+  var timeoutType = response[cordova.plugins.IdmAuthFlows.TimeoutResponse.TimeoutType];
+  var timeLeftInSeconds = response[cordova.plugins.IdmAuthFlows.TimeoutResponse.TimeLeftToTimeout];
 }
 ```
 
@@ -358,9 +358,9 @@ The plugin allows multiple authentication flows in parallel.
 ```js
 var initPromise = cordova.plugins.IdmAuthFlows.init(authProps);
 initPromise.then(
-    function(authenticationFlow) {
-        // Use authenticationFlow to perform login, logout etc.
-    }
+  function(authenticationFlow) {
+    // Use authenticationFlow to perform login, logout etc.
+  }
 );
 ```
 
@@ -369,11 +369,11 @@ Login to the authentication flow.
 
 ```js
 cordova.plugins.IdmAuthFlows.init(authProps).then(
-    function(authenticationFlow) {
-        var loginPromise = authenticationFlow.login(challengeCallback);
-        loginPromise.then(...);
-        loginPromise.catch(...);
-    }
+  function(authenticationFlow) {
+    var loginPromise = authenticationFlow.login(challengeCallback);
+    loginPromise.then(...);
+    loginPromise.catch(...);
+  }
 );
 ```
 
@@ -392,20 +392,20 @@ Once credentials are collected from the user, proceedHandler should be invoked p
 var challengeFields, challengeProceed;
 
 var challengeCallback = function(fields, proceedHandler) {
-    challengeFields = fields;
-    challengeProceed = proceedHandler;
-    var error = fields[cordova.plugins.IdmAuthFlows.AuthChallenge.ErrorCode];
-    // Show appropriate error message to the user and prompt the user to provide credentials.
+  challengeFields = fields;
+  challengeProceed = proceedHandler;
+  var error = fields[cordova.plugins.IdmAuthFlows.AuthChallenge.ErrorCode];
+  // Show appropriate error message to the user and prompt the user to provide credentials.
 };
 
 // This will be triggered once user provides the credentials and logs in.
 var loginHandler = function() {
-    // Collect inputs from user and fill in fields.
-    challengeFields[cordova.plugins.IdmAuthFlows.AuthChallenge.UserName] = <userName input by user>
-    challengeFields[cordova.plugins.IdmAuthFlows.AuthChallenge.Password] = <password input by user, in clear text>
-    ...
-    ...
-    challengeProceed(challengeFields);
+  // Collect inputs from user and fill in fields.
+  challengeFields[cordova.plugins.IdmAuthFlows.AuthChallenge.UserName] = <userName input by user>
+  challengeFields[cordova.plugins.IdmAuthFlows.AuthChallenge.Password] = <password input by user, in clear text>
+  ...
+  ...
+  challengeProceed(challengeFields);
 };
 ```
 
@@ -417,12 +417,12 @@ Used to find out if the user is authenticated or not.
 
 ```js
 authenticationFlow.isAuthenticated(props).then(
-    function(authStatus){
-      if (authStatus)
-        // user is authenticated.
-      else
-        // user is not authenticated.
-    }
+  function(authStatus){
+    if (authStatus)
+      // user is authenticated.
+    else
+      // user is not authenticated.
+  }
 ).catch(...);
 ```
 
@@ -440,24 +440,24 @@ For HTTP basic authentication the Authorization header is returned only if `offl
 
 ```js
 authenticationFlow.getHeaders(fedAuthSecuredUrl, oauthScopes)).then(
-    function(headers) {
-        // Make secured resource request using headers.
-        var request = new XMLHttpRequest();
-        request.withCredentials = true;
-        request.open('GET', '<secured url>');
-        for (var key in headers) {
-          if (headers.hasOwnProperty(key)) {
-            request.setRequestHeader(key, headers[key]);
-          }
-        }
-
-        request.onload = function() {
-            ...
-            ...
-        };
-
-        request.send();
+  function(headers) {
+    // Make secured resource request using headers.
+    var request = new XMLHttpRequest();
+    request.withCredentials = true;
+    request.open('GET', '<secured url>');
+    for (var key in headers) {
+      if (headers.hasOwnProperty(key)) {
+        request.setRequestHeader(key, headers[key]);
+      }
     }
+
+    request.onload = function() {
+        ...
+        ...
+    };
+
+    request.send();
+  }
 ).catch(...);
 ```
 The parameter of this method is optional.
@@ -497,15 +497,15 @@ Used for resetting the idle timeout. This method should be used in the timeout c
 var authenticationFlow;
 
 var timeoutCallback = function(timeoutResp) {
-    var timeoutType = response[cordova.plugins.IdmAuthFlows.TimeoutResponse.TimeoutType];
-    var timeLeftInSeconds = response[cordova.plugins.IdmAuthFlows.TimeoutResponse.TimeLeftToTimeout];
-    if (timeoutType === cordova.plugins.IdmAuthFlows.TimeoutType.IdleTimeout) && timeLeftInSeconds > 10)
-        authenticationFlow.resetIdleTimeout();
+  var timeoutType = response[cordova.plugins.IdmAuthFlows.TimeoutResponse.TimeoutType];
+  var timeLeftInSeconds = response[cordova.plugins.IdmAuthFlows.TimeoutResponse.TimeLeftToTimeout];
+  if (timeoutType === cordova.plugins.IdmAuthFlows.TimeoutType.IdleTimeout) && timeLeftInSeconds > 10)
+      authenticationFlow.resetIdleTimeout();
 }
 cordova.plugins.IdmAuthFlows.init(authProps, timeoutCallback).then(
-    function(flow) {
-        authenticationFlow = flow;
-    }
+  function(flow) {
+      authenticationFlow = flow;
+  }
 );
 ```
 
