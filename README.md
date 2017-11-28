@@ -61,7 +61,7 @@ logoutPromise.then(function(resp) {
 ```
 
 #### Typical challenge handling usecase
-```
+```js
 var challengeFields, challengeProceedHandler;
 var authFlow;
 
