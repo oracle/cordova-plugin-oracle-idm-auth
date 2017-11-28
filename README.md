@@ -113,7 +113,6 @@ var logoutBasicAuth = function() {
 
 ### Known Issues
 1. OpenID does not support implicit flow.
-1. Unable to login if the app is deployed to the device before it is connect to Wifi and VPN.
 1. Empty username and password login behavior is not consistent on Android and iOS.
 1. iOS simulator only issue - Crashes with ```Assertion failure in -[KeychainItemWrapper writeToKeychain]```. This is an apple issue discussed [here](https://stackoverflow.com/questions/39561041/keychainitemwrapper-crash-on-ios10) and [here](https://forums.developer.apple.com/thread/51071). Work around for this issue is to [enable keychain sharing from xcode](https://developer.apple.com/library/content/documentation/IDEs/Conceptual/AppDistributionGuide/AddingCapabilities/AddingCapabilities.html).
 
