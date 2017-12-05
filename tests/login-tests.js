@@ -7,6 +7,95 @@ exports.defineAutoTests = function() {
   var idmAuthFlowPlugin = cordova.plugins.IdmAuthFlows;
 
   describe('idmAuthFlowPlugin.login', function () {
+    var challengeCount = 0, loginErr, defaultJasmineTimeout;
+    beforeAll(function() {
+      defaultJasmineTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
+      jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000;
+    });
+    afterAll(function() {
+      jasmine.DEFAULT_TIMEOUT_INTERVAL = defaultJasmineTimeout;
+    });
+    beforeEach(function(done) {
+      var challengeCallback = function (fields, proceedHandler) {
+        if (challengeCount++ == 2) {
+          done();
+          return;
+        }
+        // console.log('[Login] Challenge count: ' + challengeCount);
+        loginErr = fields[idmAuthFlowPlugin.AuthChallenge.Error];
+        proceedHandler(fields);
+      };
+      var authProps = idmAuthFlowPlugin.newHttpBasicAuthPropertiesBuilder('JasmineJsTests',
+          'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo',
+          'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo')
+        .maxLoginAttempts(2)
+        .build();
+      idmAuthFlowPlugin.init(authProps).then(function (flow) {
+        // console.log('[Login] init callback: ' + JSON.stringify(flow));
+        flow.login(challengeCallback).then(function(resp) {
+          loginResult = resp;
+          done();
+        }, done);
+      }, done);
+    });
+    it('without user name and password', function(done) {
+      // console.log('[Login] Login challenge error: ' + JSON.stringify(loginErr));
+      expect(loginErr).toBeDefined();
+      expect(loginErr[idmAuthFlowPlugin.Error.ErrorCode]).toBeDefined();
+      expect(loginErr[idmAuthFlowPlugin.Error.ErrorSource]).toBeDefined();
+      expect(loginErr[idmAuthFlowPlugin.Error.TranslatedErrorMessage]).toBe("");
+      expect(loginErr[idmAuthFlowPlugin.Error.ErrorCode]).toBe("10003");
+      expect(loginErr[idmAuthFlowPlugin.Error.ErrorSource]).toBe(idmAuthFlowPlugin.ErrorSources.Plugin);
+      done();
+    });
+  });
+  describe('idmAuthFlowPlugin.login', function () {
+    var challengeCount = 0, loginErr, defaultJasmineTimeout;
+    beforeAll(function() {
+      defaultJasmineTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
+      jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000;
+    });
+    afterAll(function() {
+      jasmine.DEFAULT_TIMEOUT_INTERVAL = defaultJasmineTimeout;
+    });
+    beforeEach(function(done) {
+      var challengeCallback = function (fields, proceedHandler) {
+        if (challengeCount++ == 2) {
+          done();
+          return;
+        }
+        // console.log('[Login] Challenge count: ' + challengeCount);
+        fields[idmAuthFlowPlugin.AuthChallenge.UserName] = '';
+        fields[idmAuthFlowPlugin.AuthChallenge.Password] = '';
+        loginErr = fields[idmAuthFlowPlugin.AuthChallenge.Error];
+        proceedHandler(fields);
+      };
+      var authProps = idmAuthFlowPlugin.newHttpBasicAuthPropertiesBuilder('JasmineJsTests',
+          'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo',
+          'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo')
+        .maxLoginAttempts(2)
+        .build();
+      idmAuthFlowPlugin.init(authProps).then(function (flow) {
+        // console.log('[Login] init callback: ' + JSON.stringify(flow));
+        flow.login(challengeCallback).then(function(resp) {
+          loginResult = resp;
+          done();
+        }, done);
+      }, done);
+    });
+    it('without blank user name and password', function(done) {
+      // console.log('[Login] Login error: ' + JSON.stringify(loginResult));
+      // console.log('[Login] Login challenge error: ' + JSON.stringify(loginErr));
+      expect(loginErr).toBeDefined();
+      expect(loginErr[idmAuthFlowPlugin.Error.ErrorCode]).toBeDefined();
+      expect(loginErr[idmAuthFlowPlugin.Error.ErrorSource]).toBeDefined();
+      expect(loginErr[idmAuthFlowPlugin.Error.TranslatedErrorMessage]).toBe("");
+      expect(loginErr[idmAuthFlowPlugin.Error.ErrorCode]).toBe("10003");
+      expect(loginErr[idmAuthFlowPlugin.Error.ErrorSource]).toBe(idmAuthFlowPlugin.ErrorSources.Plugin);
+      done();
+    });
+  });
+  describe('idmAuthFlowPlugin.login', function () {
     var loginResult, challengeCount = 0, loginErr, defaultJasmineTimeout;
     beforeAll(function() {
       defaultJasmineTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;

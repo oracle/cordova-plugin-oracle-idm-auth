@@ -409,6 +409,7 @@ completionHandler:(void (^)(NSURLRequest * _Nullable))completionHandler
                                           forKey:OM_MOBILESECURITY_EXCEPTION];
                     
                     [weakSelf sendChallenge:nil];
+                    return;
                 }
                 else if(weakSelf.configuration.collectIdentityDomain &&
                         tenant == [NSNull null])
@@ -420,6 +421,7 @@ completionHandler:(void (^)(NSURLRequest * _Nullable))completionHandler
                                           forKey:OM_MOBILESECURITY_EXCEPTION];
                     
                     [weakSelf sendChallenge:nil];
+                    return;
 
                 }
                 else
