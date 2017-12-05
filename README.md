@@ -1,8 +1,8 @@
-# cordova-plugin-oracle-idm-auth 1.0.0
+# cordova-plugin-oracle-idm-auth 1.0.1
 
 ## About the cordova-plugin-oracle-idm-auth
-The plugin provides authentication and authorization functionality for cordova based mobile applications, 
-supporting standard protocols like Basic Auth, OAUTH, OpenID Connect and webSSO. 
+The plugin provides authentication and authorization functionality for cordova based mobile applications,
+supporting standard protocols like Basic Auth, OAUTH, OpenID Connect and webSSO.
 The plugin abstracts all aspects of authentication and authorization and enforces security best practices for mobile application developers.
 The plugin is designed to handle multiple authentication flows in parallel.
 
@@ -11,7 +11,7 @@ The plugin is designed to handle multiple authentication flows in parallel.
 - iOS 8.4 and above.
 
 ### Installation
-Execute this command to install cordova-plugin-oracle-idm-auth into your cordova application. 
+Execute this command to install cordova-plugin-oracle-idm-auth into your cordova application.
 
 ```bash
 cordova plugin add cordova-plugin-oracle-idm-auth
@@ -28,7 +28,7 @@ document.addEventListener("deviceready", onDeviceReady);
 function onDeviceReady() {
   // Create the authentication properties
   var authProperties = cordova.plugins.IdmAuthFlows.newHttpBasicAuthPropertiesBuilder(...).build();
-  
+
   var authPromise = cordova.plugins.IdmAuthFlows.init(authProperties);
   authPromise.then(function(flow) {
     authFlow = flow;
@@ -86,11 +86,11 @@ var startLogin = function() {
 var challengeCallback = function (fields, proceedHandler) {
     challengeFields = fields;
     challengeProceedHandler = proceedHandler;
-    ... 
+    ...
     // Present the login page to the user.
 }
 
-// Login button handler 
+// Login button handler
 var loginBasicAuth = function() {
     // Fill up challengeFields with user inputs.
     challengeProceedHandler(challengeFields);
@@ -103,7 +103,7 @@ var logoutBasicAuth = function() {
         // If presenting the user with a login screen, get ready for next login
         startLogin();
     });
-}    
+}
 ```
 
 ### Documentation
@@ -114,7 +114,7 @@ var logoutBasicAuth = function() {
 ### Known Issues
 1. OpenID does not support implicit flow.
 1. Empty username and password login behavior is not consistent on Android and iOS.
-1. Offline login on iOS with connectivity mode AUTO does not work the first time. Work around is to recreate the authentication flow instance and try again. 
+1. Offline login on iOS with connectivity mode AUTO does not work the first time. Work around is to recreate the authentication flow instance and try again.
 1. Invoking proceed handler multiple times without initiating a challenge results in app crash. Work around is to ensure that the proceed handler is invoked only once per challenge.
 1. iOS simulator only issue - Crashes with ```Assertion failure in -[KeychainItemWrapper writeToKeychain]```. This is an apple issue discussed [here](https://stackoverflow.com/questions/39561041/keychainitemwrapper-crash-on-ios10) and [here](https://forums.developer.apple.com/thread/51071). Work around for this issue is to [enable keychain sharing from xcode](https://developer.apple.com/library/content/documentation/IDEs/Conceptual/AppDistributionGuide/AddingCapabilities/AddingCapabilities.html).
 
