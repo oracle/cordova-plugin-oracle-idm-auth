@@ -70,8 +70,8 @@ exports.defineAutoTests = function() {
     var flow;
     beforeEach(function(done) {
       var authProps = idmAuthFlowPlugin.newHttpBasicAuthPropertiesBuilder('jasmineJsTests',
-          'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo',
-          'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo')
+          '{{basic.loginUrl}}',
+          '{{basic.logoutUrl}}')
         .build();
       idmAuthFlowPlugin.init(authProps).then(function (resp) {
         flow = resp;

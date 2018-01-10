@@ -8,17 +8,17 @@ exports.defineAutoTests = function() {
   var httpCallResult, authFlow, defaultJasmineTimeout;
   var authPropsBuilder = idmAuthFlowPlugin.newOpenIDConnectPropertiesBuilder('JasmineJsTests',
       idmAuthFlowPlugin.OAuthAuthorizationGrantTypes.OAuthAuthorizationCode,
-      'https://maf-tenant.identity.c9dev0.oc9qadev.com/.well-known/idcs-configuration',
-      '0c66088af56f44488eaf2b8af03f5714')
-    .oAuthRedirectEndpoint('idcsmobileapp://nodata')
-    .oAuthScope(['openid', 'urn:opc:idm:t.user.me']);
+      '{{openId.tokenUrl}}',
+      '{{openId.clientId}}')
+    .oAuthRedirectEndpoint('{{openId.redirectUrl}}')
+    .oAuthScope(['openid', '{{openId.scope1}}']);
   var makeRequest = function(done)
   {
     // console.log('[OpenId] In makeRequest.');
     authFlow.getHeaders().then(function(headers) {
       // console.log('[OpenId] In getHeaders success response.');
       var request = new XMLHttpRequest();
-      request.open('GET', 'https://maf-tenant.identity.c9dev0.oc9qadev.com:443/oauth2/v1/userinfo');
+      request.open('GET', '{{openId.securedUrl}}');
       for (var key in headers)
       {
         if (headers.hasOwnProperty(key))

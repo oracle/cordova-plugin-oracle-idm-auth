@@ -21,20 +21,20 @@ exports.defineAutoTests = function() {
     beforeEach(function(done) {
       var authProps = idmAuthFlowPlugin.newOAuthPropertiesBuilder('JasmineJsTests',
           idmAuthFlowPlugin.OAuthAuthorizationGrantTypes.OAuthAuthorizationCode,
-          'https://accounts.google.com/o/oauth2/token',
-          '1065955011866-nmlr61tf2kuj32q6c193enkrn3bvsktv.apps.googleusercontent.com')
-        .oAuthAuthorizationEndpoint('https://accounts.google.com/o/oauth2/auth')
-        .oAuthRedirectEndpoint('com.oraclecorp.internal.idm.plugin.demo:/')
-        .oAuthScope(['https://www.googleapis.com/auth/userinfo.email',
-                      'https://www.googleapis.com/auth/userinfo.profile'])
-        .logoutURL('https://www.google.com/accounts/Logout')
+          '{{oauth3leg.tokenUrl}}',
+          '{{oauth3leg.clientId}}')
+        .oAuthAuthorizationEndpoint('{{oauth3leg.authEndPoint}}')
+        .oAuthRedirectEndpoint('{{oauth3leg.redirectUrl}}')
+        .oAuthScope(['{{oauth3leg.scope1}}',
+                      '{{oauth3leg.scope2}}'])
+        .logoutURL('{{oauth3leg.logoutUrl}')
         .browserMode(idmAuthFlowPlugin.BrowserMode.External)
         .build();
       idmAuthFlowPlugin.init(authProps).then(function(flow) {
         flow.login().then(function(loginFlow) {
           loginFlow.getHeaders().then(function(headers) {
             var request = new XMLHttpRequest();
-            request.open('GET', 'https://www.googleapis.com/oauth2/v1/userinfo');
+            request.open('GET', '{{oauth3leg.securedUrl}');
             for (var key in headers)
             {
               if (headers.hasOwnProperty(key))
@@ -82,7 +82,7 @@ exports.defineAutoTests = function() {
         authFlow.getHeaders().then(function(headers) {
           // console.log('[OAuth 2-legged] In makeRequest.');
           var request = new XMLHttpRequest();
-          request.open('GET', 'http://slc09fdf.us.oracle.com:7777/mobile/custom/Greetings/sayhello');
+          request.open('GET', '{{oauth.securedUrl}}');
           for (var key in headers)
           {
             if (headers.hasOwnProperty(key))
@@ -109,17 +109,17 @@ exports.defineAutoTests = function() {
       var challengeCallback = function(fields, proceed)
       {
         // console.log('Challenge is: ' + JSON.stringify(fields));
-        fields[idmAuthFlowPlugin.AuthChallenge.UserName] = 'hcr';
-        fields[idmAuthFlowPlugin.AuthChallenge.Password] = 'Welcome1*';
+        fields[idmAuthFlowPlugin.AuthChallenge.UserName] = '{{basicMcs.userName}}';
+        fields[idmAuthFlowPlugin.AuthChallenge.Password] = '{{basicMcs.password}}';
         // console.log('Filled challenge is: ' + JSON.stringify(fields));
         proceed(fields);
       };
         var authProps = idmAuthFlowPlugin.newOAuthPropertiesBuilder('JasmineJsTests',
           idmAuthFlowPlugin.OAuthAuthorizationGrantTypes.OAuthResourceOwner,
-          'http://den00ozt.us.oracle.com:14100/oam/oauth2/tokens',
-          '02775b62-6709-42a8-aea1-58ca86243704')
-        .oAuthClientSecret('tvwCbJMkTmNquOQSbnC6')
-        .customAuthHeaders({'X-User-Identity-Domain-Name': 'yoda'})
+          '{{oauth.tokenUrl}}',
+          '{{oauth.clientId}}')
+        .oAuthClientSecret('{{oauth.secret}}')
+        .customAuthHeaders({'X-User-Identity-Domain-Name': '{{oauth.domainName}}'})
         .build();
       idmAuthFlowPlugin.init(authProps).then(function (flow) {
         // console.log('[OAuth 2-legged] initCallback executed: ' + JSON.stringify(flow));

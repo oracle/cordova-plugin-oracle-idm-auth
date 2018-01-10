@@ -26,8 +26,8 @@ exports.defineAutoTests = function() {
         proceedHandler(fields);
       };
       var authProps = idmAuthFlowPlugin.newHttpBasicAuthPropertiesBuilder('JasmineJsTests',
-          'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo',
-          'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo')
+          '{{basic.loginUrl}}',
+          '{{basic.logoutUrl}}')
         .maxLoginAttempts(2)
         .build();
       idmAuthFlowPlugin.init(authProps).then(function (flow) {
@@ -71,8 +71,8 @@ exports.defineAutoTests = function() {
         proceedHandler(fields);
       };
       var authProps = idmAuthFlowPlugin.newHttpBasicAuthPropertiesBuilder('JasmineJsTests',
-          'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo',
-          'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo')
+          '{{basic.loginUrl}}',
+          '{{basic.logoutUrl}}')
         .maxLoginAttempts(2)
         .build();
       idmAuthFlowPlugin.init(authProps).then(function (flow) {
@@ -108,14 +108,14 @@ exports.defineAutoTests = function() {
       var challengeCallback = function (fields, proceedHandler) {
         challengeCount++;
         // console.log('[Login] Challenge count: ' + challengeCount);
-        fields[idmAuthFlowPlugin.AuthChallenge.UserName] = 'neelu1';
-        fields[idmAuthFlowPlugin.AuthChallenge.Password] = 'Welcome1';
+        fields[idmAuthFlowPlugin.AuthChallenge.UserName] = 'Wrong';
+        fields[idmAuthFlowPlugin.AuthChallenge.Password] = '{{basic.password}}';
         loginErr = fields[idmAuthFlowPlugin.AuthChallenge.Error];
         proceedHandler(fields);
       };
       var authProps = idmAuthFlowPlugin.newHttpBasicAuthPropertiesBuilder('JasmineJsTests',
-          'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo',
-          'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo')
+          '{{basic.loginUrl}}',
+          '{{basic.logoutUrl}}')
         .maxLoginAttempts(2)
         .build();
       idmAuthFlowPlugin.init(authProps).then(function (flow) {
@@ -172,15 +172,15 @@ exports.defineAutoTests = function() {
       var challengeCallback = function (fields, proceedHandler) {
         challengeCount++;
         // console.log('[Login] wrong pwd challenge: ' + JSON.stringify(fields));
-        fields[idmAuthFlowPlugin.AuthChallenge.UserName] = 'neelu';
-        fields[idmAuthFlowPlugin.AuthChallenge.Password] = 'Welcom';
+        fields[idmAuthFlowPlugin.AuthChallenge.UserName] = '{{basic.userName}}';
+        fields[idmAuthFlowPlugin.AuthChallenge.Password] = 'Wrong';
         loginErr = fields[idmAuthFlowPlugin.AuthChallenge.Error];
         // console.log('[Login] wrong pwd challenge filled and proceed: ' + JSON.stringify(fields));
         proceedHandler(fields);
       };
       var authProps = idmAuthFlowPlugin.newHttpBasicAuthPropertiesBuilder('JasmineJsTests',
-          'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo',
-          'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo')
+          '{{basic.loginUrl}}',
+          '{{basic.logoutUrl}}')
         .maxLoginAttempts(2)
         .build();
       idmAuthFlowPlugin.init(authProps).then(function (flow) {
@@ -230,21 +230,21 @@ exports.defineAutoTests = function() {
         {
           // console.log('[Login] First login with wrong cred.' + JSON.stringify(fields))
           attempt++;
-          fields[idmAuthFlowPlugin.AuthChallenge.UserName] = 'neelu';
-          fields[idmAuthFlowPlugin.AuthChallenge.Password] = 'Welcom';
+          fields[idmAuthFlowPlugin.AuthChallenge.UserName] = '{{basic.userName}}';
+          fields[idmAuthFlowPlugin.AuthChallenge.Password] = 'Wrong';
           proceedHandler(fields);
         }
         else
         {
           // console.log('[Login] Second login with right cred: ' + JSON.stringify(fields));
-          fields[idmAuthFlowPlugin.AuthChallenge.UserName] = 'neelu';
-          fields[idmAuthFlowPlugin.AuthChallenge.Password] = 'Welcome1';
+          fields[idmAuthFlowPlugin.AuthChallenge.UserName] = '{{basic.userName}}';
+          fields[idmAuthFlowPlugin.AuthChallenge.Password] = '{{basic.password}}';
           proceedHandler(fields);
         }
       };
       var authProps = idmAuthFlowPlugin.newHttpBasicAuthPropertiesBuilder('JasmineJsTests',
-          'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo',
-          'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo')
+          '{{basic.loginUrl}}',
+          '{{basic.logoutUrl}}')
         .maxLoginAttempts(2)
         .build();
       idmAuthFlowPlugin.init(authProps).then(function (flow) {
@@ -288,13 +288,13 @@ exports.defineAutoTests = function() {
     });
     beforeEach(function(done) {
       var challengeCallback = function (fields, proceedHandler) {
-        fields[idmAuthFlowPlugin.AuthChallenge.UserName] = 'neelu';
-        fields[idmAuthFlowPlugin.AuthChallenge.Password] = 'Welcome1';
+        fields[idmAuthFlowPlugin.AuthChallenge.UserName] = '{{basic.userName}}';
+        fields[idmAuthFlowPlugin.AuthChallenge.Password] = '{{basic.password}}';
         proceedHandler(fields);
       };
       var authProps = idmAuthFlowPlugin.newHttpBasicAuthPropertiesBuilder('JasmineJsTests',
-          'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo',
-          'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo')
+          '{{basic.loginUrl}}',
+          '{{basic.logoutUrl}}')
         .build();
       idmAuthFlowPlugin.init(authProps).then(function (flow) {
         flow.login(challengeCallback).then(function (loginRespFlow) {
@@ -337,13 +337,13 @@ exports.defineAutoTests = function() {
     });
     beforeEach(function(done) {
       var challengeCallback = function (fields, proceedHandler) {
-        fields[idmAuthFlowPlugin.AuthChallenge.UserName] = 'neelu';
-        fields[idmAuthFlowPlugin.AuthChallenge.Password] = 'Welcome1';
+        fields[idmAuthFlowPlugin.AuthChallenge.UserName] = '{{basic.userName}}';
+        fields[idmAuthFlowPlugin.AuthChallenge.Password] = '{{basic.password}}';
         proceedHandler(fields);
       };
       var authProps = idmAuthFlowPlugin.newHttpBasicAuthPropertiesBuilder('JasmineJsTests',
-          'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo',
-          'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo')
+          '{{basic.loginUrl}}',
+          '{{basic.logoutUrl}}')
         .build();
       idmAuthFlowPlugin.init(authProps).then(function (flow) {
         flow.login(challengeCallback).then(function (loginRespFlow) {

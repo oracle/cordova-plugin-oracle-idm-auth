@@ -21,7 +21,7 @@ exports.defineAutoTests = function() {
         flow.login().then(function(loginRespFlow) {
 
           // console.log('[SSO]  Login complete.');
-          flow.getHeaders('http://den00beu.us.oracle.com:7777/index.html').then(function(h) {
+          flow.getHeaders('{{websso.securedUrl}}').then(function(h) {
             headers = h;
             // console.log('[SSO] In makeRequest: headers: ' + JSON.stringify(headers));
             var request = new XMLHttpRequest();
@@ -35,22 +35,21 @@ exports.defineAutoTests = function() {
               flow.logout().then(done, done);
             };
 
-            request.open('GET', 'http://den00beu.us.oracle.com:7777/index.html');
+            request.open('GET', '{{websso.securedUrl}}');
             request.send();
           }, done);
         }, done);
       };
 
-      // Credential - weblogic/welcome1
       var authProps = idmAuthFlowPlugin.newFedAuthPropertiesBuilder('JasmineJsTests',
-            'http://den00beu.us.oracle.com:7777/fed_auth.html',
-            'http://den00beu.us.oracle.com:7777/oam/server/logout',
-            'http://den00beu.us.oracle.com:7777/fed_success.html',
-            'http://den00beu.us.oracle.com:7777/fed_failure.html')
+            '{{websso.loginUrl}}',
+            '{{websso.logoutUrl}}',
+            '{{websso.loginSuccessUrl}}',
+            '{{websso.loginFailureUrl}}')
         .build();
       idmAuthFlowPlugin.init(authProps).then(initCallback, done);
     });
-  
+
     it('login, invoke a GET XHR request and logout.', function(done) {
       expect(httpCallResult).toContain('Hello World');
       expect(headers).toBeDefined();

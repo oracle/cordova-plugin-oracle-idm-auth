@@ -19,7 +19,7 @@ exports.defineAutoTests = function() {
       {
         var request = new XMLHttpRequest();
         request.withCredentials = true;
-        request.open('GET', 'http://slc09fdf.us.oracle.com:7777/mobile/custom/Greetings/sayhello');
+        request.open('GET', '{{basicMcs.securedUrl}}');
         for (var key in headers)
         {
           if (headers.hasOwnProperty(key))
@@ -51,15 +51,15 @@ exports.defineAutoTests = function() {
       var challengeCallback = function (fields, proceedHandler) {
         // console.log('[BAMCS] challengeCallback executed: ' + JSON.stringify(fields));
         startloginRespFlow = fields;
-        fields[idmAuthFlowPlugin.AuthChallenge.UserName] = 'hcr';
-        fields[idmAuthFlowPlugin.AuthChallenge.Password] = 'Welcome1*';
+        fields[idmAuthFlowPlugin.AuthChallenge.UserName] = '{{basicMcs.userName}}';
+        fields[idmAuthFlowPlugin.AuthChallenge.Password] = '{{basicMcs.password}}';
         proceedHandler(fields);
       };
 
       var authProps = idmAuthFlowPlugin.newHttpBasicAuthPropertiesBuilder('JasmineJsTests',
-          'http://slc09fdf.us.oracle.com:7777/mobile/platform/users/login',
-          'http://slc09fdf.us.oracle.com:7777/mobile/platform/users/logout')
-        .customAuthHeaders({"oracle-mobile-backend-id": "db5f6e86-184e-4b19-8c68-dfd9206dbe98"})
+          '{{basicMcs.loginUrl}}',
+          '{{basicMcs.logoutUrl}}')
+        .customAuthHeaders({"oracle-mobile-backend-id": "{{basicMcs.backendId}}"})
         .offlineAuthAllowed(true)
         .build();
       idmAuthFlowPlugin.init(authProps).then(function (flow) {

@@ -19,8 +19,8 @@ exports.defineAutoTests = function() {
     beforeEach(function(done) {
       var challengeCallback = function (fields, proceedHandler) {
         challengeCount++;
-        fields[idmAuthFlowPlugin.AuthChallenge.UserName] = 'neelu';
-        fields[idmAuthFlowPlugin.AuthChallenge.Password] = 'Welcome1';
+        fields[idmAuthFlowPlugin.AuthChallenge.UserName] = '{{basic.userName}}';
+        fields[idmAuthFlowPlugin.AuthChallenge.Password] = '{{basic.password}}';
         // console.log('[Timeout] challengeCallback executed: ' + JSON.stringify(fields));
         proceedHandler(fields);
       };
@@ -74,10 +74,10 @@ exports.defineAutoTests = function() {
           }, done);
         }
       };
-      
+
       var authProps = idmAuthFlowPlugin.newHttpBasicAuthPropertiesBuilder('JasmineJsTests',
-            'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo',
-            'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo')
+            '{{basic.loginUrl}}',
+            '{{basic.logoutUrl}}')
         .maxLoginAttempts(2)
         .sessionTimeOutInSeconds(30)
         .idleTimeOutInSeconds(10)
@@ -94,7 +94,7 @@ exports.defineAutoTests = function() {
             }, done);
         }, done);
     });
-  
+
     it('idle timeout triggers, reset, idle timeout again, dont reset and then session timeout.', function(done) {
       expect(authFlow).toBeDefined();
       expect(timeoutType[0]).toBe(idmAuthFlowPlugin.TimeoutType.IdleTimeout);

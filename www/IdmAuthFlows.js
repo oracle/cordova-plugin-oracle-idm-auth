@@ -708,8 +708,8 @@ var IdmAuthFlows = function() {
      * Example usage:
      * <pre><code>
      *    var authProps = IdmAuthFlows.newHttpBasicAuthPropertiesBuilder('appName',
-     *                'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo',
-     *                'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo')
+     *                'http://loginUrl',
+     *                'http://logoutUrl')
      *     .idleTimeOutInSeconds(300)
      *     .sessionTimeOutInSeconds(6000)
      *     .percentageToIdleTimeout(80)

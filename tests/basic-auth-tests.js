@@ -18,14 +18,14 @@ exports.defineAutoTests = function() {
     beforeEach(function(done) {
       var challengeCallback = function (fields, proceedHandler) {
         // user login page.
-        fields[idmAuthFlowPlugin.AuthChallenge.UserName] = 'neelu';
-        fields[idmAuthFlowPlugin.AuthChallenge.Password] = 'Welcome1';
+        fields[idmAuthFlowPlugin.AuthChallenge.UserName] = '{{basic.userName}}';
+        fields[idmAuthFlowPlugin.AuthChallenge.Password] = '{{basic.password}}';
         // console.log('[BA] challengeCallback executed: ' + JSON.stringify(fields));
         proceedHandler(fields);
       };
       var authProps = idmAuthFlowPlugin.newHttpBasicAuthPropertiesBuilder('JasmineJsTests',
-          'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo',
-          'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo')
+          '{{basic.loginUrl}}',
+          '{{basic.logoutUrl}}')
         .offlineAuthAllowed(true)
         .build();
       // console.log('[BA] auth props: ' + JSON.stringify(authProps));
@@ -39,7 +39,7 @@ exports.defineAutoTests = function() {
             basicHeaders = headers;
             // console.log('[BA] getHeaders executed: ' + JSON.stringify(basicHeaders));
             var request = new XMLHttpRequest();
-            request.open('GET', 'http://slc05zpo.us.oracle.com:7101/SecureRESTWebService1/Echo/invokeEcho/HTTPBasicAuthentication');
+            request.open('GET', '{{basic.securedUrl}}');
 
             for (var key in basicHeaders)
             {
