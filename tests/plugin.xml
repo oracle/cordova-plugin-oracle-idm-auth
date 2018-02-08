@@ -3,7 +3,7 @@
     xmlns:rim="http://www.blackberry.com/ns/widgets"
     xmlns:android="http://schemas.android.com/apk/res/android"
     id="cordova-plugin-oracle-idm-auth-tests"
-    version="1.1.0">
+    version="1.0.2">
     <name>cordova-plugin-oracle-idm-auth-tests</name>
     <description>JasmineJS tests written for cordova-plugin-oracle-idm-auth plugin</description>
 

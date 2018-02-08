@@ -278,7 +278,6 @@ exports.defineAutoTests = function() {
       .oAuthScope(['scope1', 'scope2'])
       .oAuthClientSecret('secret')
       .browserMode(idmAuthFlowPlugin.BrowserMode.External)
-      .enableWkWebView(true)
       .idleTimeOutInSeconds(300)
       .sessionTimeOutInSeconds(6000)
       .percentageToIdleTimeout(80)
@@ -299,7 +298,6 @@ exports.defineAutoTests = function() {
       expect(authProps.OAuthScope[1]).toBe('scope2');
       expect(authProps.OAuthClientID).toBe('clientId');
       expect(authProps.OAuthClientSecret).toBe('secret');
-      expect(authProps.enablewkwebview).toBe(true);
       expect(authProps.BrowserMode).toBe(idmAuthFlowPlugin.BrowserMode.External);
       expect(authProps.IdleTimeOutValue).toBe(300);
       expect(authProps.SessionTimeOutValue).toBe(6000);
@@ -385,22 +383,6 @@ exports.defineAutoTests = function() {
       expect(function() { idmAuthFlowPlugin.newOAuthPropertiesBuilder('jasmineJsTests', idmAuthFlowPlugin.OAuthAuthorizationGrantTypes.OAuthImplicit, 'http://tokenEndPoint', 'clientId').oAuthClientSecret(2222); })
       .toThrow(new Error('Invalid value 2222 passed for OAuthClientSecret. A valid string should be passed.'));
     });
-    it('should not allow string for enableWkWebView.',function() {
-      expect(function() { idmAuthFlowPlugin.newOAuthPropertiesBuilder('jasmineJsTests', idmAuthFlowPlugin.OAuthAuthorizationGrantTypes.OAuthImplicit, 'http://tokenEndPoint', 'clientId').enableWkWebView('true'); })
-      .toThrow(new Error('Invalid value true passed for enablewkwebview. A valid boolean should be passed.'));
-    });
-    it('should not allow string for enableWkWebView.',function() {
-      expect(function() { idmAuthFlowPlugin.newOAuthPropertiesBuilder('jasmineJsTests', idmAuthFlowPlugin.OAuthAuthorizationGrantTypes.OAuthImplicit, 'http://tokenEndPoint', 'clientId').enableWkWebView('false'); })
-      .toThrow(new Error('Invalid value false passed for enablewkwebview. A valid boolean should be passed.'));
-    });
-    it('should not allow string for enableWkWebView.',function() {
-      expect(function() { idmAuthFlowPlugin.newOAuthPropertiesBuilder('jasmineJsTests', idmAuthFlowPlugin.OAuthAuthorizationGrantTypes.OAuthImplicit, 'http://tokenEndPoint', 'clientId').enableWkWebView('abcd'); })
-      .toThrow(new Error('Invalid value abcd passed for enablewkwebview. A valid boolean should be passed.'));
-    });
-    it('should not allow string for enableWkWebView.',function() {
-      expect(function() { idmAuthFlowPlugin.newOAuthPropertiesBuilder('jasmineJsTests', idmAuthFlowPlugin.OAuthAuthorizationGrantTypes.OAuthImplicit, 'http://tokenEndPoint', 'clientId').enableWkWebView(1234); })
-      .toThrow(new Error('Invalid value 1234 passed for enablewkwebview. A valid boolean should be passed.'));
-    });
   });
   describe('idmAuthFlowPlugin.newOpenIDConnectPropertiesBuilder', function () {
     var authProps = idmAuthFlowPlugin.newOpenIDConnectPropertiesBuilder('jasmineJsTests',
@@ -409,7 +391,6 @@ exports.defineAutoTests = function() {
           'clientId')
       .oAuthScope(['scope1', 'scope2'])
       .oAuthClientSecret('secret')
-      .enableWkWebView(true)
       .browserMode(idmAuthFlowPlugin.BrowserMode.External)
       .idleTimeOutInSeconds(300)
       .sessionTimeOutInSeconds(6000)
@@ -428,7 +409,6 @@ exports.defineAutoTests = function() {
       expect(authProps.OAuthScope[1]).toBe('scope2');
       expect(authProps.OAuthClientID).toBe('clientId');
       expect(authProps.OAuthClientSecret).toBe('secret');
-      expect(authProps.enablewkwebview).toBe(true);
       expect(authProps.BrowserMode).toBe(idmAuthFlowPlugin.BrowserMode.External);
       expect(authProps.IdleTimeOutValue).toBe(300);
       expect(authProps.SessionTimeOutValue).toBe(6000);
@@ -489,22 +469,6 @@ exports.defineAutoTests = function() {
     it('should not allow random string for browserMode', function() {
       expect(function() { idmAuthFlowPlugin.newOpenIDConnectPropertiesBuilder('jasmineJsTests', idmAuthFlowPlugin.OAuthAuthorizationGrantTypes.OAuthImplicit, 'http://discoveryEndPoint', 'clientId').browserMode('abcd'); })
       .toThrow(new Error('BrowserMode should be one from IdmAuthFlows.BrowserMode.'));
-    });
-    it('should not allow string for enableWkWebView.',function() {
-      expect(function() { idmAuthFlowPlugin.newOpenIDConnectPropertiesBuilder('jasmineJsTests', idmAuthFlowPlugin.OAuthAuthorizationGrantTypes.OAuthImplicit, 'http://discoveryEndPoint', 'clientId').enableWkWebView('true'); })
-      .toThrow(new Error('Invalid value true passed for enablewkwebview. A valid boolean should be passed.'));
-    });
-    it('should not allow string for enableWkWebView.',function() {
-      expect(function() { idmAuthFlowPlugin.newOpenIDConnectPropertiesBuilder('jasmineJsTests', idmAuthFlowPlugin.OAuthAuthorizationGrantTypes.OAuthImplicit, 'http://discoveryEndPoint', 'clientId').enableWkWebView('false'); })
-      .toThrow(new Error('Invalid value false passed for enablewkwebview. A valid boolean should be passed.'));
-    });
-    it('should not allow string for enableWkWebView.',function() {
-      expect(function() { idmAuthFlowPlugin.newOpenIDConnectPropertiesBuilder('jasmineJsTests', idmAuthFlowPlugin.OAuthAuthorizationGrantTypes.OAuthImplicit, 'http://discoveryEndPoint', 'clientId').enableWkWebView('abcd'); })
-      .toThrow(new Error('Invalid value abcd passed for enablewkwebview. A valid boolean should be passed.'));
-    });
-    it('should not allow string for enableWkWebView.',function() {
-      expect(function() { idmAuthFlowPlugin.newOpenIDConnectPropertiesBuilder('jasmineJsTests', idmAuthFlowPlugin.OAuthAuthorizationGrantTypes.OAuthImplicit, 'http://discoveryEndPoint', 'clientId').enableWkWebView(1234); })
-      .toThrow(new Error('Invalid value 1234 passed for enablewkwebview. A valid boolean should be passed.'));
     });
   });
 };

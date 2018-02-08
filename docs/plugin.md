@@ -14,19 +14,19 @@ Enum values for HttpBasicAuthPropertiesBuilder's connectivityMode. Valid values 
 * `Offline`
 * `Auto`
 
-Setting ConnectivityMode has an effect only when offlineAuthMode is set to `true`. 
+Setting ConnectivityMode has an effect only when offlineAuthMode is set to `true`.
 offlineAuthMode `false` will result in an `ONLINE` login always.
 
 ## cordova.plugins.IdmAuthFlows.Error
-`onReject` callback returns an error object with fields in this enum. 
+`onReject` callback returns an error object with fields in this enum.
 * `ErrorCode` Value as a {String}, contains the error code.
 * `ErrorSource` Value as a {String}, one of `cordova.plugins.IdmAuthFlows.ErrorSources` enum.
-* `TranslatedErrorMessage` Value as a {String}, set only when `cordova.plugins.IdmAuthFlows.Error.ErrorSource` is `cordova.plugins.IdmAuthFlows.ErrorSources.System` for iOS. 
+* `TranslatedErrorMessage` Value as a {String}, set only when `cordova.plugins.IdmAuthFlows.Error.ErrorSource` is `cordova.plugins.IdmAuthFlows.ErrorSources.System` for iOS.
 
 ## cordova.plugins.IdmAuthFlows.ErrorSources
 Enum values for `cordova.plugins.IdmAuthFlows.Error.ErrorSource`
 * `Plugin` Indicates that the error is a plugin error. Use [error codes documentation](error-codes.md) to translate.
-* `System` Indicates that the error is a system generated error. Currently, used only for iOS system errors. 
+* `System` Indicates that the error is a system generated error. Currently, used only for iOS system errors.
 App can either use the `cordova.plugins.IdmAuthFlows.Error.TranslatedErrorMessage` or have their own translated messages based on the iOS system error codes.
 
 ## cordova.plugins.IdmAuthFlows.OAuthAuthorizationGrantTypes
@@ -54,7 +54,7 @@ Valid values are:
 * `External`
 * `Embedded`
 
-For using `External` BrowserMode, the app has to be [setup to handle the redirects from the external browser](faq.md#externalBrowser). 
+For using `External` BrowserMode, the app has to be [setup to handle the redirects from the external browser](faq.md#externalBrowser).
 Refer FAQ item about [setting up URL scheme](faq.md#urlScheme) on how to set it up.
 
 ## cordova.plugins.IdmAuthFlows.TimeoutType
@@ -113,7 +113,7 @@ If this number is very low, the timeout callback is not guaranteed to be invoked
 * `customAuthHeaders` {Object} Key value pairs of custom headers
 * `maxLoginAttempts` {Number} number of retry allowed for a user to login.
 * `connectivityMode` {cordova.plugins.IdmAuthFlows.ConnectivityModes} enum values.
-* `offlineAuthAllowed` {Boolean} if offline authentication is allowed or not. 
+* `offlineAuthAllowed` {Boolean} if offline authentication is allowed or not.
 This should be set to `true` if app wants to enable offline login and for getHeaders() API to return the `Authorization` header.
 * `rememberUsernameAllowed` {Boolean} If remember username feature should be enabled or not. Default to false.
 * `rememberUsernameDefault` {Boolean} Default value for remember username, if enabled. Default to false.
@@ -125,7 +125,7 @@ This enables user to login without challenge, after first successful login, unti
 * `put` {String}, {Object} Additional key value pairs for setting authentication properties not supported by the builder.
 
 ### ConnectivityMode and offlineAuthAllowed
-offlineAuthAllowed `true` results in offline credentials being stored in secured storage. 
+offlineAuthAllowed `true` results in offline credentials being stored in secured storage.
 App will be authenticated against this, when `OFFLINE` login applies. getHeader() API depends on this to be able to retrieve the `Authorization` headers.
 
 No matter what ConnectivityMode is set, first time login will always be `ONLINE`.
@@ -133,10 +133,10 @@ Offline credentials will be cleared if user exceeds the `maxLoginAttempts` while
 
 * offlineAuthAllowed set to `false` results in `ONLINE` login always, no matter what ConnectivityMode is set.
 * offlineAuthAllowed set to `true` and ConnectivityMode is set to `ONLINE`. This results in an `ONLINE` login always.
-* offlineAuthAllowed set to `true` and ConnectivityMode is set to `OFFLINE`. 
-This results in `OFFLINE` login for subsequent attempts. 
+* offlineAuthAllowed set to `true` and ConnectivityMode is set to `OFFLINE`.
+This results in `OFFLINE` login for subsequent attempts.
 In the case of wrong credentials, an `ONLINE` login will be attempted after `maxLoginAttempts` is exceeded.
-* offlineAuthAllowed set to `true` and ConnectivityMode is set to `AUTO`. 
+* offlineAuthAllowed set to `true` and ConnectivityMode is set to `AUTO`.
 Cookie validity determines the type if subsequent login performed. If cookies are valid, it will be an `OFFLINE` login, otherwise it will be `ONLINE` login.
 
 ## cordova.plugins.IdmAuthFlows.newFedAuthPropertiesBuilder
@@ -221,7 +221,6 @@ var authProps = cordova.plugins.IdmAuthFlows.newOAuthPropertiesBuilder('appName'
     .oAuthRedirectEndpoint('http://redirect/endpoint')
     .oAuthScope(['scope1', 'scope2'])
     .oAuthClientSecret('clientSecret')
-    .enableWkWebView(true)
     .browserMode(cordova.plugins.IdmAuthFlows.BrowserMode.External)
     .put('customKey1', 'customValue1')
     .put('customKey2', true)
@@ -247,9 +246,8 @@ If this number is very low, the timeout callback is not guaranteed to be invoked
 * `oAuthRedirectEndpoint` {String} Valid redirect end point URL.
 * `oAuthScope` {Array} Set of scopes.
 * `oAuthClientSecret` {String}
-* `enableWkWebView` {Boolean} Used for indicating that the cordova app wants to use WkWebView. This works only for iOS 10+.
-* `browserMode` {cordova.plugins.IdmAuthFlows.BrowserMode} enum value. 
-`External` will open up the browser on the device to authenticate. 
+* `browserMode` {cordova.plugins.IdmAuthFlows.BrowserMode} enum value.
+`External` will open up the browser on the device to authenticate.
 `Embedded` will open a webview inside the app to authenticate.
 * `put` {String}, {Object} Additional key value pairs for setting authentication properties not supported by the builder.
 
@@ -275,7 +273,6 @@ var authProps = cordova.plugins.IdmAuthFlows.newOpenIDConnectPropertiesBuilder('
     .percentageToIdleTimeout(80)
     .logoutTimeOutInSeconds(60)
     .customAuthHeaders({'header':'value'})
-    .enableWkWebView(true)
     .browserMode(cordova.plugins.IdmAuthFlows.BrowserMode.External)
     .put('customKey1', 'customValue1')
     .put('customKey2', true)
@@ -299,9 +296,8 @@ The methods on the builder are:
 If this number is very low, the timeout callback is not guaranteed to be invoked.
 * `logoutTimeOutInSeconds`  {Number} of seconds to wait for logout operation, before timing out.
 * `customAuthHeaders` {Object} Key value pairs of custom headers
-* `enableWkWebView` {Boolean} Used for indicating that the cordova app wants to use WkWebView. This works only for iOS 10+.
-* `browserMode` {cordova.plugins.IdmAuthFlows.BrowserMode} enum value. 
-`External` will open up the browser on the device to authenticate. 
+* `browserMode` {cordova.plugins.IdmAuthFlows.BrowserMode} enum value.
+`External` will open up the browser on the device to authenticate.
 `Embedded` will open a webview inside the app to authenticate.
 * `put` {String}, {Object} Additional key value pairs for setting authentication properties not supported by the builder.
 
@@ -435,7 +431,7 @@ which indicates if the user is logged in or not. `onRejected` will be invoked if
 object describing the error.
 
 ### cordova.plugins.IdmAuthFlows.AuthenticationFlow.getHeaders
-Used to get Authorization headers and any custom headers to be set for making XHR requests to secured end points. 
+Used to get Authorization headers and any custom headers to be set for making XHR requests to secured end points.
 For HTTP basic authentication the Authorization header is returned only if `offlineAuthAllowed(true)`.
 
 ```js
@@ -463,8 +459,8 @@ authenticationFlow.getHeaders(fedAuthSecuredUrl, oauthScopes)).then(
 The parameter of this method is optional.
 
 * `fedAuthSecuredUrl` {String} URL for which cookies and headers need to retrieved. Need to be set only for federated auth usecases.
-* `oauthScopes` {Array} Provides fine grained control on fetching header based on scopes.  
-If not specified, the first OAUTH token available will be returned. 
+* `oauthScopes` {Array} Provides fine grained control on fetching header based on scopes.
+If not specified, the first OAUTH token available will be returned.
 If multiple OAUTH tokens are available for the scopes passed, the first OAUTH token will be returned as the header.
 Need to be set only for oauth / openid usecases.
 

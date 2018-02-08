@@ -101,7 +101,7 @@ var IdmAuthFlows = function() {
     // Only used for OpenId OAUTH flows.
     OpenIDConnectDiscoveryURL:'OpenIDConnectDiscoveryURL',
 
-    // Shared by OAUTH2 3-legged and FederatedAuthentication only for iOS
+    // FederatedAuthentication only for iOS
     // boolean
     EnableWkWebView: 'enablewkwebview',
     // IdmAuthFlows.BrowserMode enum values
@@ -396,12 +396,6 @@ var IdmAuthFlows = function() {
       this.put(authPropertyKeys.OAuthClientID, clientId);
       return this;
     };
-    this.enableWkWebView = function(bool)
-    {
-      assertBoolean(bool, authPropertyKeys.EnableWkWebView);
-      this.put(authPropertyKeys.EnableWkWebView, bool);
-      return this;
-    };
     this.oAuthAuthorizationEndpoint = function(url)
     {
       assertUrl(url, authPropertyKeys.OAuthAuthorizationEndpoint);
@@ -491,6 +485,7 @@ var IdmAuthFlows = function() {
      *                            The signature of the method will have two parameters - challengeFields (Object) and proceedHandler (method).
      *                            The challengeFields is an object with the keys that need to be filled in by the user.
      *                            Once the information is collected from the user, proceedHandler should be invoked passing the challengeFields.
+      *                            Invoking proceedHandler more than once will result in a noop.
      * @return {Promise}          <ul><li>onFulfilled - will receive this AuthenticationFlow object itself.
      *                            <li>onRejected - will receive the error object describing the error with keys in IdmAuthFlows.Error.</ul>
      */
@@ -513,8 +508,12 @@ var IdmAuthFlows = function() {
               if (resp.challengeFields && challengeCallback && typeof challengeCallback === 'function')
               {
                 // console.log('Login: user not authenticated. Process challenge.');
+                var executed = false;
                 challengeCallback(resp.challengeFields, function(challengeFields) {
-                  exec(me, reject, TAG, 'finishLogin', [authFlowKey, challengeFields]);
+                  if (!executed) {
+                    executed = true;
+                    exec(me, reject, TAG, 'finishLogin', [authFlowKey, challengeFields]);
+                  }
                 });
               }
               else
@@ -781,7 +780,6 @@ var IdmAuthFlows = function() {
      *     .oAuthAuthorizationEndpoint('http://auth/endpoint')
      *     .oAuthRedirectEndpoint('http://redirect/endpoint')
      *     .logoutURL('http://logout/url')
-     *     .enableWkWebView(true)
      *     .browserMode(IdmAuthFlows.BrowserMode.External)
      *     .idleTimeOutInSeconds(300)
      *     .sessionTimeOutInSeconds(6000)
@@ -813,7 +811,6 @@ var IdmAuthFlows = function() {
      *                                                          'clientId')
      *     .oAuthClientSecret('clientSecret')
      *     .oAuthScope(['scope1', 'scope2'])
-     *     .enableWkWebView(true)
      *     .browserMode(IdmAuthFlows.BrowserMode.External)
      *     .idleTimeOutInSeconds(300)
      *     .sessionTimeOutInSeconds(6000)

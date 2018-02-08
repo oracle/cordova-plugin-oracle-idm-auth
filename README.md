@@ -1,4 +1,4 @@
-# cordova-plugin-oracle-idm-auth 1.0.1
+# cordova-plugin-oracle-idm-auth 1.0.2
 
 ## About the cordova-plugin-oracle-idm-auth
 The plugin provides authentication and authorization functionality for cordova based mobile applications,
@@ -115,9 +115,8 @@ var logoutBasicAuth = function() {
 1. OpenID does not support implicit flow.
 1. Empty username and password login behavior is not consistent on Android and iOS.
 1. Offline login on iOS with connectivity mode AUTO does not work the first time. Work around is to recreate the authentication flow instance and try again.
-1. Invoking proceed handler multiple times without initiating a challenge results in app crash. Work around is to ensure that the proceed handler is invoked only once per challenge.
 1. iOS simulator only issue - Crashes with ```Assertion failure in -[KeychainItemWrapper writeToKeychain]```. This is an apple issue discussed [here](https://stackoverflow.com/questions/39561041/keychainitemwrapper-crash-on-ios10) and [here](https://forums.developer.apple.com/thread/51071). Work around for this issue is to [enable keychain sharing from xcode](https://developer.apple.com/library/content/documentation/IDEs/Conceptual/AppDistributionGuide/AddingCapabilities/AddingCapabilities.html).
-
+1. For Oracle IDCS OpenID configuration, after login or logout, an error page is displayed momentarily.
 
 ### [Contributing](CONTRIBUTING.md)
 This is an open source project maintained by Oracle Corp. Pull Requests are currently not being accepted. See [CONTRIBUTING](CONTRIBUTING.md) for details.
