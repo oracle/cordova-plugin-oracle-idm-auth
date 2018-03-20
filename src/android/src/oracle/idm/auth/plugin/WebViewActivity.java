@@ -10,6 +10,7 @@ import java.util.Map;
 import android.content.res.Resources;
 import android.view.View;
 import android.widget.Button;
+import oracle.idm.mobile.OMMobileSecurityService;
 import oracle.idm.mobile.OMSecurityConstants;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
@@ -29,13 +30,15 @@ public class WebViewActivity extends Activity
   public static final String FINISH_WEB_VIEW_INTENT = "finishWebView";
   public static final String CANCEL_WEB_VIEW_INTENT = "cancelFromWebView";
 
+  private String redirectEndPoint;
+
   @Override
   protected void onCreate(Bundle savedInstanceState)
   {
     super.onCreate(savedInstanceState);
     Resources resources = getApplication().getResources();
     String packageName = getApplication().getPackageName();
-
+    redirectEndPoint = getIntent().getStringExtra(OMMobileSecurityService.OM_PROP_OAUTH_REDIRECT_ENDPOINT);
     setContentView(resources.getIdentifier(_ACTIVITY_WEB_VIEW, _LAYOUT, packageName));
     _webView = (WebView) findViewById(resources.getIdentifier(_IDM_WEB_VIEW, _ID, packageName));
     _webView.getSettings().setJavaScriptEnabled(true);
@@ -101,6 +104,18 @@ public class WebViewActivity extends Activity
   {
     return new WebViewClient()
     {
+      @Override
+      public boolean shouldOverrideUrlLoading(WebView view, String url) {
+        if (redirectEndPoint != null
+            && !redirectEndPoint.isEmpty()
+            && url.startsWith(redirectEndPoint)) {
+          OMLog.debug(TAG,"Finishing webview for OAUTH redirect end point: " + url);
+          finish();
+        }
+
+        return super.shouldOverrideUrlLoading(view, url);
+      }
+
       @Override
       public void onPageFinished(WebView view, String url)
       {

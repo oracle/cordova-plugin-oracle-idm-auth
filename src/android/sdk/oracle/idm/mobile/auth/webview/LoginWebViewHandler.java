@@ -142,7 +142,6 @@ public abstract class LoginWebViewHandler implements WebViewConfigurationHandler
      */
     protected class LoginWebViewClient extends BaseWebViewClient
     {
-        protected WebViewClient origAppWebViewClient;
         /**
          * username is captured from the HTML form using Javascript. If basic auth/NTLM/Kerberos challenge comes from sever,
          * then username capture becomes much easier as SDK consumer passes it to SDK.
@@ -158,7 +157,7 @@ public abstract class LoginWebViewHandler implements WebViewConfigurationHandler
         }
 
         LoginWebViewClient(WebViewClient origAppWebViewClient) {
-            this.origAppWebViewClient = origAppWebViewClient;
+            super(origAppWebViewClient);
         }
 
         @Override

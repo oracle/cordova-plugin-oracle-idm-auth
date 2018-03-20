@@ -604,6 +604,13 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
       public void run() {
         _mainActivity.registerReceiver(_broadcastReceiver, new IntentFilter(WebViewActivity.CANCEL_WEB_VIEW_INTENT));
         Intent intent = new Intent(_mainActivity, WebViewActivity.class);
+        String oauthRedirectEndPoint = null;
+        Object oauthRedirectEndPointObj = _props.get(OMMobileSecurityService.OM_PROP_OAUTH_REDIRECT_ENDPOINT);
+
+        if (oauthRedirectEndPointObj != null)
+          oauthRedirectEndPoint = (String) oauthRedirectEndPointObj;
+
+        intent.putExtra(OMMobileSecurityService.OM_PROP_OAUTH_REDIRECT_ENDPOINT, oauthRedirectEndPoint);
         _mainActivity.startActivity(intent);
         _isWebViewChallenge = true;
       }

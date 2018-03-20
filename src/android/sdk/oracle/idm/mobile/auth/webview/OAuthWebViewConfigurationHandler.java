@@ -92,6 +92,7 @@ public class OAuthWebViewConfigurationHandler extends LoginWebViewHandler {
         OAuthWebViewClient(AuthServiceInputCallback callback,
                            Map<String, Object> inputParams, String redirectEndpoint,
                            WebViewClient webviewClient) {
+            super(webviewClient);
             this.callback = callback;
             this.inputParams = inputParams;
             this.redirectEndpoint = redirectEndpoint;
@@ -115,9 +116,8 @@ public class OAuthWebViewConfigurationHandler extends LoginWebViewHandler {
                         url);
                 redirectReported = true;
                 callback.onInput(inputParams);
-            } else {
-                super.onPageStarted(view, url, favicon);
             }
+            super.onPageStarted(view, url, favicon);
         }
 
         @Override
@@ -129,9 +129,17 @@ public class OAuthWebViewConfigurationHandler extends LoginWebViewHandler {
                         url);
                 redirectReported = true;
                 callback.onInput(inputParams);
-                return false;
+                /* The below line makes sure that app's WebViewClient
+                 * gets this callback. But, SDK always returns true
+                 * irrespective of the return value given by the
+                 * app's WebViewClient.Returning true makes sure that
+                 * webview does not proceed with loading this url.
+                 */
+                super.shouldOverrideUrlLoading(view, url);
+                return true;
+            } else {
+                return super.shouldOverrideUrlLoading(view, url);
             }
-            return super.shouldOverrideUrlLoading(view, url);
         }
 
         boolean isRedirectReported() {
