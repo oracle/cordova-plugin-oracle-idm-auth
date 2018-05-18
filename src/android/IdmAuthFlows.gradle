@@ -6,11 +6,10 @@ ext.postBuildExtras = {
             targetCompatibility JavaVersion.VERSION_1_7
         }
         defaultConfig {
-            minSdkVersion 16
+            minSdkVersion 19
             targetSdkVersion 23
-            versionCode 1
-            versionName "1.0"
-            consumerProguardFiles 'lib-proguard-rules.pro'
+            versionCode 2312104
+            versionName "1.0.4"
         }
     }
 }
@@ -19,7 +18,7 @@ android {
     buildTypes {
         release {
             minifyEnabled true
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'lib-proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'src/main/lib-proguard-rules.pro'
         }
     }
 }
