@@ -12,7 +12,7 @@ typedef void (^OIDCDiscoveryCallback)(NSError *_Nullable discoveryError);
 
 @interface OMOpenIDCConfiguration :OMOAuthConfiguration
 
-@property (nonatomic, strong) NSString *properties;
+@property (nonatomic, strong) NSDictionary *properties;
 @property (nonatomic, strong) NSString *issuer;
 @property (nonatomic, strong) NSSet *claims;
 @property (nonatomic, strong) NSURL *revocationEndpoint;

@@ -51,7 +51,11 @@ NSString const *kLoginHint = @"defaultUser";
                                           valueForKey:OM_PROP_IDCS_REGISTER_CLIENT];
         id loginHint = [properties valueForKey:OM_PROP_LOGIN_HINT];
 
-        if ([OM_OAUTH_RESOURCE_OWNER caseInsensitiveCompare:grantType] ==
+        if (![grantType isKindOfClass:[NSString class]])
+        {
+            errorCode = OMERR_OAUTH_INVALID_GRANT;
+        }
+        else if ([OM_OAUTH_RESOURCE_OWNER caseInsensitiveCompare:grantType] ==
             NSOrderedSame)
         {
             _grantType = OMOAuthResourceOwner;
@@ -180,6 +184,12 @@ NSString const *kLoginHint = @"defaultUser";
             {
                 self.browserMode = OMBrowserModeExternal;
             }
+            else if([OM_PROP_BROWSERMODE_EMBEDDED_SAFARI
+                     caseInsensitiveCompare:browserMode] == NSOrderedSame)
+            {
+                self.browserMode = OMBrowserModeSafariVC;
+            }
+
         }
         self.rememberUsernameAllowed = [OMMobileSecurityConfiguration
                                         boolValue:rememberUsernameEnabled];
@@ -461,11 +471,15 @@ NSString const *kLoginHint = @"defaultUser";
 
 -(void)parseConfigData:(NSDictionary *)json;
 {
-    NSDictionary *config = [json valueForKey:@"openid-configuration"];
-    self.tokenEndpoint = [NSURL URLWithString:[config valueForKey:@"token_endpoint"]];
-    self.authEndpoint = [NSURL URLWithString:[config valueForKey:@"authorization_endpoint"]];
-    self.clientRegistrationEndpoint = [NSURL URLWithString:[config valueForKey:@"registration_endpoint"]];
-
+    NSDictionary *config = [json valueForKey:OM_PROP_OPENID_CONFIGURATION];
+    if (config)
+    {
+        self.tokenEndpoint = [NSURL URLWithString:
+                              [config valueForKey:OM_PROP_TOKEN_ENDPOINT]];
+        self.authEndpoint = [NSURL URLWithString:[config valueForKey:OM_PROP_AUTHORIZATION_ENDPOINT]];
+        self.clientRegistrationEndpoint = [NSURL URLWithString:[config valueForKey:OM_PROP_REGISTRATION_ENDPOINT]];
+        self.logoutURL = [NSURL URLWithString:[config valueForKey:OM_PROP_END_SESSION_ENDPOINT]];
+    }
 }
 
 - (NSString*)loginHint

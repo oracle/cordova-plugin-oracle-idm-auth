@@ -27,7 +27,6 @@
                        error:(NSError *__autoreleasing *)error
 {
     [self retrieveRememberCredentials:self.authData];
-    NSString *clientRegistrationFlow = self.config.clientRegistrationType;
     self.callerThread = [NSThread currentThread];
     [self performSelectorInBackground:@selector(preAuthzCode) withObject:nil];
 }

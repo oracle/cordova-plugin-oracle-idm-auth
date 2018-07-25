@@ -30,4 +30,5 @@ typedef enum : NSUInteger
 - (void)copyKeysFromKeyStore:(OMKeyStore*)keyStore;
 - (BOOL)isAuthDataSet;
 - (void)inValidate;
+- (NSInteger)authDataLength;
 @end

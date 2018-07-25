@@ -14,7 +14,8 @@
 + (void)discoverConfigurationWithURL:(NSURL *)discoveryURL
         completion:(OMOpenIDCDiscoveryCallback)completion {
     
-    if (NO == [OMObject isHostReachable:discoveryURL.host]) {
+    if (NO == (![OMObject checkConnectivityToHost:discoveryURL]))
+    {
         NSError *netWorkError = [OMObject
                                  createErrorWithCode:OMERR_NETWORK_UNAVAILABLE];
         dispatch_async(dispatch_get_main_queue(), ^{

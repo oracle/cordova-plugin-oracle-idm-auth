@@ -21,6 +21,12 @@ enum
 };
 typedef NSUInteger OMTimerType;
 
+typedef enum : NSUInteger {
+    eAlive,
+    eUseRefreshToken,
+    eExpired,
+} OMTokenStatus;
+
 @class OMMobileSecurityService;
 @class OMAuthenticationContext;
 
@@ -48,6 +54,8 @@ timeoutOccuredForTimer:(OMTimerType)timerType
 @property (nonatomic) BOOL isLogoutFalseCalled;
 @property (nonatomic, strong) NSDictionary *userInfo;
 @property (nonatomic, strong) NSDate *sessionExpiryDate;
+@property (nonatomic, strong) NSDate *idleTimeExpiryDate;
+@property (nonatomic, weak) OMMobileSecurityService *mss;
 
 -(id)initWithMss:(OMMobileSecurityService*)inObj;
 

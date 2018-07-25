@@ -173,12 +173,13 @@
     {
         self.context = nil;
     }
+    [OMURLProtocol setOMAObject:nil];
+    [NSURLProtocol unregisterClass:[OMURLProtocol class]];
+
     [self.delegate didFinishCurrentStep:self
                                nextStep:self.nextStep
                            authResponse:nil
-                                  error:object];
-    [NSURLProtocol unregisterClass:[OMURLProtocol class]];
-    
+                                  error:object];    
 }
 
 - (void)sendBackChannelResponse:(NSDictionary *)data

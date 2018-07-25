@@ -6,14 +6,12 @@
 
 #import "OMOAMOAuthClientAssertionService.h"
 #import "OMOAuthAuthenticationService.h"
-#import <libkern/OSAtomic.h>
 #import "OMDefinitions.h"
 #import "OMErrorCodes.h"
 
 @interface OMOAMOAuthClientAssertionService()<NSURLSessionDelegate>
 @property (nonatomic, weak) NSThread *callerThread;
 @property (nonatomic, strong) NSError *error;
-@property (atomic) volatile int32_t finished;
 @property (atomic) NSUInteger nextStep;
 @end
 
@@ -35,6 +33,7 @@
 -(void)performAuthentication:(NSMutableDictionary *)authData
                        error:(NSError *__autoreleasing *)error
 {
+    self.requestPauseSemaphore = dispatch_semaphore_create(0);
     self.authData = authData;
     self.callerThread = [NSThread currentThread];
     [self performSelectorInBackground:@selector(clientAssertion)
@@ -68,11 +67,9 @@
                      onThread:self.callerThread
                    withObject:nil
                 waitUntilDone:false];
-        while (false == OSAtomicCompareAndSwap32(1, 0, &_finished))
-        {
-            [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode
-                                     beforeDate:[NSDate distantFuture]];
-        }
+      
+        dispatch_semaphore_wait(self.requestPauseSemaphore,
+                                DISPATCH_TIME_FOREVER);
         
         username = [self.authData valueForKey:OM_USERNAME];
         password = [self.authData valueForKey:OM_PASSWORD];
@@ -218,7 +215,8 @@
     self.challenge.authData = challengeDict;
     self.challenge.challengeType = OMChallengeUsernamePassword;
     __block __weak OMOAMOAuthClientAssertionService *weakSelf = self;
-    
+    __block dispatch_semaphore_t blockSemaphore = self.requestPauseSemaphore;
+
     self.challenge.authChallengeHandler = ^(NSDictionary *dict,
                                             OMChallengeResponse response)
     {
@@ -262,7 +260,7 @@
                         waitUntilDone:YES];
             
         }
-        OSAtomicCompareAndSwap32(0, 1, &_finished);
+        dispatch_semaphore_signal(blockSemaphore);
     };
     
     [self.delegate didFinishCurrentStep:self

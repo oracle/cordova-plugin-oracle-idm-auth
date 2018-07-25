@@ -15,6 +15,7 @@ import org.json.JSONObject;
 
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Set;
 
 import oracle.idm.mobile.OMSecurityConstants;
@@ -34,6 +35,9 @@ public class OAuthToken extends OMToken {
     protected String mRefreshTokenValue;
     protected String mTokenType;
     protected String mTokenID;
+    /**
+     * This stores the ID Token mentioned in standard OpenID Connect flow.
+     */
     protected String mIdToken;
 
 
@@ -52,13 +56,28 @@ public class OAuthToken extends OMToken {
      * @throws JSONException
      */
     public OAuthToken(String tokenString) throws JSONException {
+        this(new JSONObject(tokenString));
+    }
+
+    /**
+     * Refer {@link #OAuthToken(String)}
+     */
+    public OAuthToken(JSONObject oauthToken) throws JSONException {
         super();
-        parseForStandardToken(tokenString);
+        populateDetails(oauthToken);
         OMLog.info(TAG, "Created OAuth Access Token!");
     }
 
-    private void parseForStandardToken(String tokenString) throws JSONException {
-        JSONObject tokenJSON = new JSONObject(tokenString);
+    /**
+     * This method populates this object with token details based on the details
+     * available in the parameter passed. First, it looks for keys mentioned in
+     * {@link OAuthResponseParameters} in the parameter passed. The keys will be the ones in
+     * {@link OAuthResponseParameters} if the response from server is being parsed.
+     * If not, secondly, it will look for keys mentioned in {@link OMSecurityConstants}.
+     * This is the case when OAuth token is converted to String for the purpose of persisting
+     * it.
+     */
+    private void populateDetails(JSONObject tokenJSON) throws JSONException {
         String accessTokenValue = tokenJSON.optString(
                 OAuthResponseParameters.ACCESS_TOKEN.getValue(), EMPTY_STRING);
         if (TextUtils.isEmpty(accessTokenValue)) {
@@ -70,41 +89,69 @@ public class OAuthToken extends OMToken {
         }
         String tokenName = tokenJSON.optString(OMSecurityConstants.TOKEN_NAME,
                 EMPTY_STRING);
+        /* This tokenName is being overridden as OMSecurityConstants.OAUTH_ACCESS_TOKEN
+        in oracle.idm.mobile.auth.OAuthAuthenticationService#onAccessToken.
+         */
         name = tokenName;
+        if (TextUtils.isEmpty(name)) {
+            name = OMSecurityConstants.OAUTH_ACCESS_TOKEN;
+        }
         String refreshTokenValue = tokenJSON.optString(
                 OAuthResponseParameters.REFRESH_TOKEN.getValue(), EMPTY_STRING);
+        if (TextUtils.isEmpty(refreshTokenValue)) {
+            refreshTokenValue = tokenJSON.optString(
+                    OMSecurityConstants.OAUTH_TOKEN_REFRESH_VALUE, EMPTY_STRING);
+        }
         this.mRefreshTokenValue = refreshTokenValue;
+
         String expTime = tokenJSON.optString(
                 OAuthResponseParameters.EXPIRES_IN.getValue(), EMPTY_STRING);
         if (!TextUtils.isEmpty(expTime)) {
             int expiryInSecs = Integer.parseInt(expTime);
             Calendar futureTime = Calendar.getInstance();
             futureTime.add(Calendar.SECOND, expiryInSecs);
-            Date expiryDate = futureTime.getTime();
-            this.expiryTime = expiryDate;
+            this.expiryTime = futureTime.getTime();
             this.expiryInSecs = expiryInSecs;
         } else {
             // if it is store to memory use case.
-            long expFromStore = tokenJSON.optLong(OMSecurityConstants.EXPIRES,
-                    -1);
+            long expFromStore = tokenJSON.optLong(OMSecurityConstants.EXPIRES, -1);
             if (expFromStore != -1) {
                 this.expiryTime = new Date(expFromStore);
-
             }
-
+            int expiryInSecs = tokenJSON.optInt(OMSecurityConstants.EXPIRY_SECS, -1);
+            if (expiryInSecs != -1) {
+                this.expiryInSecs = expiryInSecs;
+            }
         }
+
         String tokenType = tokenJSON.optString(
                 OAuthResponseParameters.TOKEN_TYPE.getValue(), EMPTY_STRING);
+        if (TextUtils.isEmpty(tokenType)) {
+            tokenType = tokenJSON.optString(OMSecurityConstants.OAUTH_TOKEN_TYPE, EMPTY_STRING);
+        }
         this.mTokenType = tokenType;
 
         String tokenID = tokenJSON.optString(
                 OAuthResponseParameters.TOKEN_ID.getValue(), EMPTY_STRING);
+        if (TextUtils.isEmpty(tokenID)) {
+            tokenID = tokenJSON.optString(OMSecurityConstants.OAUTH_TOKEN_ID, EMPTY_STRING);
+        }
         this.mTokenID = tokenID;
+
         String idToken = tokenJSON.optString(
                 OAuthResponseParameters.ID_TOKEN.getValue(), EMPTY_STRING);
+        if (TextUtils.isEmpty(idToken)) {
+            idToken = tokenJSON.optString(OMSecurityConstants.OAUTH_ID_TOKEN, EMPTY_STRING);
+        }
         this.mIdToken = idToken;
-        if (TextUtils.isEmpty(name)) {
-            name = OMSecurityConstants.OAUTH_ACCESS_TOKEN;
+
+        JSONArray scopeArray = tokenJSON.optJSONArray(OMSecurityConstants.OAUTH_TOKEN_SCOPE);
+        if (scopeArray != null) {
+            HashSet<String> scopeSet = new HashSet<>();
+            for (int j = 0; j < scopeArray.length(); j++) {
+                scopeSet.add(scopeArray.getString(j));
+            }
+            this.mScopes = scopeSet;
         }
     }
 
@@ -133,6 +180,9 @@ public class OAuthToken extends OMToken {
     }
 
     public Set<String> getScopes() {
+        if (mScopes == null) {
+            mScopes = new HashSet<>();
+        }
         return mScopes;
     }
 
@@ -161,23 +211,29 @@ public class OAuthToken extends OMToken {
     }
 
     public String toString() {
+        return toJSONObject().toString();
+    }
+
+    public JSONObject toJSONObject() {
         JSONObject tokenJSON = new JSONObject();
-        String tokenString = "";
         try {
             tokenJSON.put(OMSecurityConstants.TOKEN_NAME, name);
             tokenJSON.put(OMSecurityConstants.TOKEN_VALUE, value);
-            tokenJSON.put(OMSecurityConstants.EXPIRES, expiryTime.toString());
+            if (expiryTime != null) {
+                tokenJSON.put(OMSecurityConstants.EXPIRES, expiryTime.getTime());
+            }
             tokenJSON.put(OMSecurityConstants.EXPIRY_SECS, expiryInSecs);
-            tokenJSON.put(OMSecurityConstants.OAUTH_TOKEN_REFRESH_VALUE,
-                    mRefreshTokenValue);
-            if (mScopes != null)
-                tokenJSON.put(OMSecurityConstants.OAUTH_TOKEN_SCOPE,
-                        new JSONArray(mScopes));
-            tokenString = tokenJSON.toString();
+            tokenJSON.put(OMSecurityConstants.OAUTH_TOKEN_REFRESH_VALUE, mRefreshTokenValue);
+            if (mScopes != null) {
+                tokenJSON.put(OMSecurityConstants.OAUTH_TOKEN_SCOPE, new JSONArray(mScopes));
+            }
+            tokenJSON.put(OMSecurityConstants.OAUTH_TOKEN_TYPE, mTokenType);
+            tokenJSON.put(OMSecurityConstants.OAUTH_TOKEN_ID, getTokenID());
+            tokenJSON.put(OMSecurityConstants.OAUTH_ID_TOKEN, getIdToken());
         } catch (JSONException e) {
-            Log.e(TAG + "_toString()", e.getLocalizedMessage(), e);
+            Log.e(TAG + "_toString()", e.getMessage(), e);
         }
-        return tokenString;
+        return tokenJSON;
     }
 
 }

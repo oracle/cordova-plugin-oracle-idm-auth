@@ -5,7 +5,6 @@
 
 
 #import "OMObject.h"
-#import "libkern/OSAtomic.h"
 #import "OMReachability.h"
 #import "OMVersion.h"
 
@@ -143,6 +142,7 @@ NSString *const OM_OAUTH_ERROR_TEMPORARILY_UNAVAILABLE =
 NSString *const OM_OAUTH_ERROR_TIMEOUT = @"TIMEOUT";
 NSString *const OM_OAUTH_CLIENT_ASSERTION_REFRESH_TOKEN =
 @"CilentAssertionRefreshToken";
+NSString *const OM_OAUTH_INVALID_SCOPE       = @"invalid_scope";
 NSString *const OM_STATUS_DENIED             = @"DENIED";
 NSString *const OM_PROP_AUTHSERVER_FED_AUTH = @"FederatedAuthentication";
 NSString *const OM_PROP_AUTH_WEBVIEW = @"webview_key";
@@ -180,7 +180,9 @@ NSString *const OM_MOBILESECURITY_EXCEPTION = @"mobileSecurityException";
 NSString *const OM_RETRY_COUNT = @"retryCount";
 NSString *const OM_PROP_CUSTOM_AUTH_HEADERS = @"CustomAuthHeaders";
 NSString *const OM_PRINCIPAL = @"principal";
-
+NSString *const OM_PROP_USERNAME_PARAM_NAME  = @"FedAuthUsernameParamName";
+NSString *const OM_PROP_CUSTOM_HEADERS_FOR_MOBILE_AGENT
+= @"CustomHeadersForMobileAgent";
 //secure storage
 NSString *const OM_DEFAULT_KEY               = @"defaultKey";
 NSString *const OM_PIN_AUTHENTICATOR         = @"pinAuthenticator";
@@ -193,6 +195,7 @@ NSString *const OM_KEK_ID = @"keykeychainkey";
 NSString *const OM_PROP_LOCAL_AUTHENTICATOR_INSTANCE_ID = @"localauthenticatorinstanceid";
 NSString *const OM_PROP_ENABLE_WKWEBVIEW = @"enablewkwebview";
 NSString *const OM_CRED_FILE_LIST = @"credentialFileList";
+NSString *const OM_PIN_LENGTH_KEY = @"pinLength";
 
 ///////////////////////////////////////////////////////////////////////////////
 // OpenID Connect Constants
@@ -232,13 +235,18 @@ NSString *const OM_PROP_LOGOUT_SESSION_SUPPORTED = @"logout_session_supported";
 NSString *const OM_PROP_REQUEST_PARAM_SUPPORTED = @"request_parameter_supported";
 NSString *const OM_PROP_REQUEST_URI_SUPPORTED = @"request_uri_parameter_supported";
 NSString *const OM_PROP_REQUIRE_REQ_URI_REG = @"require_request_uri_registration";
-NSString *const OM_PROP_OAUTH_ENABLE_PKCE = @"EnablePKCE";
+NSString *const OM_PROP_OAUTH_ENABLE_PKCE = @"OAuthEnablePKCE";
 NSString *const OM_PROP_OAUTH_OAM_SERVICE_ENDPOINT = @"OAMOAuthServiceEndpoint";
 NSString *const OM_OAM_OAUTH_TWO_LEGGED_REGISTRATION
 = @"OAMOAuth2LeggedRegistration";
 NSString *const OM_OAM_OAUTH_THREE_LEGGED_REGISTRATION
 = @"OAMOAuth3LeggedRegistration";
 NSString *const OM_LOGOUT_RESPONSE = @"logoutResponse";
+NSString *const OM_PROP_AUTHORIZATION_ENDPOINT = @"authorization_endpoint";
+NSString *const OM_PROP_TOKEN_ENDPOINT = @"token_endpoint";
+NSString *const OM_PROP_REGISTRATION_ENDPOINT = @"registration_endpoint";
+NSString *const OM_PROP_OPENID_CONFIGURATION = @"openid-configuration";
+
 
 //Device Properties
 NSString *const OM_HARDWAREIDS                    = @"hardwareIds";
@@ -285,6 +293,9 @@ NSString *const OM_PROP_LOGIN_HINT = @"LoginHint";
 NSString *const OM_PROP_IDCS_CLIENT_REGISTRATION_TOKEN = @"IDCSClientRegistrationToken";
 NSString *const OM_PROP_IDCS_REGISTER_ENDPOINT = @"IDCSRegisterEndpoint";
 NSString *const OM_PROP_OAUTH_DISCOVERY_URL = @"oauth_discoveryURL";
+
+NSString *const OM_FACEBOOK_HOST = @".facebook.com";
+NSString *const OM_PROP_SESSION_ACTIVE_ON_RESTART = @"SessionActiveOnRestart";
 
 @implementation OMObject
 
@@ -372,6 +383,39 @@ NSString *const OM_PROP_OAUTH_DISCOVERY_URL = @"oauth_discoveryURL";
     return error;
 }
 
++ (BOOL)checkConnectivityToHost:(NSURL*)hostUrl
+{
+    __block BOOL isHostReachable = NO;
+    
+    if ([self isNetworkReachable])
+    {
+        dispatch_semaphore_t    sem;
+        sem = dispatch_semaphore_create(0);
+        
+        NSMutableURLRequest *request =
+        [NSMutableURLRequest requestWithURL:hostUrl
+                             cachePolicy:NSURLRequestReloadIgnoringLocalCacheData
+                            timeoutInterval:10.0];
+        
+        [request setHTTPMethod:@"HEAD"];
+
+        [[[NSURLSession sharedSession] dataTaskWithRequest:request
+                                         completionHandler:^
+          (NSData *data,NSURLResponse *response,NSError *error)
+          {
+              if (!error)
+              {
+                  isHostReachable = YES;
+              }
+              dispatch_semaphore_signal(sem);
+          }] resume];
+        
+        dispatch_semaphore_wait(sem, DISPATCH_TIME_FOREVER);
+    }
+   
+    return isHostReachable;
+}
+
 + (BOOL)isHostReachable:(NSString *)host
 {
     OMReachability *reachability = [OMReachability reachabilityWithHostName:host];
@@ -432,7 +476,13 @@ NSString *const OM_PROP_OAUTH_DISCOVERY_URL = @"oauth_discoveryURL";
     
     if (expectedURLQuery != nil && currentURLQuery == nil)
         return FALSE;
-    
+   
+    if ((expectedURLQuery != nil && currentURLQuery != nil) &&
+        NSOrderedSame ==[expectedURLQuery caseInsensitiveCompare:currentURLQuery])
+    {
+        return TRUE;
+    }
+
     //Support wildcard characters in query component to support apex
     //applications using corporate SSO. In case of APEX application, sessionid
     //is appended to login success URL. Since login URL and login success URL

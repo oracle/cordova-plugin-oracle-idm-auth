@@ -105,7 +105,7 @@
     {
         [authnData setValue:[NSNumber numberWithBool:
                              ((OMHTTPBasicConfiguration *)config).
-                             isMultiTenantEnabled]
+                             collectIdentityDomain]
                      forKey:OM_PROP_COLLECT_IDENTITY_DOMAIN];
         if([currentTenant length])
         {
@@ -689,30 +689,47 @@
 + (NSError *)setErrorObject:(NSDictionary *)errorDict
               withErrorCode:(NSUInteger)code
 {
-    NSString *errorName = [errorDict objectForKey:@"error"];
+    id errorName = [errorDict objectForKey:@"error"];
     NSUInteger errorCode;
     NSError *error = nil;
-    errorCode = [self getErrorCodeForError:errorName];
-    NSString *errorDesc = [errorDict objectForKey:@"error_description"];
-    if(errorDesc == nil)
+    
+    if ([errorName isKindOfClass:[NSString class]])
     {
-        error = [OMObject createErrorWithCode:errorCode];
-    }
-    else
-    {
-        NSString *errorString = [errorDesc stringByRemovingPercentEncoding];
-        if(code != -1)
-            errorCode = code;
-        errorString = [errorString
-                       stringByReplacingOccurrencesOfString:@"+" withString:@" "];
-        if([errorString isEqualToString:[OMObject
-                                         messageForCode:OMERR_OAUTH_CLIENT_ASSERTION_REVOKED]])
+        errorCode = [self getErrorCodeForError:errorName];
+        NSString *errorDesc = [errorDict objectForKey:@"error_description"];
+        if(errorDesc == nil)
         {
-            errorCode = OMERR_OAUTH_CLIENT_ASSERTION_REVOKED;
+            error = [OMObject createErrorWithCode:errorCode];
         }
-        error = [OMObject createErrorWithCode:errorCode
-                                   andMessage:errorString];
+        else
+        {
+            NSString *errorString = [errorDesc stringByRemovingPercentEncoding];
+            if(code != -1)
+                errorCode = code;
+            errorString = [errorString
+                           stringByReplacingOccurrencesOfString:@"+" withString:@" "];
+            if([errorString isEqualToString:[OMObject
+                                             messageForCode:OMERR_OAUTH_CLIENT_ASSERTION_REVOKED]])
+            {
+                errorCode = OMERR_OAUTH_CLIENT_ASSERTION_REVOKED;
+            }
+            error = [OMObject createErrorWithCode:errorCode
+                                       andMessage:errorString];
+        }
+
     }
+    else if ([errorName isKindOfClass:[NSDictionary class]])
+        {
+            NSString *messgae = [errorName valueForKey:@"message"];
+            
+            if (messgae)
+            {
+                error = [OMObject createErrorWithCode:code
+                                           andMessage:messgae];
+            }
+            
+        }
+
     return error;
 }
 
@@ -734,6 +751,8 @@
         return OMERR_DENIED_ACTION;
     else if([error isEqualToString:OM_OAUTH_ERROR_TIMEOUT])
         return OMERR_AUTHENTICATION_TIMED_OUT;
+    else if([error isEqualToString:OM_OAUTH_INVALID_SCOPE])
+        return OMERR_OAUTH_INVALID_SCOPE;
     else
         return OMERR_OAUTH_OTHER_ERROR;
     return 0;

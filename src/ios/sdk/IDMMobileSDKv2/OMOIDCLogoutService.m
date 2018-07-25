@@ -61,7 +61,7 @@
         }
         else if(self.config.browserMode == OMBrowserModeSafariVC)
         {
-            [challengeDict setObject:logoutURLString
+            [challengeDict setObject:logoutURL
                               forKey:OM_PROP_LOGOUT_URL];
             challenge.challengeType = OMChallengeEmbeddedSafari;
         }
@@ -114,28 +114,33 @@
 
 -(void)sendFinishLogout:(NSError *)error
 {
-    self.webViewClient.clientWebView.delegate = self.previousDelegate;
+    [self.webViewClient stopRequest];
     OMAuthenticationContext *context = [self.mss.cacheDict
                                         valueForKey:self.mss.authKey];
     OMOAuthConfiguration *config = (OMOAuthConfiguration *)
     self.mss.configuration;
 
+    [context clearCookies:self.clearPersistentCookies];
+    [self.mss.cacheDict removeObjectForKey:self.mss.authKey];
+
     if (self.clearPersistentCookies)
     {
-        [context clearCookies:self.clearPersistentCookies];
-        [self.mss.cacheDict removeObjectForKey:self.mss.authKey];
-        
         if ([config isClientRegistrationRequired])
         {
             [self removeClientRegistrationToken];
         }
 
     }
-    else
+   
+    if (self.mss.configuration.sessionActiveOnRestart)
     {
-        
-        context.isLogoutFalseCalled = true;
+        [[OMCredentialStore sharedCredentialStore]
+         deleteAuthenticationContext:self.mss.authKey];
     }
+    
+    context = nil;
+    self.mss.authManager.curentAuthService.context = nil;
+    
     [self.mss.delegate mobileSecurityService:self.mss
                              didFinishLogout:error];
 }

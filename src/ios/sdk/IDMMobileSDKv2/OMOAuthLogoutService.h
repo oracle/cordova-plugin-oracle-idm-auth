@@ -5,6 +5,7 @@
 
 
 #import "OMLogoutService.h"
+#import "OMAuthenticationManager.h"
 
 @interface OMOAuthLogoutService : OMLogoutService
 @property(nonatomic, strong) NSMutableDictionary *authData;

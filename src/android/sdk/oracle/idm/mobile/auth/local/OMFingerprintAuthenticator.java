@@ -285,6 +285,7 @@ public class OMFingerprintAuthenticator implements OMAuthenticator {
 
     @Override
     public void invalidate() {
+        initialized = false;
         authenticated = false;
         omKeyStore = null;
         secretKeyWrapper = null;

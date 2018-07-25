@@ -9,8 +9,12 @@ package oracle.idm.mobile.connection;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.Build;
 import android.text.TextUtils;
 import android.util.Log;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -40,13 +44,23 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLSession;
 
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 import oracle.idm.mobile.OMErrorCode;
 import oracle.idm.mobile.OMMobileSecurityException;
 import oracle.idm.mobile.OMMobileSecurityService;
+import oracle.idm.mobile.OMSecurityConstants;
 import oracle.idm.mobile.certificate.ClientCertificatePreference;
 import oracle.idm.mobile.certificate.OMCertificateService;
+import oracle.idm.mobile.configuration.OMMobileSecurityConfiguration;
+import oracle.idm.mobile.configuration.OMMobileSecurityConfiguration.HostnameVerification;
 import oracle.idm.mobile.logging.OMLog;
+import oracle.idm.mobile.util.LogUtils;
 
+import static oracle.idm.mobile.configuration.OMMobileSecurityConfiguration.DEFAULT_HOSTNAME_VERIFICATION;
 import static oracle.idm.mobile.connection.OMCookieManager.SET_COOKIE2_HEADER;
 import static oracle.idm.mobile.connection.OMCookieManager.SET_COOKIE_HEADER;
 
@@ -56,7 +70,7 @@ import static oracle.idm.mobile.connection.OMCookieManager.SET_COOKIE_HEADER;
  * @since 11.1.2.3.1
  */
 public class OMConnectionHandler {
-//    TODO Consider Code re-factoring and resuage in the http methods.
+    //    TODO Consider Code re-factoring and resuage in the http methods.
     private static final String TAG = OMConnectionHandler.class.getSimpleName();
     private static final String HTTP_GET = "GET";
     private static final String HTTP_POST = "POST";
@@ -77,9 +91,11 @@ public class OMConnectionHandler {
     private OMSSLSocketFactory mSocketFactory;
     private boolean mHandleClientCerts = false;//to be changed to false TODO
     private String[] mCorrectedProtocols = null;
-    private String mDefaultProtocol = "TLSv1.1";
+    private String[] mEnabledCipherSuites;
     private boolean mAllowHttpsToHttpRedirect = false;
     private boolean mAllowHttpToHttpsRedirect = true;/*We are by default allowing this configuration*/
+    private OkHttpClient okHttpClient;
+    private HostnameVerification mHostnameVerification = DEFAULT_HOSTNAME_VERIFICATION;
 
     public OMConnectionHandler(Context context) {
         mContext = context;
@@ -93,16 +109,23 @@ public class OMConnectionHandler {
      */
     public OMConnectionHandler(Context context, int milliSeconds) {
         //TODO see if this really required? or having a setter will suffice.
+        this(context, milliSeconds, false, null);
+    }
+
+    public OMConnectionHandler(Context context, int milliSeconds, boolean handleClientCerts) {
+        this(context, milliSeconds, handleClientCerts, null);
+    }
+
+    public OMConnectionHandler(Context context, int milliSeconds, boolean handleClientCerts,
+                               OMMobileSecurityConfiguration mobileSecurityConfiguration) {
         this(context);
         if (milliSeconds > 0) {
             mConnectionTimeout = milliSeconds;
         }
-    }
-
-
-    public OMConnectionHandler(Context context, int milliSeconds, boolean handleClientCerts) {
-        this(context, milliSeconds);
         mHandleClientCerts = handleClientCerts;
+        if (mobileSecurityConfiguration != null) {
+            mHostnameVerification = mobileSecurityConfiguration.getHostnameVerification();
+        }
     }
 
     /**
@@ -118,9 +141,7 @@ public class OMConnectionHandler {
 
         OMHTTPResponse response = httpGet(url, username, pwd, headers, false, (OMHTTPRequest.REQUIRE_RESPONSE_STRING | OMHTTPRequest.REQUIRE_RESPONSE_CODE));
         if (response != null) {
-            int responseCode = response.getResponseCode();
-            if (responseCode / 100 == 2) {
-                //success.
+            if (response.isSuccess()) {
                 return response.getResponseStringOnSuccess();
             }
             return response.getResponseStringOnFailure();
@@ -155,7 +176,8 @@ public class OMConnectionHandler {
     public OMHTTPResponse httpGet(final URL url, Map<String, String> headers) throws OMMobileSecurityException {
 
         validateURL(url);
-        return httpGet(url, null, null, headers, false, false, true, true, true);
+        return httpGet(url, null, null, headers, false, false,
+                true, true, true);
 
     }
 
@@ -175,9 +197,7 @@ public class OMConnectionHandler {
 
         OMHTTPResponse response = httpPost(url, headers, payload, payloadType, (OMHTTPRequest.REQUIRE_RESPONSE_CODE | OMHTTPRequest.REQUIRE_RESPONSE_STRING));
         if (response != null) {
-            int responseCode = response.getResponseCode();
-            if (responseCode / 100 == 2) {
-                //success
+            if (response.isSuccess()) {
                 return response.getResponseStringOnSuccess();
             }
             return response.getResponseStringOnFailure();
@@ -191,9 +211,7 @@ public class OMConnectionHandler {
 
         OMHTTPResponse response = httpPatch(url, headers, payload, payloadType, (OMHTTPRequest.REQUIRE_RESPONSE_CODE | OMHTTPRequest.REQUIRE_RESPONSE_STRING));
         if (response != null) {
-            int responseCode = response.getResponseCode();
-            if (responseCode / 100 == 2) {
-                //success
+            if (response.isSuccess()) {
                 return response.getResponseStringOnSuccess();
             }
             return response.getResponseStringOnFailure();
@@ -269,7 +287,7 @@ public class OMConnectionHandler {
         }
         HttpURLConnection connection;
         InputStream inputStream = null;
-        Map<String, List<String>> visitedUrlsCookiesMap = new HashMap();
+        Map<String, List<String>> visitedUrlsCookiesMap = new HashMap<>();
         boolean isHttps = url.getProtocol().equals(PROTOCOL_HTTPS);
         try {
             if (isHttps) {
@@ -316,7 +334,8 @@ public class OMConnectionHandler {
                         case HttpURLConnection.HTTP_ACCEPTED:
                             process = false;
                             if (isAuthMode && !mPwdAuthenticator.isAuthenticationRequired()) {
-                                OMLog.error(TAG, "invalid Basic Auth URL");
+                                OMLog.error(TAG, "Invalid Basic Auth URL. InputStream: "
+                                        + readInputStreamString(connection.getInputStream()));
                                 throw new OMMobileSecurityException(OMErrorCode.INVALID_BASIC_AUTHENTICATION_URL);
                                 //invalid basic authentication URL
                             } else {
@@ -333,9 +352,6 @@ public class OMConnectionHandler {
                             //Wrong credentials submitted.
                             OMLog.error(TAG, "Wrong credentials");
                             throw new OMMobileSecurityException(OMErrorCode.UN_PWD_INVALID, new InvalidCredentialEvent());
-                        case HttpURLConnection.HTTP_NOT_FOUND:
-                            OMLog.error(TAG, "The requested URL does not exist");
-                            throw new OMMobileSecurityException(OMErrorCode.NOT_FOUND);
                         default:
                             //can handle more specific cases if we want.
                             process = false;
@@ -357,6 +373,7 @@ public class OMConnectionHandler {
                 if (requireResponseCode) {
                     response.setResponseCode(responseCode);
                 }
+                response.setResponseMessage(connection.getResponseMessage());
                 response.setVisitedUrlsCookiesMap(visitedUrlsCookiesMap);
 
             } catch (SocketException se) {
@@ -436,6 +453,16 @@ public class OMConnectionHandler {
             for (String s : mCorrectedProtocols) {
                 OMLog.info(TAG, "Corrected to protocol : " + s);
             }
+        }
+    }
+
+    /**
+     * @hide
+     */
+    public void setEnabledCipherSuites(String[] enabledCipherSuites) {
+        if (enabledCipherSuites != null && enabledCipherSuites.length > 0) {
+            OMLog.trace(TAG, "CipherSuites used: " + Arrays.toString(enabledCipherSuites));
+            this.mEnabledCipherSuites = enabledCipherSuites;
         }
     }
 
@@ -578,13 +605,29 @@ public class OMConnectionHandler {
         OMLog.info(TAG, "Response headers required : " + requireResponseHeaders);
         OMLog.info(TAG, "Response code required    : " + requireResponseCode);
         OMLog.info(TAG, "Response string required  : " + requireResponseString);
+        if (OMSecurityConstants.DEBUG) {
+            try {
+                LogUtils.log("Request body: " + new JSONObject(payload).toString(3));
+            } catch (JSONException e) {
+                LogUtils.log("Request body: " + payload);
+            }
+        }
         if (shouldSetCookieManager()) {
             CookieHandler.setDefault(OMCookieManager.getInstance());
         }
+        if (httpMethod.equals(HTTP_PATCH) && Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+            try {
+                return patch(url.toString(), headers, payloadType, payload);
+            } catch (IOException e) {
+                OMLog.error(TAG, e.getMessage(), e);
+                throw new OMMobileSecurityException(OMErrorCode.UNABLE_TO_CONNECT_TO_SERVER, e);
+            } catch (GeneralSecurityException e) {
+                OMLog.error(TAG, e.getMessage(), e);
+                throw new OMMobileSecurityException(OMErrorCode.UNABLE_OPEN_SECURE_CONNECTION);
+            }
+        }
         HttpURLConnection connection;
-        if (payload == null)
-            payload = "";
-        final byte[] payloadBytes = payload.getBytes();
+        final byte[] payloadBytes = payload != null ? payload.getBytes() : null;
         try {
             if (url.getProtocol().equals(PROTOCOL_HTTPS)) {
                 try {
@@ -607,24 +650,32 @@ public class OMConnectionHandler {
             OutputStream outputStream;//send payload
             int responseCode;
             addHeaders(connection, headers);
-            connection.setDoOutput(true);
+            if (payload != null) {
+                connection.setDoOutput(true);
+            }
             if (!TextUtils.isEmpty(payloadType)) {
                 connection.setRequestProperty(HEADER_FIELD_CONTENT, payloadType);
             }
             try {
                 connection.setRequestMethod(httpMethod);
-                connection.setFixedLengthStreamingMode(payload.length());
+                if (payload != null) {
+                    connection.setFixedLengthStreamingMode(payload.length());
+                }
             } catch (ProtocolException e) {
 
                 throw new OMMobileSecurityException(OMErrorCode.INTERNAL_ERROR, e);
             }
             try {
-                outputStream = connection.getOutputStream();
-                outputStream.write(payloadBytes);
-                responseCode = connection.getResponseCode();
+                if (payloadBytes != null) {
+                    outputStream = connection.getOutputStream();
+                    outputStream.write(payloadBytes);
+                    responseCode = connection.getResponseCode();
+                    outputStream.close();
+                } else {
+                    responseCode = connection.getResponseCode();
+                }
 
                 OMLog.trace(TAG, "Response code : " + responseCode);
-                outputStream.close();
                 if (responseCode / 100 == 2) {
                     //success
                     inputStream = connection.getInputStream();
@@ -634,6 +685,7 @@ public class OMConnectionHandler {
                     response.setResponseStringOnFailure(readInputStreamString(inputStream));
                 }
                 response.setResponseCode(responseCode);
+                response.setResponseMessage(connection.getResponseMessage());
             } catch (IOException e) {
                 if (e instanceof SSLHandshakeException) {
                     OMLog.error(TAG, "SSLHandshakeException");
@@ -668,6 +720,41 @@ public class OMConnectionHandler {
         return null;
     }
 
+    private OkHttpClient getOkHttpClient() throws GeneralSecurityException {
+        if (okHttpClient == null) {
+            OMSSLSocketFactory omsslSocketFactory = getSSLSocketFactory();
+            okHttpClient = new OkHttpClient.Builder()
+                    .sslSocketFactory(omsslSocketFactory, omsslSocketFactory.getTrustManager())
+                    .build();
+        }
+        return okHttpClient;
+    }
+
+    private OMHTTPResponse patch(String url, Map<String, String> headers, String payloadType, String payload) throws IOException, GeneralSecurityException {
+        MediaType mediaType = MediaType.parse(payloadType);
+        RequestBody body = RequestBody.create(mediaType, payload);
+        Request.Builder requestBuilder = new Request.Builder()
+                .url(url)
+                .patch(body);
+
+        for (Map.Entry<String, String> header : headers.entrySet()) {
+            requestBuilder.addHeader(header.getKey(), header.getValue());
+        }
+        Request request = requestBuilder.build();
+        Response response = getOkHttpClient().newCall(request).execute();
+        OMHTTPResponse omhttpResponse = new OMHTTPResponse();
+        int responseCode = response.code();
+        OMLog.trace(TAG, "Response code : " + responseCode);
+        omhttpResponse.setResponseCode(responseCode);
+        String responseString = response.body() != null ? response.body().string() : null;
+        if (responseCode / 100 == 2) {
+            omhttpResponse.setResponseStringOnSuccess(responseString);
+        } else {
+            omhttpResponse.setResponseStringOnFailure(responseString);
+        }
+        return omhttpResponse;
+    }
+
     private String readInputStreamString(InputStream in) throws IOException {
         if (in != null) {
             BufferedReader responseBufferedReader = new BufferedReader(new InputStreamReader(in));
@@ -677,7 +764,16 @@ public class OMConnectionHandler {
             while ((line = responseBufferedReader.readLine()) != null) {
                 responseStringBuilder.append(line);
             }
-            return responseStringBuilder.toString();
+            String responseString = responseStringBuilder.toString();
+            if (OMSecurityConstants.DEBUG) {
+                try {
+                    LogUtils.log("Response: " +
+                            new JSONObject(responseString).toString(3));
+                } catch (JSONException e) {
+                    LogUtils.log("Response: " + responseString);
+                }
+            }
+            return responseString;
         }
         return null;
     }
@@ -685,7 +781,7 @@ public class OMConnectionHandler {
 
     private void validateURL(URL url) {
         if (url == null) {
-            OMLog.error(TAG,"URL is null");
+            OMLog.error(TAG, "URL is null");
             throw new IllegalArgumentException("URL can not be null");
         }
     }
@@ -711,11 +807,8 @@ public class OMConnectionHandler {
 
     private OMSSLSocketFactory getSSLSocketFactory() throws GeneralSecurityException {
         if (mSocketFactory == null) {
-            if (mCorrectedProtocols == null) {
-                mSocketFactory = new OMSSLSocketFactory(getCertificateService(), mHandleClientCerts, DEFAULT_SSL_PROTOCOL);
-            } else {
-                mSocketFactory = new OMSSLSocketFactory(getCertificateService(), mHandleClientCerts, DEFAULT_SSL_PROTOCOL, mCorrectedProtocols);
-            }
+            mSocketFactory = new OMSSLSocketFactory(getCertificateService(), mHandleClientCerts,
+                    DEFAULT_SSL_PROTOCOL, mCorrectedProtocols, mEnabledCipherSuites);
         }
         return mSocketFactory;
     }
@@ -725,20 +818,16 @@ public class OMConnectionHandler {
         connection = (HttpsURLConnection) url.openConnection();
         connection.setSSLSocketFactory(getSSLSocketFactory());
 
-        // TODO commenting this for now as its not working because of the following issue.
-        // https://code.google.com/p/android/issues/detail?id=52962
-        //  if (BuildConfig.DEBUG) {
-        //  Log.d(CLASS_NAME, "[OMConnectionHandler] added lenient hostname verifier for DEBUG mode");
-        connection.setHostnameVerifier(new HostnameVerifier() {
-            @Override
-            public boolean verify(String hostname, SSLSession session) {
-                OMLog.info(TAG, "Hostname: " + hostname + " verified");
-                //very lenient policy.
-                //TODO change after discussion
-                return true;
-            }
-        });
-        //        }
+        if (mHostnameVerification == HostnameVerification.ALLOW_ALL) {
+            connection.setHostnameVerifier(new HostnameVerifier() {
+                @Override
+                public boolean verify(String hostname, SSLSession session) {
+                    OMLog.warn(TAG, "Hostname verification is turned off");
+                    return true;
+                }
+            });
+        }
+
         updateHttpProps(connection);
         connection.setInstanceFollowRedirects(false);
         return connection;
@@ -900,7 +989,7 @@ public class OMConnectionHandler {
     }
 
     private Map<String, List<String>> parseCookieFromResponseHeader(Map<String, List<String>> responseHeaders, URL url) {
-        Map<String, List<String>> visitedUrlsCookiesMap = new HashMap();
+        Map<String, List<String>> visitedUrlsCookiesMap = new HashMap<>();
         for (String headerKey : responseHeaders.keySet()) {
             if ((headerKey != null) && (headerKey.equalsIgnoreCase(SET_COOKIE_HEADER) || headerKey.equalsIgnoreCase(SET_COOKIE2_HEADER))) {
                 List<String> cookieList = responseHeaders.get(headerKey);
@@ -933,6 +1022,7 @@ public class OMConnectionHandler {
     /**
      * Method to check if default cookie manager should be set.
      * Syncing of cookies between webkit and HttpUrlConnection fails in android versions between 4.1 to 4.3
+     *
      * @return true if android version is later 4.3 version
      */
     private boolean shouldSetCookieManager() {

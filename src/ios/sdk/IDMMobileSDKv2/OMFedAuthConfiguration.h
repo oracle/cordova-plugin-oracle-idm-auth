@@ -16,6 +16,7 @@
 @property (nonatomic, strong) NSURL *logoutSuccessURL;
 @property (nonatomic, strong) NSURL *logoutFailureURL;
 @property (nonatomic, strong) NSSet *confirmLogoutButtons;
+@property (nonatomic, strong) NSSet *fedAuthUsernameParamName;
 
 @property (nonatomic) BOOL parseTokenRelayResponse;
 @property (nonatomic, readonly) BOOL enableWKWebView;

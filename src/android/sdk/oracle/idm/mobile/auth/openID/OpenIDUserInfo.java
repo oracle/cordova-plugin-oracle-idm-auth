@@ -55,7 +55,10 @@ public class OpenIDUserInfo {
         mDisplayName = (String) mClaims.get(USER_DISPLAY_NAME.getName());
         mUserTenantName = (String) mClaims.get(USER_TENANT_NAME.getName());
         mUserID = (String) mClaims.get(USER_ID.getName());
-        mSessionExpTime = (long) mClaims.get(SESSION_EXPIRY.getName());
+        Object sessionExpiryObj = mClaims.get(SESSION_EXPIRY.getName());
+        if (sessionExpiryObj != null) {
+            mSessionExpTime = (long) sessionExpiryObj;
+        }
         mUserLang = (String) mClaims.get(USER_LANG.getName());
     }
 

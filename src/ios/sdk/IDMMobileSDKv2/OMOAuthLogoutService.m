@@ -18,7 +18,6 @@
 @property (nonatomic, strong) OMAuthenticationChallenge *challenge;
 @property (nonatomic, strong) OMWebViewClient *webViewClient;
 @property (nonatomic, assign) BOOL clearPersistentCookies;
-@property (nonatomic, weak) id<UIWebViewDelegate> previousDelegate;
 @end
 
 @implementation OMOAuthLogoutService
@@ -90,29 +89,39 @@
 
 -(void)sendFinishLogout:(NSError *)error
 {
-    self.webViewClient.clientWebView.delegate = self.previousDelegate;
+    [self.webViewClient stopRequest];
+    
     OMAuthenticationContext *context = [self.mss.cacheDict
                                         valueForKey:self.mss.authKey];
     OMOAuthConfiguration *config = (OMOAuthConfiguration *)
     self.mss.configuration;
 
+    [context clearCookies:self.clearPersistentCookies];
+
     if (self.clearPersistentCookies)
     {
-        [context clearCookies:self.clearPersistentCookies];
         [self.mss.cacheDict removeObjectForKey:self.mss.authKey];
         
         if ([config isClientRegistrationRequired])
         {
             [self removeClientRegistrationToken];
         }
-
     }
     else
     {
-        
         context.isLogoutFalseCalled = true;
     }
     
+    if (self.clearPersistentCookies)
+    {
+        context = nil;
+        self.mss.authManager.curentAuthService.context = nil;
+    }
+    if (self.mss.configuration.sessionActiveOnRestart)
+    {
+        [[OMCredentialStore sharedCredentialStore]
+         deleteAuthenticationContext:self.mss.authKey];
+    }
 
     [self.mss.delegate mobileSecurityService:self.mss
                              didFinishLogout:error];
@@ -167,8 +176,6 @@ didFailLoadWithError:(NSError *)error
 {
     NSError *error = [[OMCredentialStore sharedCredentialStore]
                       deleteCredential:[self clientRegistrationKey]];
-
-    
     
 }
 

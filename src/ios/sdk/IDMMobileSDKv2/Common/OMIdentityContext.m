@@ -19,7 +19,6 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <net/if_dl.h>
-#import "libkern/OSAtomic.h"
 #import "OMCredentialStore.h"
 #import "OMReachability.h"]
 #import "OMCredential.h"

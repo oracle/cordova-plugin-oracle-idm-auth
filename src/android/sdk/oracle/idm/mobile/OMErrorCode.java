@@ -22,10 +22,11 @@ public enum OMErrorCode {
     UNABLE_TO_CONNECT_TO_SERVER("10001", "UNABLE TO CONNECT TO SERVER"),
     SSL_EXCEPTION("10002", "SSL Exception occurred."),
     UNEXPECTED_SSL_FAILURE("10004", "Unexpected SSL error occurred. Please contact administrator for help."),
+    SERVER_RETURNED_ERROR("10005", "The server encountered an error. Try again. If the problem persists, contact your system administrator."),
 
     AUTHENTICATION_FAILED("10408", "Authentication failed"),
     USER_NOT_AUTHENTICATED("10023", "User not yet authenticated"),
-    USER_CANCELED_AUTHENTICATION("10029","User canceled authentication"),
+    USER_CANCELED_AUTHENTICATION("10029", "User canceled authentication"),
     LOGOUT_TIMED_OUT("10034", "Logout operation failed as connection timed out."),
     LOGOUT_FAILED("10035", "Logout failed"),
     USERNAME_REQUIRED("10036", "Username required"),
@@ -42,7 +43,7 @@ public enum OMErrorCode {
     UN_PWD_INVALID("10003", "Invalid username or password."),
     LOGOUT_URL_NOT_LOADED("0021", "LOGOUT URL IS NOT LOADED IN WEBVIEW. BUT, ALL SESSION COOKIES ARE CLEARED LOCALLY"),
 
-    INVALID_APP_NAME("10100","Invalid Application name"),
+    INVALID_APP_NAME("10100", "Invalid Application name"),
     INVALID_AUTH_SERVER_TYPE("10115", "Invalid authentication server type"),
     MAX_RETRIES_REACHED("10418", "Authentication has been retried max allowed times"),
 
@@ -57,7 +58,8 @@ public enum OMErrorCode {
     OUT_OF_RANGE("10403", "Parameter or value is out of range"),
 
     //basic
-    INVALID_BASIC_AUTHENTICATION_URL("20001", "Invalid basic auth url"),
+    INVALID_BASIC_AUTHENTICATION_URL("20001", "Invalid basic auth url or another user is already logged in." +
+            "Logout any other session and try again."),
 
     //Network related
     INVALID_REDIRECTION_PROTOCOL_MISMATCH("300", "INVALID REDIRECTION (CHANGE IN PROTOCOL NOT SUPPORTED)"),
@@ -131,7 +133,8 @@ public enum OMErrorCode {
      * Caused by: java.security.InvalidAlgorithmParameterException: java.lang.IllegalStateException: At least one fingerprint must be enrolled to create keys requiring user authentication for every use
      * This seems to be a bug in emulator. This should not arise in a device.
      */
-    NO_FINGERPRINT_ENROLLED("10536", "At least one fingerprint must be enrolled to create keys requiring user authentication for every use");
+    NO_FINGERPRINT_ENROLLED("10536", "At least one fingerprint must be enrolled to create keys requiring user authentication for every use"),
+    DISABLE_AUTHENTICATOR_INSTANCE("60014", "Disable Authentication for all instances of authenticator.");
 
 
     String mErrorCode;

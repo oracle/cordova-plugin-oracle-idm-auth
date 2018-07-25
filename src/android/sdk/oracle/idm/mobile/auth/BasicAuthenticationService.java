@@ -32,20 +32,21 @@ import oracle.idm.mobile.connection.OMHTTPResponse;
 import oracle.idm.mobile.credentialstore.OMCredential;
 import oracle.idm.mobile.logging.OMLog;
 
-import static oracle.idm.mobile.OMSecurityConstants.Challenge.*;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.IDENTITY_DOMAIN_KEY;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.PASSWORD_KEY;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.USERNAME_KEY;
 
 /**
- * Created by ajulka on 1/7/2016.
+ * Handles basic authentication.
  */
 class BasicAuthenticationService extends AuthenticationService implements ChallengeBasedService {
 
     private static final String TAG = BasicAuthenticationService.class.getSimpleName();
-    private boolean idleTimeOut = false;
     private boolean sessionTimedOut = false;
 
     BasicAuthenticationService(AuthenticationServiceManager asm, OMAuthenticationCompletionHandler handler) {
         super(asm, handler);
-        OMLog.info(OMSecurityConstants.TAG, "initialized");
+        OMLog.info(TAG, "initialized");
     }
 
     @Override
@@ -129,11 +130,9 @@ class BasicAuthenticationService extends AuthenticationService implements Challe
     public OMHTTPResponse handleAuthentication(OMAuthenticationRequest authRequest, OMAuthenticationContext authContext) throws OMMobileSecurityException {
         OMLog.trace(TAG, "handleAuthentication");
         OMLog.trace(TAG, "username: " + authContext.getInputParams().get(USERNAME_KEY));
-        int flag;
-        Map<String, Object> inputParams = authContext.getInputParams();
         OMConnectionHandler connectionHandler = mASM.getMSS().getConnectionHandler();
         OMCookieManager omCookieManager = OMCookieManager.getInstance();
-        inputParams = authContext.getInputParams();
+        Map<String, Object> inputParams = authContext.getInputParams();
         String username = (String) inputParams.get(USERNAME_KEY);
         String password = (String) inputParams.get(PASSWORD_KEY);
         String identityDomain = (String) inputParams.get(IDENTITY_DOMAIN_KEY);
@@ -143,39 +142,45 @@ class BasicAuthenticationService extends AuthenticationService implements Challe
         username = addIdentityDomain(username, headers, identityDomain);
         OMAuthenticationContext existingAuthContext = mASM.retrieveAuthenticationContext();
         //Username is being set in authContext only after successful authentication, hence it will be null in case of retries.
-        if (existingAuthContext != null && (existingAuthContext.getUserName() != null && !existingAuthContext.getUserName().equals(username))) {
+        if (existingAuthContext != null) {
             /*
-             * if user is different, delete session cookies of previous authContext before trying
-             * online authentication against server
+             * Delete session cookies of previous authContext before trying online authentication
+             * against server. Cookies will be present here only after idle timeout, not after
+             * session timeout.
              */
             existingAuthContext.deleteCookies();
         }
         omCookieManager.startURLTracking();
-        if (existingAuthContext != null
-                && (existingAuthContext.getUserName() != null && existingAuthContext.getUserName().equals(username))
-                && authContext.isIdleTimeout()) {
-            flag = (OMHTTPRequest.REQUIRE_RESPONSE_HEADERS | OMHTTPRequest.REQUIRE_RESPONSE_CODE | OMHTTPRequest.REQUIRE_RESPONSE_STRING);
-        } else {
-            flag = (OMHTTPRequest.AUTHENTICATION_REQUEST | OMHTTPRequest.REQUIRE_RESPONSE_HEADERS | OMHTTPRequest.REQUIRE_RESPONSE_CODE | OMHTTPRequest.REQUIRE_RESPONSE_STRING) | OMHTTPRequest.AUTHENTICATION_REQUEST;
-        }
-
+        int flag = (OMHTTPRequest.AUTHENTICATION_REQUEST | OMHTTPRequest.REQUIRE_RESPONSE_HEADERS |
+                OMHTTPRequest.REQUIRE_RESPONSE_CODE | OMHTTPRequest.REQUIRE_RESPONSE_STRING);
         OMHTTPResponse httpResponse = connectionHandler.httpGet(authRequest.getAuthenticationURL(), username, password, headers, false, flag);
         omCookieManager.stopURLTracking();
         Set<String> requiredCookies = mASM.getMSS().getMobileSecurityConfig().getRequiredTokens();
         authContext.setAuthenticationProvider(AuthenticationProvider.BASIC);
-        if (omCookieManager.hasRequiredCookies(requiredCookies, omCookieManager.getVisitedURLs())) {
+        boolean hasReqCookies = omCookieManager.hasRequiredCookies(requiredCookies, omCookieManager.getVisitedURLs());
+        boolean successResponse = httpResponse.isSuccess();
+        if (successResponse && hasReqCookies) {
             authContext.setStatus(Status.SUCCESS);
             authContext.setVisitedUrls(omCookieManager.getVisitedURLs());
-            authContext.setCookies(parseVisitedURLCookieMap(httpResponse.getVisitedUrlsCookiesMap()));
+            authContext.setCookies(parseVisitedURLCookieMap(omCookieManager.getVisitedUrlsCookiesMap()));
         } else {
-            // fail only if the apps has specified required tokens.
-            // this can happen due to the tokens requested not matching
-            // Setting AuthenticationProvider so that logout url is invoked
-            // properly in this use case, clearing the same in
-            // OMAuthenticationContext#clearAllFields()
+             /*This can happen because the required tokens are not present after authentication.
+             Setting AuthenticationProvider so that logout url is invoked properly in this use case,
+             clearing the same in OMAuthenticationContext#clearAllFields().
+             Cookies are deleted here itself as logout url invocation happens asynchronously
+             and we are supposed to invoke onAuthenticationCompleted without waiting for
+             logout url invocation to be completed.*/
             authContext.setStatus(Status.FAILURE);
             OMLog.error(TAG, "Tokens that are requested are not available from the server.");
-            throw new OMMobileSecurityException(OMErrorCode.AUTHENTICATION_FAILED, new InvalidCredentialEvent());
+            authContext.setCookies(parseVisitedURLCookieMap(omCookieManager.getVisitedUrlsCookiesMap()));
+            authContext.deleteCookies();
+            if (!successResponse) {
+                throw new OMMobileSecurityException(OMErrorCode.AUTHENTICATION_FAILED,
+                        httpResponse.constructErrorMessage());
+            } else {
+                throw new OMMobileSecurityException(OMErrorCode.AUTHENTICATION_FAILED,
+                        new InvalidCredentialEvent());
+            }
         }
         return httpResponse;
     }
@@ -186,7 +191,7 @@ class BasicAuthenticationService extends AuthenticationService implements Challe
         if (mAuthCompletionHandler != null) {
             mAuthCompletionHandler.cancel();
         }
-        OMAuthenticationContext authContext = mASM.getAuthenticationContext();
+        OMAuthenticationContext authContext = mASM.getTemporaryAuthenticationContext();
         if (authContext != null) {
             authContext.clearFields();
         }
@@ -195,17 +200,6 @@ class BasicAuthenticationService extends AuthenticationService implements Challe
     @Override
     public Type getType() {
         return Type.BASIC_SERVICE;
-    }
-
-    /*
-     * return if idle time out is hit or not?
-     */
-    boolean isIdleTimeOut() {
-        return idleTimeOut;
-    }
-
-    public void setIdleTimeOut(boolean idleTimeOut) {
-        this.idleTimeOut = idleTimeOut;
     }
 
     boolean isSessionTimedOut() {
@@ -221,7 +215,7 @@ class BasicAuthenticationService extends AuthenticationService implements Challe
         Date idleTimeExpiry = authContext.getIdleTimeExpiry();
         Date currentTime = Calendar.getInstance().getTime();
 
-        setIdleTimeOut(false);// reseting the value .
+        authContext.setIdleTimeout(false);// reseting the value .
 
         // Non-zero check for getSessionExpInSecs() added to ignore session
         // expiry if session timeout value is 0.
@@ -253,15 +247,13 @@ class BasicAuthenticationService extends AuthenticationService implements Challe
                 .equals(idleTimeExpiry))) {
 
             OMLog.debug(TAG + "_isValid", "Idle time is expired.");
-            setIdleTimeOut(true);
+            authContext.setIdleTimeout(true);
             return false;
         }
 
         if (authContext.getAuthenticatedMode() == OMAuthenticationContext.AuthenticationMode.ONLINE) {
-            authContext.resetIdleTime();
-            if (authContext.getIdleTimeExpiry() != null) {
-                OMLog.debug(TAG + "_isValid", "Idle time is reset to : "
-                        + authContext.getIdleTimeExpiry().getTime());
+            if (authContext.getIdleTimeExpInSecs() > 0 && !authContext.resetIdleTime()) {
+                return false;
             }
             authContext.setStatus(Status.SUCCESS);
         }
@@ -280,13 +272,6 @@ class BasicAuthenticationService extends AuthenticationService implements Challe
         if (isDeleteCookies) {
             URL logoutUrl = mASM.getMSS().getMobileSecurityConfig().getLogoutUrl();
             if (logoutUrl != null) {
-                /*
-                 * Already setting the logout in progress to true in the
-                 * beginning.
-                 */
-                if (isLogoutCall) {
-                    mASM.getMSS().setLogoutInProgress(true);
-                }
                 new AccessLogoutUrlTask(mASM.getMSS().getMobileSecurityConfig(),
                         isLogoutCall, authContext).execute();
             }

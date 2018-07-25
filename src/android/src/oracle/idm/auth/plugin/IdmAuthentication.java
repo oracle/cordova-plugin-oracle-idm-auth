@@ -18,7 +18,9 @@ import android.content.Context;
 import android.content.IntentFilter;
 import android.net.Uri;
 import android.os.Looper;
+import android.util.Log;
 import android.widget.Toast;
+import oracle.idm.auth.plugin.util.PluginErrorCodes;
 import oracle.idm.mobile.OMErrorCode;
 import oracle.idm.mobile.OMMobileSecurityException;
 import oracle.idm.mobile.OMMobileSecurityService;
@@ -34,7 +36,6 @@ import oracle.idm.mobile.callback.OMAuthenticationContextCallback;
 import oracle.idm.mobile.callback.OMMobileSecurityServiceCallback;
 import oracle.idm.mobile.configuration.OMMobileSecurityConfiguration;
 
-import oracle.idm.mobile.logging.OMLog;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
 import org.json.JSONArray;
@@ -80,7 +81,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
    */
   public boolean setup(final CallbackContext callback)
   {
-    OMLog.debug(TAG, "Setting up OMMSS instance with: " + _props);
+    Log.d(TAG, "Setting up OMMSS instance with: " + _props);
     try
     {
       _ommss = new OMMobileSecurityService(_mainActivity, _props, this);
@@ -94,12 +95,12 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
     }
     catch (OMMobileSecurityException securityEx)
     {
-      OMLog.error(TAG, "Error while setting up OMMSS instance.");
+      Log.e(TAG, "Error while setting up OMMSS instance.");
       IdmAuthenticationPlugin.invokeCallbackError(callback, securityEx);
       return false;
     } catch (InterruptedException e) {
-      OMLog.error(TAG, "Error while setting up OMMSS instance.");
-      IdmAuthenticationPlugin.invokeCallbackError(callback, _SETUP_ERROR);
+      Log.e(TAG, "Error while setting up OMMSS instance.");
+      IdmAuthenticationPlugin.invokeCallbackError(callback, PluginErrorCodes.SETUP_ERROR);
       return false;
     }
     return true;
@@ -111,23 +112,28 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
    */
   public void startLogin(final CallbackContext loginCallback)
   {
-    OMLog.debug(TAG, "Start login process.");
+    Log.d(TAG, "Start login process.");
     _loginCallback = loginCallback;
-    _mainActivity.runOnUiThread(new Runnable()
-    {
-      @Override
-      public void run() {
-        try
-        {
-          _ommss.authenticate();
-        }
-        catch (OMMobileSecurityException securityEx)
-        {
-          OMLog.error(TAG, "Error while login: " + securityEx.getMessage());
-          IdmAuthenticationPlugin.invokeCallbackError(loginCallback, securityEx);
-        }
+    _mainActivity.runOnUiThread(() -> {
+      try
+      {
+        _ommss.authenticate();
+      }
+      catch (OMMobileSecurityException securityEx)
+      {
+        Log.e(TAG, "Error while login: " + securityEx.getMessage());
+        IdmAuthenticationPlugin.invokeCallbackError(loginCallback, securityEx);
       }
     });
+  }
+
+  public void cancelLogin(final CallbackContext loginCallback) {
+    Log.d(TAG, "Cancel login.");
+    _loginCallback = loginCallback;
+    _mainActivity.runOnUiThread(() -> {
+      _completionHandler.cancel();
+    });
+    Log.d(TAG, "Cancel login process completed.");
   }
 
   /**
@@ -137,37 +143,34 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
    */
   public void finishLogin(final JSONObject challengeFieldsJson, final CallbackContext loginCallback)
   {
-    OMLog.debug(TAG, "Finish login process.");
+    Log.d(TAG, "Finish login process.");
     _loginCallback = loginCallback;
     final Map<String, Object> challengeFields = new HashMap<String, Object>();
-    _mainActivity.runOnUiThread(new Runnable() {
-      @Override
-      public void run() {
-        Iterator<String> it = challengeFieldsJson.keys();
-        while (it.hasNext())
-        {
-          String key = it.next();
-          challengeFields.put(key, challengeFieldsJson.opt(key));
-        }
-        _completionHandler.proceed(challengeFields);
+    _mainActivity.runOnUiThread(() -> {
+      Iterator<String> it = challengeFieldsJson.keys();
+      while (it.hasNext())
+      {
+        String key = it.next();
+        Object value = challengeFieldsJson.opt(key);
+        if (value == JSONObject.NULL)
+          value = null;
+
+        challengeFields.put(key, value);
       }
+      _completionHandler.proceed(challengeFields);
     });
   }
 
   /**
    * Initiate logout.
    * @param logoutCallback executed when IDM invokes onLogoutCompleted.
+   * @param forget whether to forget the auth details.
    */
-  public void logout(final CallbackContext logoutCallback)
+  public void logout(final CallbackContext logoutCallback, boolean forget)
   {
-    OMLog.debug(TAG, "Logout invoked.");
+    Log.d(TAG, "Logout invoked with forget: " + forget);
     _logoutCallback = logoutCallback;
-    _mainActivity.runOnUiThread(new Runnable() {
-      @Override
-      public void run() {
-        _ommss.logout(false);
-      }
-    });
+    _mainActivity.runOnUiThread(() -> _ommss.logout(forget));
   }
 
   /**
@@ -177,7 +180,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
    */
   public void isAuthenticated(JSONObject props, CallbackContext callbackContext)
   {
-    OMLog.debug(TAG, "isAuthenticated invoked.");
+    Log.d(TAG, "isAuthenticated invoked.");
     try
     {
       Set<String> scopeSet = null;
@@ -208,12 +211,12 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
       {
         if (scopeSet != null)
         {
-          OMLog.debug(TAG, "Invoking isValid with scopeSet and refreshExpiredTokens options.");
+          Log.d(TAG, "Invoking isValid with scopeSet and refreshExpiredTokens options.");
           isValid = context.isValid(scopeSet, refreshExpiredTokens);
         }
         else
         {
-          OMLog.debug(TAG, "Invoking isValid.");
+          Log.d(TAG, "Invoking isValid.");
           isValid = context.isValid();
         }
       }
@@ -224,7 +227,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
     }
     catch (OMMobileSecurityException securityEx)
     {
-      OMLog.error(TAG, "Error while checking authentication status: " + securityEx.getMessage());
+      Log.e(TAG, "Error while checking authentication status: " + securityEx.getMessage());
       IdmAuthenticationPlugin.invokeCallbackError(callbackContext, securityEx);
     }
   }
@@ -235,7 +238,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
    */
   public void addTimeoutCallback(CallbackContext callbackContext)
   {
-    OMLog.debug(TAG, "Adding timeout callback.");
+    Log.d(TAG, "Adding timeout callback.");
     _timeoutCallback = callbackContext;
     _ommss.setAuthenticationContextCallback(this);
   }
@@ -247,32 +250,29 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
    */
   public void resetIdleTimeout(final CallbackContext callbackContext)
   {
-    OMLog.debug(TAG, "Resetting idle timeout.");
-    _mainActivity.runOnUiThread(new Runnable() {
-      @Override
-      public void run() {
-        try
+    Log.d(TAG, "Resetting idle timeout.");
+    _mainActivity.runOnUiThread(() -> {
+      try
+      {
+        OMAuthenticationContext authContext = _ommss.retrieveAuthenticationContext();
+        boolean resetSuccess = authContext.resetTimer();
+        if (resetSuccess)
         {
-          OMAuthenticationContext authContext = _ommss.retrieveAuthenticationContext();
-          boolean resetSuccess = authContext.resetTimer();
-          if (resetSuccess)
-          {
-            callbackContext.success();
-          }
-          else
-          {
-            //
-            // There is no error code for this scenario in the wiki.
-            //
-            OMLog.debug(TAG, "Resetting idle timeout failed.");
-            IdmAuthenticationPlugin.invokeCallbackError(callbackContext, _IDLE_TIMEOUT_RESET_FAILED);
-          }
+          callbackContext.success();
         }
-        catch (OMMobileSecurityException securityEx)
+        else
         {
-          OMLog.error(TAG, "Error while resetting idle timeout: " + securityEx.getMessage());
-          IdmAuthenticationPlugin.invokeCallbackError(callbackContext, securityEx);
+          //
+          // There is no error code for this scenario in the wiki.
+          //
+          Log.d(TAG, "Resetting idle timeout failed.");
+          IdmAuthenticationPlugin.invokeCallbackError(callbackContext, PluginErrorCodes.IDLE_TIMEOUT_RESET_FAILED);
         }
+      }
+      catch (OMMobileSecurityException securityEx)
+      {
+        Log.e(TAG, "Error while resetting idle timeout: " + securityEx.getMessage());
+        IdmAuthenticationPlugin.invokeCallbackError(callbackContext, securityEx);
       }
     });
   }
@@ -284,10 +284,16 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
    */
   public void getHeaders(final CallbackContext callbackContext, String fedAuthSecuredUrl, Set<String> scopes)
   {
-    OMLog.debug(TAG, "Getting headers.");
+    Log.d(TAG, "Getting headers.");
     try
     {
       OMAuthenticationContext context = _ommss.retrieveAuthenticationContext();
+
+      if (context == null) {
+        IdmAuthenticationPlugin.invokeCallbackError(callbackContext, PluginErrorCodes.NO_AUTH_CONTEXT);
+        return;
+      }
+
       Map<String, Object> headers = new HashMap<String, Object>();
 
       switch(_authType)
@@ -316,7 +322,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
     }
     catch (OMMobileSecurityException securityEx)
     {
-      OMLog.error(TAG, "Error while getting headers: " + securityEx.getMessage());
+      Log.e(TAG, "Error while getting headers: " + securityEx.getMessage());
       IdmAuthenticationPlugin.invokeCallbackError(callbackContext, securityEx);
     }
   }
@@ -334,7 +340,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
       _externalBrowserChallengeResponseExpected = false;
     } else
     {
-      OMLog.info(TAG, "Not expecting a external browser challenge response, ignoring.");
+      Log.i(TAG, "Not expecting a external browser challenge response, ignoring.");
     }
   }
 
@@ -342,7 +348,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
   public void onAuthenticationChallenge(OMMobileSecurityService ommss, OMAuthenticationChallenge challenge,
                                         final OMAuthenticationCompletionHandler completionHandler)
   {
-    OMLog.debug(TAG, "onAuthenticationChallenge invoked.");
+    Log.d(TAG, "onAuthenticationChallenge invoked.");
     Map<String, Object> fields = challenge.getChallengeFields();
 
     Object o = fields.get(OMSecurityConstants.Challenge.MOBILE_SECURITY_EXCEPTION);
@@ -355,7 +361,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
     if (o != null && o instanceof OMMobileSecurityException)
     {
       OMMobileSecurityException securityEx = (OMMobileSecurityException) o;
-      OMLog.warn(TAG, "Exception returned in Challenge callback.", securityEx);
+      Log.w(TAG, "Exception returned in Challenge callback.", securityEx);
       errorCode = securityEx.getErrorCode();
 
       //
@@ -394,7 +400,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
     switch (_challengeType)
     {
       case USERNAME_PWD_REQUIRED:
-        OMLog.debug(TAG, "Handling username password challenge.");
+        Log.d(TAG, "Handling username password challenge.");
         Map<String, Object> fieldsMap = new HashMap<String, Object>();
         fieldsMap.put("challengeFields", fields);
 
@@ -408,7 +414,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
         _loginCallback.success(new JSONObject(fieldsMap));
         break;
       case EMBEDDED_WEBVIEW_REQUIRED:
-        OMLog.debug(TAG, "Handling embedded webview challenge.");
+        Log.d(TAG, "Handling embedded webview challenge.");
         _startWebView();
         break;
       case EXTERNAL_BROWSER_INVOCATION_REQUIRED:
@@ -421,8 +427,8 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
         }
         else
         {
-          OMLog.error(TAG, "Error while handling external browser challenge. Cannot launch external browser. Cancelling login.");
-          IdmAuthenticationPlugin.invokeCallbackError(_loginCallback, _EXTERNAL_BROWSER_LAUNCH_ERROR);
+          Log.e(TAG, "Error while handling external browser challenge. Cannot launch external browser. Cancelling login.");
+          IdmAuthenticationPlugin.invokeCallbackError(_loginCallback, PluginErrorCodes.EXTERNAL_BROWSER_LAUNCH_FAILED);
           _completionHandler.cancel();
         }
         break;
@@ -430,14 +436,16 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
         // The google way of redirecting to app via http://localhost
         // does not result in a challenge in Android. The challenge in Android
         // happens only when there is a POST request which moves from secured to non secured.
-        IdmAuthenticationPlugin.invokeCallbackError(_loginCallback, _REDIRECT_CHALLENGE_ERROR);
+        _finishWebView();
+        IdmAuthenticationPlugin.invokeCallbackError(_loginCallback, PluginErrorCodes.INVALID_REDIRECT_CHALLENGE);
         break;
       case UNTRUSTED_SERVER_CERTIFICATE:
-        IdmAuthenticationPlugin.invokeCallbackError(_loginCallback, _UNTRUSTED_CHALLENGE_ERROR);
+        _finishWebView();
+        IdmAuthenticationPlugin.invokeCallbackError(_loginCallback, PluginErrorCodes.UNTRUSTED_CHALLENGE);
         break;
       default:
-        OMLog.warn(TAG, "Unhandled challenge type encountered: " + _challengeType);
-        IdmAuthenticationPlugin.invokeCallbackError(_loginCallback, _UNSUPPORTED_CHALLENGE_ERROR);
+        Log.w(TAG, "Unhandled challenge type encountered: " + _challengeType);
+        IdmAuthenticationPlugin.invokeCallbackError(_loginCallback, PluginErrorCodes.UNSUPPORTED_CHALLENGE);
         break;
     }
   }
@@ -446,7 +454,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
   public void onLogoutChallenge(OMMobileSecurityService ommss, OMAuthenticationChallenge challenge,
                                 final OMLogoutCompletionHandler completionHandler)
   {
-    OMLog.debug(TAG, "onLogoutChallenge invoked.");
+    Log.d(TAG, "onLogoutChallenge invoked.");
     Map<String, Object> fields = challenge.getChallengeFields();
     _completionHandler = new CompletionHandler()
     {
@@ -473,7 +481,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
       //
       // Provide webview for logout via activity.
       //
-      OMLog.debug(TAG, "Handling embedded webview challenge");
+      Log.d(TAG, "Handling embedded webview challenge");
       _startWebView();
     }
     else if (challenge.getChallengeType() == OMAuthenticationChallengeType.EXTERNAL_BROWSER_INVOCATION_REQUIRED)
@@ -487,8 +495,8 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
       }
       else
       {
-        OMLog.error(TAG, "Error while handling external browser challenge. Cannot launch external browser. Cancelling login.");
-        IdmAuthenticationPlugin.invokeCallbackError(_logoutCallback, _EXTERNAL_BROWSER_LAUNCH_ERROR);
+        Log.e(TAG, "Error while handling external browser challenge. Cannot launch external browser. Cancelling login.");
+        IdmAuthenticationPlugin.invokeCallbackError(_logoutCallback, PluginErrorCodes.EXTERNAL_BROWSER_LAUNCH_FAILED);
         _completionHandler.cancel();
       }
     }
@@ -498,17 +506,17 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
   public void onSetupCompleted(OMMobileSecurityService ommss, OMMobileSecurityConfiguration config,
                                OMMobileSecurityException securityEx)
   {
-    OMLog.debug(TAG, "Setup completed.");
+    Log.d(TAG, "Setup completed.");
     _setupException = securityEx;
     _setupLatch.countDown();
-    OMLog.debug(TAG, "Exit Setup completed..");
+    Log.d(TAG, "Exit Setup completed..");
   }
 
   @Override
   public void onAuthenticationCompleted(OMMobileSecurityService ommss, OMAuthenticationContext context,
                                         OMMobileSecurityException securityEx)
   {
-    OMLog.debug(TAG, "onAuthenticationCompleted invoked.");
+    Log.d(TAG, "onAuthenticationCompleted invoked.");
     try
     {
       //
@@ -519,7 +527,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
 
       if (securityEx != null)
       {
-        OMLog.error(TAG, "Error in authentication completed: " + securityEx.getMessage());
+        Log.e(TAG, "Error in authentication completed: " + securityEx.getMessage());
         IdmAuthenticationPlugin.invokeCallbackError(_loginCallback, securityEx);
         return;
       }
@@ -535,14 +543,14 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
   @Override
   public void onLogoutCompleted(OMMobileSecurityService ommss, OMMobileSecurityException securityEx)
   {
-    OMLog.debug(TAG, "onLogoutCompleted invoked");
+    Log.d(TAG, "onLogoutCompleted invoked");
     try
     {
       _finishWebView();
 
       if (securityEx != null)
       {
-        OMLog.error(TAG, "Error in logout completed: " + securityEx.getMessage());
+        Log.e(TAG, "Error in logout completed: " + securityEx.getMessage());
         IdmAuthenticationPlugin.invokeCallbackError(_logoutCallback, securityEx);
         return;
       }
@@ -564,7 +572,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
   @Override
   public void onTimeout(TimeoutType timeoutType, long timeLeftToTimeout)
   {
-    OMLog.debug(TAG, "onTimeout invoked");
+    Log.d(TAG, "onTimeout invoked");
     Map<String, String> resp = new HashMap<String, String>();
     resp.put("TimeoutType", timeoutType.toString());
     resp.put("TimeLeftToTimeout", String.valueOf(timeLeftToTimeout));
@@ -598,22 +606,12 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
    */
   private void _startWebView()
   {
-    OMLog.debug(TAG, "Launching webview activity");
-    _mainActivity.runOnUiThread(new Runnable() {
-      @Override
-      public void run() {
-        _mainActivity.registerReceiver(_broadcastReceiver, new IntentFilter(WebViewActivity.CANCEL_WEB_VIEW_INTENT));
-        Intent intent = new Intent(_mainActivity, WebViewActivity.class);
-        String oauthRedirectEndPoint = null;
-        Object oauthRedirectEndPointObj = _props.get(OMMobileSecurityService.OM_PROP_OAUTH_REDIRECT_ENDPOINT);
-
-        if (oauthRedirectEndPointObj != null)
-          oauthRedirectEndPoint = (String) oauthRedirectEndPointObj;
-
-        intent.putExtra(OMMobileSecurityService.OM_PROP_OAUTH_REDIRECT_ENDPOINT, oauthRedirectEndPoint);
-        _mainActivity.startActivity(intent);
-        _isWebViewChallenge = true;
-      }
+    Log.d(TAG, "Launching webview activity");
+    _mainActivity.runOnUiThread(() -> {
+      _mainActivity.registerReceiver(_broadcastReceiver, new IntentFilter(WebViewActivity.CANCEL_WEB_VIEW_INTENT));
+      Intent intent = new Intent(_mainActivity, WebViewActivity.class);
+      _mainActivity.startActivity(intent);
+      _isWebViewChallenge = true;
     });
   }
 
@@ -625,14 +623,11 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
       return;
     }
 
-    OMLog.debug(TAG, "Hide webview after successful authentication or logout.");
-    _mainActivity.runOnUiThread(new Runnable() {
-      @Override
-      public void run() {
-        _mainActivity.sendBroadcast(new Intent(WebViewActivity.FINISH_WEB_VIEW_INTENT));
-        _mainActivity.unregisterReceiver(_broadcastReceiver);
-        _isWebViewChallenge = false;
-      }
+    Log.d(TAG, "Hide webview after successful authentication or logout.");
+    _mainActivity.runOnUiThread(() -> {
+      _mainActivity.sendBroadcast(new Intent(WebViewActivity.FINISH_WEB_VIEW_INTENT));
+      _mainActivity.unregisterReceiver(_broadcastReceiver);
+      _isWebViewChallenge = false;
     });
   }
 
@@ -640,17 +635,14 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
    * Handle user cancelled login from webView.
    */
   private void _cancelLoginFromWebView() {
-    OMLog.debug(TAG, "Cancel webview login.");
-    _mainActivity.runOnUiThread(new Runnable() {
-      @Override
-      public void run() {
-        if (_completionHandler.getChallengeType() == CompletionHandler.CHALLENGE_TYPE.LOGIN)
-        {
-          _ommss.cancel();
-        }
-        Toast.makeText(_mainActivity.getApplicationContext(), "Cancel WebView Login", Toast.LENGTH_SHORT).show();
-        _finishWebView();
+    Log.d(TAG, "Cancel webview login.");
+    _mainActivity.runOnUiThread(() -> {
+      if (_completionHandler.getChallengeType() == CompletionHandler.CHALLENGE_TYPE.LOGIN)
+      {
+        _ommss.cancel();
       }
+      Toast.makeText(_mainActivity.getApplicationContext(), "Cancel WebView Login", Toast.LENGTH_SHORT).show();
+      _finishWebView();
     });
   }
 
@@ -661,7 +653,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
    */
   private Map<String, Object> _convertToAuthConfigProperties(JSONObject authPropsJson)
   {
-    OMLog.debug(TAG, "Converting JSON to auth map.");
+    Log.d(TAG, "Converting JSON to auth map.");
     Map<String, Object> authProps = new HashMap<String, Object>();
     Iterator<String> keys = authPropsJson.keys();
 
@@ -688,11 +680,11 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
         {
           authProps.put(key, scopeSet);
         }
-
         continue;
       }
 
-      if (OMMobileSecurityService.OM_PROP_CUSTOM_AUTH_HEADERS.equals(key))
+      if (OMMobileSecurityService.OM_PROP_CUSTOM_AUTH_HEADERS.equals(key)
+          || OMMobileSecurityService.OM_PROP_CUSTOM_HEADERS_FOR_MOBILE_AGENT.equals(key))
       {
         JSONObject customAuthPropsJson = authPropsJson.optJSONObject(key);
 
@@ -708,7 +700,6 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
           }
 
           authProps.put(key, customHeaders);
-          authProps.put(OMMobileSecurityService.OM_PROP_CUSTOM_HEADERS_FOR_MOBILE_AGENT, customHeaders);
         }
         continue;
       }
@@ -754,7 +745,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
   private Map<String, Object> _fetchOauthHeaders(OMAuthenticationContext context, Set<String> scopes)
   {
     Map<String, Object> headers = new HashMap<String, Object>();
-    OMLog.debug(TAG, "Collect headers for OAUTH from auth context or scope set " + scopes);
+    Log.d(TAG, "Collect headers for OAUTH from auth context or scope set " + scopes);
 
     //
     // All tokens returned are valid for the provided scopes, return first one.
@@ -774,7 +765,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
    */
   private Map<String, Object> _fetchBasicAuthHeaders(OMAuthenticationContext context)
   {
-    OMLog.debug(TAG, "Collect auth header from auth context for HTTP Basic.");
+    Log.d(TAG, "Collect auth header from auth context for HTTP Basic.");
     Map<String, Object> headers = new HashMap<String, Object>();
     Map<String, Object> contextHeaders = context.getCredentialInformation(new String[]{OMAuthenticationContext.CREDENTIALS});
     String userName = (String) contextHeaders.get("javax.xml.ws.security.auth.username");
@@ -793,7 +784,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
       {
         // This will never happen because the string itself is created locally.
         // Still for completeness, add a log.
-        OMLog.error(TAG, "UnsupportedEncodingException while creating Authorization header.");
+        Log.e(TAG, "UnsupportedEncodingException while creating Authorization header.");
       }
     }
 
@@ -822,12 +813,6 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
   }
 
   private static final String TAG = IdmAuthentication.class.getSimpleName();
-  private static final String _REDIRECT_CHALLENGE_ERROR = "P1001";
-  private static final String _UNTRUSTED_CHALLENGE_ERROR = "P1002";
-  private static final String _UNSUPPORTED_CHALLENGE_ERROR = "P1003";
-  private static final String _IDLE_TIMEOUT_RESET_FAILED = "P1004";
-  private static final String _EXTERNAL_BROWSER_LAUNCH_ERROR = "P1012";
-  private static final String _SETUP_ERROR = "P1013";
   private static final String _AUTHORIZATION = "Authorization";
   private static final String _TOKEN_FORMAT = "%s %s";
   private static final String _BEARER = "Bearer";

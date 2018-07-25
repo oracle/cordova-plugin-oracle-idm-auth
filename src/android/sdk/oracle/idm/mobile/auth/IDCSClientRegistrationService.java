@@ -236,7 +236,7 @@ class IDCSClientRegistrationService extends OAuthAuthorizationCodeService {
                     }
                     OMHTTPResponse regResponse = mASM.getMSS().getConnectionHandler().httpPost(new URL(registrationEP), headers, payload.toString(), OMSecurityConstants.ConnectionConstants.JSON_CONTENT_TYPE.getValue(),
                             (OMHTTPRequest.REQUIRE_RESPONSE_CODE | OMHTTPRequest.REQUIRE_RESPONSE_STRING));
-                    if (regResponse != null && regResponse.getResponseCode() / 100 == 2) {
+                    if (regResponse != null && regResponse.isSuccess()) {
                         OMLog.debug(TAG, "Response Code from Registration EP: " + regResponse.getResponseCode());
                         String clientAssertion = regResponse.getResponseStringOnSuccess();
                         if (enableReqResVerbose) {

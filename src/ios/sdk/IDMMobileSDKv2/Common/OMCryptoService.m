@@ -1844,6 +1844,16 @@ last:
             hashAlgorithm = OMAlgorithmSHA256;
             hashLength = CC_SHA256_DIGEST_LENGTH;
             break;
+        case OMPaddingPKCS1SHA384:
+            underlyingPadding = kSecPaddingPKCS1SHA384;
+            hashAlgorithm = OMAlgorithmSHA384;
+            hashLength = CC_SHA384_DIGEST_LENGTH;
+            break;
+        case OMPaddingPKCS1SHA512:
+            underlyingPadding = kSecPaddingPKCS1SHA512;
+            hashAlgorithm = OMAlgorithmSHA512;
+            hashLength = CC_SHA512_DIGEST_LENGTH;
+            break;
         default:
             if (error)
                 *error = [OMObject createErrorWithCode:

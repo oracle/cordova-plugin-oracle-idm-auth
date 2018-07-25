@@ -1,3 +1,7 @@
+#
+# Copyright (c) 2017, Oracle and/or its affiliates.
+# The Universal Permissive License (UPL), Version 1.0
+#
 # Add project specific ProGuard rules here.
 # By default, the flags in this file are appended to flags specified
 # in D:\Android_SDK/tools/proguard/proguard-android.txt
@@ -32,6 +36,15 @@
 -keep class org.slf4j.** { *; }
 -dontwarn org.slf4j.**
 -dontwarn com.nimbusds.**
+
+#BEGIN: OkHttp uses reflection to obtain the following classes. So, switching off the notes.
+-dontnote com.android.org.conscrypt.SSLParametersImpl
+-dontnote org.apache.harmony.xnet.provider.jsse.SSLParametersImpl
+-dontnote dalvik.system.CloseGuard
+-dontnote sun.security.ssl.SSLContextImpl
+-dontwarn okhttp3.**
+-dontwarn okio.**
+#END: OkHttp
 
 # Enable proguard with Cordova
 -keep class org.apache.cordova.** { *; }

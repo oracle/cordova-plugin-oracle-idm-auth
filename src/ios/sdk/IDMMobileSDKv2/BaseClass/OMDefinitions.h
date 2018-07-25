@@ -285,6 +285,7 @@ extern NSString *const OM_OAUTH_ERROR_SERVER_ERROR;
 extern NSString *const OM_OAUTH_ERROR_TEMPORARILY_UNAVAILABLE;
 extern NSString *const OM_OAUTH_ERROR_TIMEOUT;
 extern NSString *const OM_OAUTH_CLIENT_ASSERTION_REFRESH_TOKEN;
+extern NSString *const OM_OAUTH_INVALID_SCOPE;
 extern NSString *const OM_STATUS_DENIED;
 extern NSString *const OM_PROP_AUTHSERVER_FED_AUTH;
 extern NSString *const OM_PROP_AUTH_WEBVIEW;
@@ -315,6 +316,8 @@ extern NSString *const OM_TOKENS;
 extern NSString *const OM_ACCESS_TOKEN;
 extern NSString *const OM_INVALID_REDIRECT;
 extern NSString *const OM_PRINCIPAL;
+extern NSString *const OM_PROP_USERNAME_PARAM_NAME;
+extern NSString *const OM_PROP_CUSTOM_HEADERS_FOR_MOBILE_AGENT;
 
 ///////////////////////////////////////////////////////////////////////////////
 // OpenID Connect Constants
@@ -366,7 +369,10 @@ extern NSString *const OM_PROP_OAUTH_OAM_SERVICE_ENDPOINT;
 extern NSString *const OM_OAM_OAUTH_TWO_LEGGED_REGISTRATION;
 extern NSString *const OM_OAM_OAUTH_THREE_LEGGED_REGISTRATION;
 extern NSString *const OM_LOGOUT_RESPONSE;
-
+extern NSString *const OM_PROP_AUTHORIZATION_ENDPOINT;
+extern NSString *const OM_PROP_TOKEN_ENDPOINT;
+extern NSString *const OM_PROP_REGISTRATION_ENDPOINT;
+extern NSString *const OM_PROP_OPENID_CONFIGURATION;
 //Device Properties
 extern NSString *const OM_HARDWAREIDS;
 extern NSString *const OM_DEVICE_UNIQUE_ID;
@@ -418,6 +424,7 @@ extern NSString *const OM_Touch_VALIDATION_DATA_ID;
 extern NSString *const OM_KEK_ID;
 extern NSString *const OM_PROP_LOCAL_AUTHENTICATOR_INSTANCE_ID;
 extern NSString *const OM_CRED_FILE_LIST;
+extern NSString *const OM_PIN_LENGTH_KEY;
 
 //Webkit
 
@@ -429,7 +436,8 @@ extern NSString *const OM_PROP_LOGIN_HINT;
 extern NSString *const OM_PROP_IDCS_REGISTER_ENDPOINT;
 extern NSString *const OM_PROP_OAUTH_DISCOVERY_URL;
 
-
+extern NSString *const OM_FACEBOOK_HOST;
+extern NSString *const OM_PROP_SESSION_ACTIVE_ON_RESTART;
 ///////////////////////////////////////////////////////////////////////////////
 // End of OMDefinitions.h
 ///////////////////////////////////////////////////////////////////////////////

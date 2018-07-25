@@ -63,7 +63,12 @@ public class OMOAuthMobileSecurityConfiguration extends
             if (oAuthZGrantObj instanceof OAuthAuthorizationGrantType) {
                 this.mOAuthzGrantType = (OAuthAuthorizationGrantType) oAuthZGrantObj;
             } else if (oAuthZGrantObj instanceof String) {
-                this.mOAuthzGrantType = OAuthAuthorizationGrantType.valueOfGrantType((String) oAuthZGrantObj);
+                OAuthAuthorizationGrantType grantType =
+                        OAuthAuthorizationGrantType.valueOfGrantType((String) oAuthZGrantObj);
+                if (grantType == null) {
+                    throw new IllegalArgumentException("Authorization grant type given is invalid.");
+                }
+                this.mOAuthzGrantType = grantType;
             } else {
                 throw new IllegalArgumentException(
                         "Authorization grant type can not be null");
@@ -123,7 +128,7 @@ public class OMOAuthMobileSecurityConfiguration extends
                     .get(OMMobileSecurityService.OM_PROP_OAUTH_SCOPE);
             if (scopeObj != null) {
                 if (scopeObj instanceof Set<?>) {
-                    this.mOAuthScopes = new HashSet<String>(
+                    this.mOAuthScopes = new HashSet<>(
                             (Set<String>) scopeObj);
                     this.mOAuthScopes.remove(null);
                 }
@@ -197,7 +202,7 @@ public class OMOAuthMobileSecurityConfiguration extends
                 if (registerEPObj instanceof String) {
                     mClientRegistrationEndpoint = (String) registerEPObj;
                 } else if (registerEPObj instanceof URL) {
-                    mClientRegistrationEndpoint = ((URL) registerEPObj).toString();
+                    mClientRegistrationEndpoint = registerEPObj.toString();
                 }
             }
             parseIdleTimeout(configProperties);

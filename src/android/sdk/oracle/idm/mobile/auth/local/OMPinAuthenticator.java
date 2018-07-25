@@ -21,6 +21,7 @@ import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 
 import oracle.idm.mobile.OMErrorCode;
+import oracle.idm.mobile.OMSecurityConstants;
 import oracle.idm.mobile.crypto.Base64;
 import oracle.idm.mobile.crypto.OMInvalidKeyException;
 import oracle.idm.mobile.crypto.OMKeyManager;
@@ -34,6 +35,8 @@ import oracle.idm.mobile.logging.OMLog;
  *
  */
 public class OMPinAuthenticator implements OMAuthenticator {
+
+    private static final String TAG = OMPinAuthenticator.class.getSimpleName();
 
     protected String authenticatorId;
     protected OMAuthenticationPolicy authenticationPolicy;
@@ -121,6 +124,9 @@ public class OMPinAuthenticator implements OMAuthenticator {
     private void doSetAuthData(String pin, byte[] salt) throws OMAuthenticationManagerException {
         try {
             kek = getKeyFromPin(pin, salt);
+            if (OMSecurityConstants.DEBUG) {
+                OMLog.trace(TAG, "**** Inside doSetAuthData: kek = " + Base64.encode(kek.getEncoded()));
+            }
             OMKeyManager keyManager = new OMKeyManager(context);
 
             try {
@@ -277,6 +283,9 @@ public class OMPinAuthenticator implements OMAuthenticator {
 
         try {
             kek = getKeyFromPin(pin, salt);
+            if (OMSecurityConstants.DEBUG) {
+                OMLog.trace(TAG, "**** Inside authenticate: KEK = " + Base64.encode(kek.getEncoded()));
+            }
             OMKeyManager keyManager = new OMKeyManager(context);
             keyStore = keyManager.getKeyStore(authenticatorId, kek.getEncoded());
             OMSecureStorageService secureStorageService = new OMSecureStorageService(context, keyStore, authenticatorId);
@@ -316,8 +325,10 @@ public class OMPinAuthenticator implements OMAuthenticator {
 
     @Override
     public void invalidate() {
+        initialized = false;
         authenticated = false;
         keyStore = null;
+        oldKeyStore = null;
         kek = null;
     }
 

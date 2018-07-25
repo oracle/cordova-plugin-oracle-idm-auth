@@ -114,6 +114,8 @@
 
 -(void)sendSetupDone
 {
+    self.mss.authManager = nil;
+
     if ([self.mss.delegate respondsToSelector:@selector(mobileSecurityService:completedSetupWithConfiguration:error:)])
     {
         if (self.error)

@@ -11,7 +11,6 @@
 @interface OMHTTPBasicConfiguration : OMMobileSecurityConfiguration
 
 @property (nonatomic, strong) NSSet *requiredTokens;
-@property (nonatomic) BOOL isMultiTenantEnabled;
 @property (nonatomic, strong) NSString *applicationID;
 @property (nonatomic) NSUInteger connectivityMode;
 @property (nonatomic,) BOOL offlineAuthAllowed;

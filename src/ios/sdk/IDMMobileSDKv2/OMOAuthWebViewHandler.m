@@ -8,6 +8,13 @@
 #import "OMDefinitions.h"
 #import "OMAuthorizationCodeGrant.h"
 #import "OMErrorCodes.h"
+#import "OMWebViewClient.h"
+
+@interface OMOAuthWebViewHandler ()
+
+@property(nonatomic, strong) OMWebViewClient *webViewClient;
+
+@end
 
 @implementation OMOAuthWebViewHandler
 
@@ -16,6 +23,7 @@ shouldStartLoadWithRequest:(NSURLRequest *)request
 navigationType:(UIWebViewNavigationType)navigationType
 {
     NSString *urlScheme = request.URL.scheme;
+    
     if ([urlScheme isEqual:self.oauthService.config.redirectURI.scheme])
     {
         self.redirectURIHit = true;
@@ -27,7 +35,7 @@ navigationType:(UIWebViewNavigationType)navigationType
         {
             self.oauthService.error = [OMOAuthAuthenticationService
                                        oauthErrorFromResponse:responseDict
-                                       andStatusCode:0];
+                                       andStatusCode:-1];
             self.oauthService.nextStep = OM_NEXT_AUTH_STEP_NONE;
         }
         else
@@ -55,19 +63,10 @@ navigationType:(UIWebViewNavigationType)navigationType
          onThread:self.oauthService.callerThread
          withObject:self.oauthService.error
          waitUntilDone:false];
-        webView.delegate = self.previousDelegate;
+        [self.webViewClient stopRequest];
         return false;
     }
     return true;
-}
-- (void)webViewDidStartLoad:(UIWebView *)webView
-{
-    [self.previousDelegate webViewDidStartLoad:webView];
-}
-
-- (void)webViewDidFinishLoad:(UIWebView *)webView
-{
-    [self.previousDelegate webViewDidFinishLoad:webView];
 }
 
 - (void)webView:(UIWebView *)webView
@@ -82,8 +81,19 @@ didFailLoadWithError:(NSError *)error
          onThread:self.oauthService.callerThread
          withObject:error
          waitUntilDone:false];
-        webView.delegate = self.previousDelegate;
-        [self.previousDelegate webView:webView didFailLoadWithError:error];
+        
+        [self.webViewClient stopRequest];
     }
 }
+- (void)loadRequest:(NSURLRequest*)request;
+{
+    self.webViewClient = [[OMWebViewClient alloc] initWithWebView:self.webView callBackDelegate:self];
+    [self.webViewClient loadRequest:request];
+}
+
+- (void)stopRequest
+{
+    [self.webViewClient stopRequest];
+}
+
 @end

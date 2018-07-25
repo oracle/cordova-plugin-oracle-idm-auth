@@ -21,7 +21,7 @@
 #import "NSData+OMBase64.h"
 #import "NSData+OMBase32.h"
 #import "OMAuthenticator.h"
-#import "OMPinauthenticator.h"
+#import "OMPinAuthenticator.h"
 #import "OMTouchIDAuthenticator.h"
 #import "OMDefaultAuthenticator.h"
 #import "OMAuthData.h"

@@ -6,8 +6,6 @@
 
 package oracle.idm.mobile.connection;
 
-import android.os.Build;
-
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
@@ -41,6 +39,7 @@ public class OMSSLSocketFactory extends SSLSocketFactory {
     private static final OMLogger mLogger = new OMLogger(OMSSLSocketFactory.class);
 
     private String[] mCorrectedProtocols = null;
+    private String[] mEnabledCipherSuites;
 
     private OMTrustManager mTM;
     private OMX509KeyManager mKM;
@@ -75,9 +74,12 @@ public class OMSSLSocketFactory extends SSLSocketFactory {
         mCertificateService = certificateService;
     }
 
-    OMSSLSocketFactory(OMCertificateService certificateService, boolean handleClientCertificates, String protocol, String[] correctedProtocols) throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
+    OMSSLSocketFactory(OMCertificateService certificateService, boolean handleClientCertificates, String protocol,
+                       String[] correctedProtocols, String[] enabledCipherSuites)
+            throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
         this(certificateService, handleClientCertificates, protocol);
         mCorrectedProtocols = correctedProtocols;
+        mEnabledCipherSuites = enabledCipherSuites;
     }
 
 
@@ -159,6 +161,8 @@ public class OMSSLSocketFactory extends SSLSocketFactory {
                 .createSocket(s, host, port, autoClose);
         sslSocket.setEnabledProtocols(protocolCorrection(sslSocket
                 .getEnabledProtocols()));
+        sslSocket.setEnabledCipherSuites(updateCipherSuites(sslSocket
+                .getEnabledCipherSuites()));
         return sslSocket;
     }
 
@@ -167,18 +171,32 @@ public class OMSSLSocketFactory extends SSLSocketFactory {
     Weblogic still supports TLS but by default on Android5.0 onwards TLSv1.1/1.2 is used
      */
     protected String[] protocolCorrection(String[] supportedProtocols) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP
-                && mCorrectedProtocols != null) {
-            // By default from Android5.0 onwards TLSv1.1 and TLSv1.2 is
-            // enabled, but the weblogic server is not compatible with
-            // v1.2/v1.1 hence setting the protocol as v1 by default.
-            // TODO this should be reverted back when weblogic adds this
-            // support.
-            mLogger.debug(
-                    "[OMSSLSocketFactory] device version >= lollipop [setting the default protocols in the sslSocket]");
+        if (mCorrectedProtocols != null) {
+            /**
+             * Initially this support was added because of the following
+             * reason only for Build.VERSION.SDK_INT >=
+             * Build.VERSION_CODES.LOLLIPOP:
+             * <p>
+             * By default from Android5.0 onwards TLSv1.1 and TLSv1.2 is
+             * enabled, but the weblogic server is not compatible with
+             * v1.2/v1.1 hence setting the protocol as v1 by default. TODO
+             * this should be reverted back when weblogic adds this support.
+             *
+             * But, later for fixing 25179521 and 25453853, the version
+             * check [Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP]
+             * is removed. It is mainly to enable TLSv1.1,TLSv1.2 in Android
+             * APIs 16-19, where it is supported but not enabled by default.
+             */
             return mCorrectedProtocols;
         }
         return supportedProtocols;
+    }
+
+    private String[] updateCipherSuites(String[] enabledCipherSuites) {
+        if (mEnabledCipherSuites != null) {
+            return mEnabledCipherSuites;
+        }
+        return enabledCipherSuites;
     }
 
     @Override
@@ -199,6 +217,10 @@ public class OMSSLSocketFactory extends SSLSocketFactory {
     @Override
     public Socket createSocket(InetAddress address, int port, InetAddress localAddress, int localPort) throws IOException {
         return null;
+    }
+
+    public OMTrustManager getTrustManager() {
+        return mTM;
     }
 
     /**

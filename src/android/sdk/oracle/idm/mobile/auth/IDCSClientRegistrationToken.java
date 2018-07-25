@@ -146,12 +146,19 @@ public class IDCSClientRegistrationToken extends OAuthToken {
 
 
     public String toString() {
+        return toJSONObject().toString();
+    }
+
+    @Override
+    public JSONObject toJSONObject() {
         JSONObject tokenJSON = new JSONObject();
         try {
             tokenJSON.put(OMSecurityConstants.CLIENT_ID, mClientID);
             tokenJSON.put(OMSecurityConstants.CLIENT_NAME, mClientName);
             tokenJSON.put(OMSecurityConstants.CLIENT_SECRET, mClientSecret);
-            tokenJSON.put(OMSecurityConstants.CLIENT_SECRET_EXPIRES_AT, expiryTime.getTime());
+            if (expiryTime != null) {
+                tokenJSON.put(OMSecurityConstants.CLIENT_SECRET_EXPIRES_AT, expiryTime.getTime());
+            }
             //redirect URIS
             tokenJSON.put(OMSecurityConstants.REDIRECT_URIS, getListJSON(mRedirectUris));
             //grant types
@@ -159,12 +166,10 @@ public class IDCSClientRegistrationToken extends OAuthToken {
             tokenJSON.put(OMSecurityConstants.DEVICE_ID, mDeviceID);
             tokenJSON.put(OMSecurityConstants.ANDROID_PACKAGE_NAME, mAndroidPackageName);
             tokenJSON.put(OMSecurityConstants.ANDROID_SIGNING_CERT_FINGERPRINT, mAndroidSigningCert);
-            return tokenJSON.toString();
         } catch (JSONException e) {
-            OMLog.debug(TAG, "toString() failed", e);
-            return null;
+            OMLog.debug(TAG, e.getMessage(), e);
         }
-
+        return tokenJSON;
     }
 
     private JSONArray getListJSON(List<String> list) throws JSONException {

@@ -35,5 +35,6 @@ typedef NSUInteger OMInvalidRedirectTypes;
 + (BOOL)isCurrentURL:(NSURL *)currentURL EqualTo:(NSURL *)expectedURL;
 + (NSString *)version;
 + (BOOL)isNetworkReachable;
++ (BOOL)checkConnectivityToHost:(NSURL*)hostUrl;
 
 @end

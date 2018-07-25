@@ -21,6 +21,8 @@ NS_ASSUME_NONNULL_BEGIN
                                    callback:(void(^)(IdmAuthentication* authFlow, NSError* error))setupCompletion;
 - (void) startLogin: (CDVCommandDelegateImpl*) commandDelegate
      withCallbackId: (NSString*) callbackId;
+- (void) cancelLogin: (CDVCommandDelegateImpl*) commandDelegate
+     withCallbackId: (NSString*) callbackId;
 - (void) finishLogin: (CDVCommandDelegateImpl*) commandDelegate
       withCallbackId: (NSString*) callbackId
      challengeResult: (NSDictionary*) challengeFields;
@@ -32,7 +34,8 @@ NS_ASSUME_NONNULL_BEGIN
 withFedAuthSecuredUrl: (NSString*) fedAuthSecuredUrl
     withOauthScopes: (NSSet*) scopes;
 - (void) logout: (CDVCommandDelegateImpl*) commandDelegate
- withCallbackId: (NSString*) callbackId;
+ withCallbackId: (NSString*) callbackId
+ withForgetOption:(BOOL) forget;
 - (void) addTimeoutCallback: (CDVCommandDelegateImpl*) commandDelegate
              withCallbackId: (NSString*) callbackId;
 - (void) resetIdleTimeout: (CDVCommandDelegateImpl*) commandDelegate

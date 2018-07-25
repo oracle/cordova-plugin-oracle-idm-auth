@@ -11,6 +11,19 @@ package oracle.idm.mobile;
  */
 public class OMSecurityConstants {
 
+    /**
+     * Change this boolean to enable/disable debug logging in SDK.
+     *
+     * Cannot use {@link BuildConfig#DEBUG} in library project because of
+     * https://issuetracker.google.com/issues/36967265
+     * <p>
+     * Once, Gradle plugin 3.0 version is up-taken which has the fix (as mentioned in the issue tracker),
+     * we can start using that instead of this boolean variable.
+     * <p>
+     * This should be false in production code.
+     */
+    public static boolean DEBUG = false;
+
     public static final char COLON = ':';
     public static final char EQUAL = '=';
     public static final char AMPERSAND = '&';
@@ -24,8 +37,6 @@ public class OMSecurityConstants {
     public static final int DEFAULT_SALT_LENGTH = 8; // In bytes
 
     // M&S OAuth constants
-    public static final String USERNAME = "username";
-    public static final String PASSWORD = "password";
     public static final String IDENTITY_DOMAIN = "identityDomain";
     public static final String OAUTH_MS_VALID_CLIENT_ASSERTION_PRESENT = "OAuthValidClientAssertionPresent";
     public static final String OAUTH_MS_CLIENT_ASSERTION_SUFFIX = "OAuthClientAssertionKey";
@@ -47,11 +58,6 @@ public class OMSecurityConstants {
 
 
     /*TODO Documentation*/
-//    public static final String USERNAME = "username";
-//    public static final String PASSWORD = "password";
-//    public static final String IDENTITY_DOMAIN = "identityDomain";
-
-
     //TODO Add javadoc for every constant following the format specified for CLIENT_CERTIFICATE_HOST
     /**
      * Holds constants specific to OMAuthenticationChallenge
@@ -190,16 +196,21 @@ public class OMSecurityConstants {
         public static final String OAUTH_CLIENT_ASSERTION = "OAuthClientAssertion";
     }
 
-    //OAuth
+    //Begin : OAuth
     public static final String TOKEN = "TOKEN";
     public static final String TOKEN_NAME = "name";
     public static final String TOKEN_VALUE = "value";
     public static final String EXPIRES = "expires";
     public static final String EXPIRY_SECS = "expirationTSInSec";
+    public static final String URL = "url";
     public static final String OAUTH_TOKEN_REFRESH_VALUE = "OAuthRefreshValue";
+    public static final String OAUTH_TOKEN_TYPE = "OAuthTokenType";
+    public static final String OAUTH_ID_TOKEN = "OAuthIdToken";
+    public static final String OAUTH_TOKEN_ID = "OAuthTokenId";
     public static final String OAUTH_TOKEN_SCOPE = "OAuthTokenScopes";
     public static final String OAUTH_AUTHORIZATION_HEADER = "Authorization";
     public static final String OAUTH_ACCESS_TOKEN = "oauth_access_token";
+    //End : OAuth
 
     public static final String CLIENT_CERTIFICATE_PREFERENCE = "ClientCertificatePreference";
 

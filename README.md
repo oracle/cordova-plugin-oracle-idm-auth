@@ -1,4 +1,4 @@
-# cordova-plugin-oracle-idm-auth 1.0.4
+# cordova-plugin-oracle-idm-auth 1.1.0
 
 ## About the cordova-plugin-oracle-idm-auth
 The plugin provides authentication and authorization functionality for cordova based mobile applications,
@@ -36,19 +36,19 @@ function onDeviceReady() {
 }
 
 // Do login.
-var loginPromise = authFlow.login(challengeCallback);
+var loginPromise = authFlow.login();
 loginPromise.then(function(resp) {
   // Perform after login tasks.
 })
 
 // Retrieve headers
-var getHeadersPromise = authFlow.getHeaders();
+var getHeadersPromise = authFlow.getHeaders(options);
 getHeadersPromise.then(function(headers) {
   // Use headers for setting appropriate headers for performing an XHR request.
 });
 
 // Find our use's authentication status.
-var isAuthenticatedPromise = authFlow.isAuthenticated();
+var isAuthenticatedPromise = authFlow.isAuthenticated(options);
 isAuthenticatedPromise.then(function(authenticated) {
   // Use headers for setting appropriate headers for performing an XHR request.
 });
@@ -65,29 +65,37 @@ logoutPromise.then(function(resp) {
 var challengeFields, challengeProceedHandler;
 var authFlow;
 
+// Define challenge callback
+var callback = function (fields, proceedHandler) {
+  challengeFields = fields;
+  challengeProceedHandler = proceedHandler;
+  ...
+  // Present the login page to the user.
+}
+
+// Define timeout callback
+var timeoutCallback = function (timeoutResponse) {
+  // Handle timeout
+}
+
 // Auth props to init with.
-var basicAuthProps = cordova.plugins.IdmAuthFlows.newHttpBasicAuthPropertiesBuilder(...)
-...
-...
-.build();
+var basicAuthProps = new cordova.plugins.IdmAuthFlows.HttpBasicAuthPropertiesBuilder(...)
+                          .challengeCallback(callback)
+                          .timeoutCallback(timeoutCallback)
+                          ...
+                          ...
+                          .build();
 
 // Init the auth flow on load.
-cordova.plugins.IdmAuthFlows.init(basicAuthProps, timeoutCallback).then(function (flow) {
+cordova.plugins.IdmAuthFlows.init(basicAuthProps).then(function (flow) {
     authFlow = flow;
     startLogin();
 }).catch(errorHandler);
 
 var startLogin = function() {
-    basicAuthFlow.login(challengeCallback).then(function (flow) {
+    basicAuthFlow.login().then(function (flow) {
         // Do after login stuff.
     });
-}
-
-var challengeCallback = function (fields, proceedHandler) {
-    challengeFields = fields;
-    challengeProceedHandler = proceedHandler;
-    ...
-    // Present the login page to the user.
 }
 
 // Login button handler
@@ -107,14 +115,15 @@ var logoutBasicAuth = function() {
 ```
 
 ### Documentation
-- Detailed documentation for the plugin are in the [doc](docs/plugin.md).
-- Error codes are documented in the [error codes](docs/error-codes.md).
-- Frequently asked questions are answered in the [FAQ](docs/faq.md).
+- Details of JavaScript API can be found in the [JSDocs](https://oracle.github.io/cordova-plugin-oracle-idm-auth/ "JSDocs")..
+- Error codes are documented in the [error codes](md/error-codes.md).
+- Frequently asked questions are answered in the [FAQ](md/faq.md).
 
 ### Known Issues
 1. OpenID does not support implicit flow.
 1. Empty username and password login behavior is not consistent on Android and iOS.
 1. Offline login on iOS with connectivity mode AUTO does not work the first time. Work around is to recreate the authentication flow instance and try again.
+1. Invoking proceed handler multiple times without initiating a challenge results in app crash. Work around is to ensure that the proceed handler is invoked only once per challenge.
 1. iOS simulator only issue - Crashes with ```Assertion failure in -[KeychainItemWrapper writeToKeychain]```. This is an apple issue discussed [here](https://stackoverflow.com/questions/39561041/keychainitemwrapper-crash-on-ios10) and [here](https://forums.developer.apple.com/thread/51071). Work around for this issue is to [enable keychain sharing from xcode](https://developer.apple.com/library/content/documentation/IDEs/Conceptual/AppDistributionGuide/AddingCapabilities/AddingCapabilities.html).
 
 ### [Contributing](CONTRIBUTING.md)
@@ -123,3 +132,5 @@ This is an open source project maintained by Oracle Corp. Pull Requests are curr
 ### [License](LICENSE.md)
 Copyright (c) 2017 Oracle and/or its affiliates
 The Universal Permissive License (UPL), Version 1.0
+
+### [Release Notes](RELEASENOTES.md)

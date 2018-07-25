@@ -11,6 +11,9 @@
 @interface OMOAuthWebViewHandler : NSObject<UIWebViewDelegate>
 @property (nonatomic, weak) UIWebView *webView;
 @property (nonatomic, weak) OMOAuthAuthenticationService *oauthService;
-@property (nonatomic, weak) id<UIWebViewDelegate> previousDelegate;
 @property (nonatomic) BOOL redirectURIHit;
+
+- (void)loadRequest:(NSURLRequest*)request;
+- (void)stopRequest;
+
 @end

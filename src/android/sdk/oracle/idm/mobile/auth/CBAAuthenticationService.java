@@ -38,18 +38,20 @@ class CBAAuthenticationService extends AuthenticationService {
     public OMHTTPResponse handleAuthentication(OMAuthenticationRequest authRequest, OMAuthenticationContext authContext) throws OMMobileSecurityException {
         OMConnectionHandler connectionHandler = mASM.getMSS().getConnectionHandler();
         OMMobileSecurityConfiguration config = mASM.getMSS().getMobileSecurityConfig();
+        OMCookieManager omCookieManager = OMCookieManager.getInstance();
+        omCookieManager.startURLTracking();
         OMHTTPResponse response = connectionHandler.httpGet(config.getAuthenticationURL(), config.getCustomAuthHeaders());
+        omCookieManager.stopURLTracking();
         // any failure will be reported using the exception.
         // for now if we get 200 we are marking authentication success, however
         // we can add other use cases based on the requirements.
-        if (response != null) {
-            OMCookieManager omCookieManager = OMCookieManager.getInstance();
+        if (response != null && response.isSuccess()) {
             int responseCode = response.getResponseCode();
             OMLog.debug(TAG, "handleAuthentication responseCode: " + responseCode);
             authContext.setAuthenticationProvider(OMAuthenticationContext.AuthenticationProvider.CBA);
             authContext.setStatus(OMAuthenticationContext.Status.SUCCESS);
             authContext.setVisitedUrls(omCookieManager.getVisitedURLs());
-            authContext.setCookies(parseVisitedURLCookieMap(response.getVisitedUrlsCookiesMap()));
+            authContext.setCookies(parseVisitedURLCookieMap(omCookieManager.getVisitedUrlsCookiesMap()));
         } else {
             authContext.setAuthenticationProvider(OMAuthenticationContext.AuthenticationProvider.CBA);
             authContext.setStatus(OMAuthenticationContext.Status.FAILURE);
@@ -70,13 +72,10 @@ class CBAAuthenticationService extends AuthenticationService {
 
     @Override
     public void logout(OMAuthenticationContext authContext, boolean isDeleteUnPwd, boolean isDeleteCookies, boolean isDeleteToken, boolean isLogoutCall) {
-        if (authContext.getAuthenticationProvider() == OMAuthenticationContext.AuthenticationProvider.CBA
-                && isLogoutCall) {
+        if (authContext.getAuthenticationProvider() == OMAuthenticationContext.AuthenticationProvider.CBA) {
             //TODO ajulka see if some extra clean up.
-            mASM.getMSS().onLogoutCompleted();
-            mASM.getMSS().getCallback().onLogoutCompleted(mASM.getMSS(), null);
+            reportLogoutCompleted(mASM.getMSS(), isLogoutCall, (OMMobileSecurityException) null);
         }
-        return;
     }
 
     @Override

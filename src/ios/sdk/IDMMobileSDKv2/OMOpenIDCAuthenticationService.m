@@ -157,8 +157,9 @@
             {
                 self.nextStep = OM_NEXT_AUTH_STEP_NONE;
                 self.error = errorLocal;
-                [self sendFinishAuthentication:self.error];
+                [OMURLProtocol setOMAObject:nil];
                 [NSURLProtocol unregisterClass:[OMURLProtocol class]];
+                [self sendFinishAuthentication:self.error];
             }
         }];
     }

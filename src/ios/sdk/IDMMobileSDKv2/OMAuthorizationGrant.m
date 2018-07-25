@@ -105,9 +105,14 @@
 {
     OMOAuthConfiguration *config = (OMOAuthConfiguration *)
                                         self.oauthService.mss.configuration;
-    if (config.clientSecret == nil)
+    
+    NSRange range = [[config.tokenEndpoint host] rangeOfString:OM_FACEBOOK_HOST
+                                            options:NSCaseInsensitiveSearch];
+    
+    if (nil == config.clientSecret || range.length > 0)
     {
         [url appendFormat:@"&client_id=%@",config.clientId];
+
     }
     NSSet *scope = config.scope;
     if ([scope count] && config.grantType != OMOAuthAuthorizationCode)
@@ -174,6 +179,11 @@
 }
 
 -(void)sendFrontChannelChallenge
+{
+    
+}
+
+- (void)cancelAuthentication;
 {
     
 }

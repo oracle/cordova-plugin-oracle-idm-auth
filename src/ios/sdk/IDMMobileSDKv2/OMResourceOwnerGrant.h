@@ -7,5 +7,4 @@
 #import "OMAuthorizationGrant.h"
 
 @interface OMResourceOwnerGrant : OMAuthorizationGrant
-@property(nonatomic) volatile int32_t finished;
 @end

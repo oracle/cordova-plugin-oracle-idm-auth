@@ -97,6 +97,8 @@ enum
     OMPaddingPKCS1SHA1,
     OMPaddingPKCS1SHA224,
     OMPaddingPKCS1SHA256,
+    OMPaddingPKCS1SHA384,
+    OMPaddingPKCS1SHA512
 };
 typedef uint32_t OMCryptoPadding;
 

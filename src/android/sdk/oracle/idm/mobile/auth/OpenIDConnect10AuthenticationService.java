@@ -10,6 +10,7 @@ import android.text.TextUtils;
 
 import org.json.JSONException;
 
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.ParseException;
 import java.util.HashMap;
@@ -27,7 +28,6 @@ import oracle.idm.mobile.auth.openID.OpenIDTokenService;
 import oracle.idm.mobile.auth.openID.OpenIDUserInfo;
 import oracle.idm.mobile.configuration.OMMobileSecurityConfiguration;
 import oracle.idm.mobile.configuration.OMOICMobileSecurityConfiguration;
-import oracle.idm.mobile.connection.OMHTTPRequest;
 import oracle.idm.mobile.connection.OMHTTPResponse;
 import oracle.idm.mobile.logging.OMLog;
 
@@ -78,34 +78,30 @@ public class OpenIDConnect10AuthenticationService extends OAuthAuthorizationCode
                 try {
                     accessToken = onAccessToken(accessTokenResponse);
                     String idTokenString = accessToken.getIdToken();
-                    OMLog.info(TAG, "ID Token String: " + idTokenString);
                     if (!TextUtils.isEmpty(idTokenString)) {
-                        OpenIDTokenService tokenService = new OpenIDTokenService();
-                        OpenIDToken idToken = tokenService.generate(idTokenString, true);
+                        OpenIDToken idToken = getOpenIDTokenService().generate(idTokenString, true);
                         URL url = idConfig.getSigningCertEndpoint();
                         OMLog.debug(TAG, "Getting Signing Cert details from URL: " + url);
+                        String jwksResponse = "";
                         OMHTTPResponse response = getSigningCertForIDCS(url, accessToken);
                         boolean verify = false;
                         if (response != null) {
                             int responseCode = response.getResponseCode();
                             OMLog.debug(TAG, "Response Code: " + responseCode);
-                            String responseString;
-                            if (responseCode / 100 == 2) {
-                                responseString = response.getResponseStringOnSuccess();
+                            if (responseCode == HttpURLConnection.HTTP_OK) {
+                                jwksResponse = response.getResponseStringOnSuccess();
                                 verify = true;
                             } else {
-                                responseString = response.getResponseStringOnFailure();
+                                jwksResponse = response.getResponseStringOnFailure();
                                 verify = false;//no verifying required
                             }
-                            OMLog.debug(TAG, "Response String: " + responseString);
-                        } else {
-                            verify = false;//no verifying required
                         }
+
                         //lets do local validation first
                         if (isTokenValid(idToken, true)) {
                             if (verify) {
-                                if (!isTokenVerified(idToken)) {
-                                    OMLog.error(TAG, "ID Token Verification Failed!");
+                                boolean verificationStatus = getOpenIDTokenService().verifySignature(idToken, jwksResponse);
+                                if (!verificationStatus) {
                                     error = true;
                                     mobileException = new OMMobileSecurityException(OMErrorCode.OPENID_TOKEN_SIGNATURE_INVALID);
                                 } else {
@@ -180,18 +176,11 @@ public class OpenIDConnect10AuthenticationService extends OAuthAuthorizationCode
         Map<String, String> headers = new HashMap<>();
         headers.put(AUTHORIZATION, BEARER + " " + accessToken.getValue());
         try {
-            int requestFlags = (OMHTTPRequest.REQUIRE_RESPONSE_CODE |
-                    OMHTTPRequest.REQUIRE_RESPONSE_STRING | OMHTTPRequest.REQUIRE_RESPONSE_HEADERS);
-            return mASM.getMSS().getConnectionHandler().httpPost(url, headers, null, null, requestFlags);
+            return mASM.getMSS().getConnectionHandler().httpGet(url, headers);
         } catch (OMMobileSecurityException e) {
             OMLog.error(TAG, e.getErrorMessage(), e);
         }
         return null;
-    }
-
-    private boolean isTokenVerified(OpenIDToken token) {
-        OMLog.debug(TAG, "Verifying the openID Token");
-        return true;
     }
 
     public OpenIDTokenService getOpenIDTokenService() {
@@ -300,7 +289,7 @@ public class OpenIDConnect10AuthenticationService extends OAuthAuthorizationCode
             } else if (isDeleteTokens) {
                 authContext.setOpenIdUserInfo(null);
                 clearOAuthTokens(authContext, isLogoutCall);
-                reportLogoutCompleted(mASM.getMSS(), isLogoutCall, null);
+                reportLogoutCompleted(mASM.getMSS(), isLogoutCall, (OMMobileSecurityException) null);
             }
         }
     }

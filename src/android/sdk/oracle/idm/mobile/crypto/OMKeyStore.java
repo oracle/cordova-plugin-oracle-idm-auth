@@ -23,6 +23,8 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 
 import oracle.idm.mobile.OMErrorCode;
+import oracle.idm.mobile.OMSecurityConstants;
+import oracle.idm.mobile.logging.OMLog;
 
 /**
  * Key store.
@@ -30,6 +32,7 @@ import oracle.idm.mobile.OMErrorCode;
 public class OMKeyStore implements Serializable {
 
     private static final long serialVersionUID = -1455576501673848476L;
+    private static final String TAG = OMKeyStore.class.getSimpleName();
 
     private static final String DEFAULT_KEY_ID = "__OMKeyStore_Default_Key";
 
@@ -160,6 +163,10 @@ public class OMKeyStore implements Serializable {
         Key key = createNewRandomKey();
         byte[] encodedKey = key.getEncoded();
         keys.put(keyId, encodedKey);
+        if (OMSecurityConstants.DEBUG) {
+            OMLog.trace(TAG, "****New key created. Key id: "+ keyId +
+                    " Key Value: " + Base64.encode(encodedKey));
+        }
         saveKeyStore();
         return encodedKey;
     }
@@ -288,6 +295,12 @@ public class OMKeyStore implements Serializable {
         ensureValidState();
         for (Map.Entry<String, byte[]> entry : keyStore.keys.entrySet()) {
             keys.put(entry.getKey(), entry.getValue());
+        }
+        if (OMSecurityConstants.DEBUG) {
+            for (Map.Entry<String, byte[]> entry : keyStore.keys.entrySet()) {
+                OMLog.trace(TAG, "****Key copied. Key id : " + entry.getKey() +
+                        " Key Value: " + Base64.encode(entry.getValue()));
+            }
         }
         saveKeyStore();
     }

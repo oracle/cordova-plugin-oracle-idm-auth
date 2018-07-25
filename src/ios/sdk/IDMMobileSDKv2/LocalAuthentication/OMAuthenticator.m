@@ -62,4 +62,9 @@
 {
     
 }
+
+- (NSInteger)authDataLength;
+{
+    return -1;
+}
 @end

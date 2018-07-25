@@ -18,7 +18,8 @@ public enum OMAuthenticationScheme {
     FEDERATED("FederatedAuthentication"),
     OFFLINE("OfflineAuthentication"),
     CBA("ClientCertificateBasedAuthentication"),
-    OPENIDCONNECT10("OpenIDConnect10");
+    OPENIDCONNECT10("OpenIDConnect10"),
+    REFRESH_TOKEN("RefreshToken");
 
     private String mValue;
 

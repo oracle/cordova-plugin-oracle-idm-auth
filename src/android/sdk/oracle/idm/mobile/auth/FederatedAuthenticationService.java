@@ -14,7 +14,6 @@ import android.webkit.WebViewClient;
 
 import org.json.JSONException;
 
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -36,7 +35,6 @@ import oracle.idm.mobile.configuration.OMFederatedMobileSecurityConfiguration;
 import oracle.idm.mobile.connection.OMCookieManager;
 import oracle.idm.mobile.connection.OMHTTPResponse;
 import oracle.idm.mobile.logging.OMLog;
-import oracle.idm.mobile.util.GenericsUtils;
 
 /**
  * @hide
@@ -93,39 +91,29 @@ public class FederatedAuthenticationService extends AuthenticationService implem
         Set<String> visitedUrls = (Set<String>) inputParams
                 .get(OMSecurityConstants.Param.VISITED_URLS);
         try {
-            if (OMCookieManager.getInstance().hasRequiredCookies(requiredCookies, GenericsUtils.convert(visitedUrls))) {
-                boolean parseTokenRelayResponse = mConfig.parseTokenRelayResponse();
-                if (parseTokenRelayResponse) {
-                    parseTokenRelayResponse(authContext);
-                }
-
-                authContext.setStatus(OMAuthenticationContext.Status.SUCCESS);
-                OMAuthenticationContext.AuthenticationMechanism authenticationMechanism = (OMAuthenticationContext.AuthenticationMechanism) inputParams
-                        .get(OMSecurityConstants.Param.AUTHENTICATION_MECHANISM);
-                if (authenticationMechanism != null) {
-                    authContext.setAuthenticationMechanism(authenticationMechanism);
-                } else {
-                    authContext
-                            .setAuthenticationMechanism(OMAuthenticationContext.AuthenticationMechanism.FEDERATED);
-                }
-            } else {
-                // fail only if the apps has specified required tokens.
-                // this can happen due to the tokens requested not matching
-                // Setting AuthenticationProvider so that logout url is invoked
-                // properly in this use case, clearing the same in
-                // OMAuthenticationContext#clearAllFields()
-//                authContext.setStatus(OMAuthenticationContext.Status.FAILURE);
-//                OMLog.error(TAG, "Tokens that are requested are not available from the server.");
-//                throw new OMMobileSecurityException(OMErrorCode.AUTHENTICATION_FAILED, new InvalidCredentialEvent());
+            Map<String, OMCookie> filteredCookies = OMCookieManager.getInstance().filterCookies(
+                    requiredCookies, visitedUrls);
+            if (hasNoCookiesOrNoRequiredCookies(filteredCookies, requiredCookies)) {
+                /* this can happen due to the cookies requested not matching*/
                 onAuthenticationFailed(
                         authContext,
-                        "Tokens that are requested are not available from the server.",
+                        "Cookies that are requested are not available from the server.",
                         null);
             }
-        } catch (URISyntaxException e) {
-            OMLog.error(TAG, "Really unexpected, URL loaded in webview is not a proper URL", e);
-            authContext.setStatus(OMAuthenticationContext.Status.FAILURE);
-            throw new OMMobileSecurityException(OMErrorCode.RFC_NON_COMPLIANT_URI);
+            boolean parseTokenRelayResponse = mConfig.parseTokenRelayResponse();
+            if (parseTokenRelayResponse) {
+                parseTokenRelayResponse(authContext);
+            }
+
+            authContext.setStatus(OMAuthenticationContext.Status.SUCCESS);
+            OMAuthenticationContext.AuthenticationMechanism authenticationMechanism = (OMAuthenticationContext.AuthenticationMechanism) inputParams
+                    .get(OMSecurityConstants.Param.AUTHENTICATION_MECHANISM);
+            if (authenticationMechanism != null) {
+                authContext.setAuthenticationMechanism(authenticationMechanism);
+            } else {
+                authContext
+                        .setAuthenticationMechanism(OMAuthenticationContext.AuthenticationMechanism.FEDERATED);
+            }
         } finally {
             // AuthentcationProvider is being set here to delete the cookies
             // from CookieManger properly, in case of exceptions
@@ -133,6 +121,20 @@ public class FederatedAuthenticationService extends AuthenticationService implem
                     .setAuthenticationProvider(AuthenticationProvider.FEDERATED);
         }
         return null;
+    }
+
+    /**
+     * Returns true if no cookies are present at all OR if required cookies are not present.
+     */
+    private boolean hasNoCookiesOrNoRequiredCookies(Map<String, OMCookie> filteredCookies,
+                                                    Set<String> requiredCookies) {
+        return (filteredCookies == null ||
+                filteredCookies.isEmpty() ||
+                (
+                        requiredCookies != null &&
+                                requiredCookies.size() != 0 &&
+                                filteredCookies.size() < requiredCookies.size()
+                ));
     }
 
     @Override
@@ -174,11 +176,8 @@ public class FederatedAuthenticationService extends AuthenticationService implem
             return false;
         }
 
-        if (authContext.getIdleTimeExpInSecs() > 0) {
-            authContext.resetIdleTime();
-            Log.d(TAG + "_isValid",
-                    "Idle time is reset to : "
-                            + authContext.getIdleTimeExpiry());
+        if (authContext.getIdleTimeExpInSecs() > 0 && !authContext.resetIdleTime()) {
+            return false;
         }
 
         if (mConfig.parseTokenRelayResponse()) {
@@ -217,35 +216,47 @@ public class FederatedAuthenticationService extends AuthenticationService implem
             return;
         }
 
-        collectLogoutChallengeInput(authContext.getInputParams(), new AuthServiceInputCallback() {
-            @Override
-            public void onInput(Map<String, Object> inputs) {
-                //Input validation is done in proceed(). Invalid input results in onError being called.
-                OMLog.trace(TAG, "Inside AuthServiceInputCallback#onInput");
-                authContext.getInputParams().putAll(inputs);
-                handleLogout(authContext, isDeleteUnPwd, isDeleteCookies, isDeleteTokens, isLogoutCall);
-            }
-
-            @Override
-            public void onError(OMErrorCode error) {
-                if (error == OMErrorCode.WEB_VIEW_REQUIRED) {
-                    OMLog.info(TAG, "Since Login Webview not supplied, simply clear session cookies and report this back to app");
-                    removeSessionCookies();
-                    reportLogoutCompleted(mASM.getMSS(), isLogoutCall, OMErrorCode.LOGOUT_URL_NOT_LOADED);
+        if (isLogoutCall) {
+            collectLogoutChallengeInput(authContext.getInputParams(), new AuthServiceInputCallback() {
+                @Override
+                public void onInput(Map<String, Object> inputs) {
+                    //Input validation is done in proceed(). Invalid input results in onError being called.
+                    OMLog.trace(TAG, "Inside AuthServiceInputCallback#onInput");
+                    authContext.getInputParams().putAll(inputs);
+                    handleLogout(authContext, isDeleteUnPwd, isDeleteCookies, isDeleteTokens, isLogoutCall);
                 }
-            }
 
-            @Override
-            public void onCancel() {
+                @Override
+                public void onError(OMErrorCode error) {
+                    if (error == OMErrorCode.WEB_VIEW_REQUIRED) {
+                        OMLog.info(TAG, "Since Login Webview not supplied, simply clear session cookies and report this back to app");
+                        removeSessionCookies();
+                        reportLogoutCompleted(mASM.getMSS(), isLogoutCall, OMErrorCode.LOGOUT_URL_NOT_LOADED);
+                    }
+                }
+
+                @Override
+                public void onCancel() {
                 /*Cancel of logout DOES NOT happen as we expect the SDK consumer to always return a webview in which logout url can be loaded.
                   But, to cover the negative scenario of logout cancel, we clear all session cookies. This is because logout can be initiated on
                   idle/session timeout. This should make authContext invalid. If we do not clear cookies just because the webview is not returned by SDK consumer,
                   the next authentication MAY NOT show the login screen as the cookies might still be valid. */
 
-                removeSessionCookies();
-                reportLogoutCompleted(mASM.getMSS(), true, OMErrorCode.LOGOUT_URL_NOT_LOADED);
-            }
-        });
+                    removeSessionCookies();
+                    reportLogoutCompleted(mASM.getMSS(), true, OMErrorCode.LOGOUT_URL_NOT_LOADED);
+                }
+            });
+        } else {
+            /*
+             * This will be executed when 1. idle timeout or session timeout
+             * happens 2. authentication fails because of required tokens, not
+             * being present, OAuth access token not being present in case of
+             * token relay with SIM.
+             *
+             * Hence, logout callback is not invoked.
+             */
+            removeSessionCookies();
+        }
     }
 
     @Override
@@ -267,24 +278,11 @@ public class FederatedAuthenticationService extends AuthenticationService implem
                     WebViewClient appWebViewClient = (WebViewClient) authContext.getInputParams().get(OMSecurityConstants.Challenge.WEBVIEW_CLIENT_KEY);
                     loadLogoutURL(webView, new LogoutWebViewClient(webView, appWebViewClient, mASM.getMSS(), handler,
                             mConfig, authContext.getLogoutTimeout(), isLogoutCall), logoutUrl.toString());
-                   /* webView.getSettings().setJavaScriptEnabled(true);
-                    webView.setWebViewClient(new LogoutWebViewClient(webView, appWebViewClient, handler, authContext.getLogoutTimeout(), isLogoutCall));
-                    OMLog.trace(TAG, "Loading logout url");
-                    webView.loadUrl(logoutUrl.toString());*/
                 }
             });
         } else {
             removeSessionCookies();
             reportLogoutCompleted(mASM.getMSS(), isLogoutCall, OMErrorCode.LOGOUT_URL_NOT_LOADED);
-           /* OMCookieManager.getInstance().removeSessionCookies(mASM.getApplicationContext());
-            OMMobileSecurityService mss = mASM.getMSS();
-            OMMobileSecurityServiceCallback callback = mss.getCallback();
-            mss.onLogoutCompleted();
-            if (isLogoutCall && callback != null) {
-                callback.onLogoutCompleted(
-                        mss,
-                        new OMMobileSecurityException(OMErrorCode.LOGOUT_URL_NOT_LOADED));
-            }*/
         }
     }
 
@@ -319,8 +317,8 @@ public class FederatedAuthenticationService extends AuthenticationService implem
 
     private void onAuthenticationFailed(OMAuthenticationContext authContext,
                                         String errorMessage, Throwable tr) throws OMMobileSecurityException {
-        // AuthentcationProvider is being set here to delete the cookies
-        // from CookieManger properly
+        /* AuthenticationProvider is being set here to delete the cookies
+         from CookieManger properly.*/
         authContext.setAuthenticationProvider(AuthenticationProvider.FEDERATED);
         authContext.setStatus(OMAuthenticationContext.Status.FAILURE);
         OMLog.error(TAG, errorMessage, tr);

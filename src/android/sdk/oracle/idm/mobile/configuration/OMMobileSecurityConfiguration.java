@@ -36,9 +36,53 @@ import oracle.idm.mobile.credentialstore.OMCredentialStore;
 import oracle.idm.mobile.crypto.CryptoScheme;
 import oracle.idm.mobile.logging.OMLog;
 import oracle.idm.mobile.util.GenericsUtils;
+import oracle.idm.mobile.util.StringUtils;
 
 import static oracle.idm.mobile.OMMobileSecurityService.AuthServerType;
-import static oracle.idm.mobile.OMMobileSecurityService.*;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_AUTO_LOGIN_DEFAULT;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_APPNAME;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_AUTHSERVER_TYPE;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_AUTH_KEY;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_AUTO_LOGIN_ALLOWED;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_BROWSER_MODE;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_COLLECT_IDENTITY_DOMAIN;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_CONFIRM_LOGOUT_AUTOMATICALLY;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_CONFIRM_LOGOUT_BUTTON_ID;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_CONNECTIVITY_MODE;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_CRYPTO_SCHEME;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_CUSTOM_AUTH_HEADERS;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_CUSTOM_HEADERS_FOR_MOBILE_AGENT;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_DEFAULT_PROTOCOL_FOR_CLIENT_SOCKET;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_ENABLED_CIPHER_SUITES;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_HOSTNAME_VERIFICATION;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_IDENTITY_DOMAIN_NAME_IN_HEADER;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_IDLE_TIMEOUT_VALUE;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_LOCAL_AUTHENTICATOR_INSTANCE_ID;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_LOCAL_AUTHENTICATOR_NAME;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_LOCATION_UPDATE_ENABLED;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_LOGIN_TIMEOUT_VALUE;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_LOGOUT_TIMEOUT_VALUE;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_MAX_LOGIN_ATTEMPTS;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_OAM_OAUTH_SERVICE_ENDPOINT;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_OAUTH_AUTHORIZATION_GRANT_TYPE;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_OAUTH_ENABLE_PKCE;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_OAUTH_INCLUDE_CLIENT_AUTH_HEADER;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_OAUTH_SCOPE;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_OFFLINE_AUTH_ALLOWED;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_PARSE_TOKEN_RELAY_RESPONSE;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_PRESENT_CLIENT_IDENTITY_ON_DEMAND;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_REMEMBER_CREDENTIALS_ALLOWED;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_REMEMBER_USERNAME_ALLOWED;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_REMOVE_ALL_SESSION_COOKIES;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_REQUIRED_TOKENS;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_SEND_AUTHORIZATION_HEADER_IN_LOGOUT;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_SEND_CUSTOM_AUTH_HEADERS_IN_LOGOUT;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_SEND_IDENTITY_DOMAIN_HEADER_TO_MOBILE_AGENT;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_SESSION_ACTIVE_ON_RESTART;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_SESSION_TIMEOUT_VALUE;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_USERNAME_PARAM_NAME;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_REMEMBER_CREDENTIALS_DEFAULT;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_REMEMBER_USERNAME_DEFAULT;
 
 /**
  * OMMobileSecurityConfiguration is the abstract base class which provides all
@@ -53,8 +97,7 @@ public abstract class OMMobileSecurityConfiguration {
     private static final String TAG = OMMobileSecurityConfiguration.class.getSimpleName();
 
     private static final List<String> PROHIBITED_CUSTOM_AUTH_HEADERS = Arrays
-            .asList(new String[]
-                    {"authorization", "cookie", "content-length", "host"});
+            .asList("authorization", "cookie", "content-length", "host");
     private static final int MAX_CUSTOM_AUTH_HEADERS = 10;
 
     // Default Values
@@ -65,6 +108,7 @@ public abstract class OMMobileSecurityConfiguration {
     private static final int DEFAULT_SALT_LENGTH = 8; // In bytes
     private static final String DEFAULT_HEADER_FOR_IDENTITY_DOMAIN = "X-USER-IDENTITY-DOMAIN-NAME";
     private static final int DEFAULT_ADVANCE_TIMEOUT_NOTIFICATION = 10; // In percentage
+    public static final HostnameVerification DEFAULT_HOSTNAME_VERIFICATION = HostnameVerification.ALLOW_ALL;
 
     protected static final String CLAIM_ATTRIBUTES_MSOAUTH = "claimAttributes";
     protected static final String MOBILE_APP_CONFIG = "mobileAppConfig";
@@ -77,6 +121,10 @@ public abstract class OMMobileSecurityConfiguration {
     static final int FLAG_ENABLE_REMEMBER_USERNAME = FLAG_ENABLE_AUTO_LOGIN << 2;
 
     //RC- configuration flags
+
+    /**
+     * Refer {@link OMMobileSecurityService#OM_PROP_BROWSER_MODE}
+     */
     public enum BrowserMode {
         EMBEDDED("Embedded"), EXTERNAL("External");
 
@@ -94,6 +142,38 @@ public abstract class OMMobileSecurityConfiguration {
             for (BrowserMode browserModeEnum : values()) {
                 if (browserModeEnum.value.equalsIgnoreCase(browserMode)) {
                     return browserModeEnum;
+                }
+            }
+            return null;
+        }
+    }
+
+    /**
+     * Provides available options to do Hostname verification while establishing
+     * HTTPS connection with the server.
+     */
+    public enum HostnameVerification
+    {
+        /**
+         * This basically disables hostname verification.
+         */
+        ALLOW_ALL,
+        /**
+         * The hostname must match either the first CN, or any of the
+         * subject-alts. A wildcard can occur in the CN, and in any of the
+         * subject-alts.
+         */
+        STRICT;
+
+        public static HostnameVerification valueOfHostnameVerification(
+                String hostnameVerification)
+        {
+            for (HostnameVerification hostnameVerificationEnum : values())
+            {
+                if (hostnameVerificationEnum.name().equalsIgnoreCase(
+                        hostnameVerification))
+                {
+                    return hostnameVerificationEnum;
                 }
             }
             return null;
@@ -142,6 +222,7 @@ public abstract class OMMobileSecurityConfiguration {
     private boolean authContextPersistenceAllowed = false;
 
     private String[] mDefaultProtcols;
+    protected String[] mEnabledCipherSuites;
 
     /**
      * This contains the HTTP headers to be added to the request being sent to
@@ -168,6 +249,8 @@ public abstract class OMMobileSecurityConfiguration {
     private URL logoutFailureUrl;
     private boolean confirmLogoutAutomatically;
     private Set<String> confirmLogoutButtonId;
+    private boolean removeAllSessionCookies;
+    private HostnameVerification hostnameVerification = DEFAULT_HOSTNAME_VERIFICATION;
 
     public static OMMobileSecurityConfiguration createMobileSecurityConfiguration(Map<String, Object> configProperties) throws OMMobileSecurityException {
         Object serverTypeObj = configProperties.get(OM_PROP_AUTHSERVER_TYPE);
@@ -357,15 +440,7 @@ public abstract class OMMobileSecurityConfiguration {
         Map<String, Object> configPropertiesMap = null;
         if (configurationUri != null)
         {
-            String query;
-            if (decodeQuery)
-            {
-                query = configurationUri.getQuery();
-            }
-            else
-            {
-                query = configurationUri.getEncodedQuery();
-            }
+            String query = configurationUri.getEncodedQuery();
             if (query != null)
             {
                 configPropertiesMap = new HashMap<>();
@@ -433,10 +508,12 @@ public abstract class OMMobileSecurityConfiguration {
                                 .equalsIgnoreCase(OM_PROP_SEND_CUSTOM_AUTH_HEADERS_IN_LOGOUT)
                                 || nameValue[0]
                                 .equalsIgnoreCase(OM_PROP_PARSE_TOKEN_RELAY_RESPONSE)
-                                ||nameValue[0]
+                                || nameValue[0]
                                 .equalsIgnoreCase(OM_PROP_OAUTH_ENABLE_PKCE)
-                                ||nameValue[0]
-                                .equalsIgnoreCase(OM_PROP_CONFIRM_LOGOUT_AUTOMATICALLY))
+                                || nameValue[0]
+                                .equalsIgnoreCase(OM_PROP_CONFIRM_LOGOUT_AUTOMATICALLY)
+                                || nameValue[0]
+                                .equalsIgnoreCase(OM_PROP_REMOVE_ALL_SESSION_COOKIES))
                         {
                             configPropertiesMap.put(nameValue[0],
                                     Boolean.parseBoolean(nameValue[1]));
@@ -474,13 +551,9 @@ public abstract class OMMobileSecurityConfiguration {
                         {
                             String[] requiredTokensStr = nameValue[1]
                                     .split(",");
-                            Set<String> requiredTokensList = new HashSet<>();
-                            for (String reqToken : requiredTokensStr)
-                            {
-                                requiredTokensList.add(reqToken);
-                            }
                             configPropertiesMap.put(OM_PROP_REQUIRED_TOKENS,
-                                    requiredTokensList);
+                                    StringUtils.covertToSet(requiredTokensStr,
+                                            decodeQuery));
                         }
                         else if (nameValue[0]
                                 .equalsIgnoreCase(OM_PROP_OAUTH_SCOPE)
@@ -491,40 +564,39 @@ public abstract class OMMobileSecurityConfiguration {
                         {
                             boolean decode = false;
                             if (nameValue[0]
-                                    .equalsIgnoreCase(OM_PROP_OAUTH_SCOPE))
+                                    .equalsIgnoreCase(OM_PROP_OAUTH_SCOPE)
+                                    || decodeQuery)
                             {
                                 decode = true;
                             }
 
                             String[] valuesStr = nameValue[1].split(",");
-                            Set<String> values = new HashSet<>();
-                            for (String value : valuesStr)
+                            configPropertiesMap.put(nameValue[0],
+                                    StringUtils.covertToSet(valuesStr, decode));
+                        }
+                        else if (nameValue[0]
+                                .equalsIgnoreCase(OM_PROP_DEFAULT_PROTOCOL_FOR_CLIENT_SOCKET)
+                                || nameValue[0]
+                                .equalsIgnoreCase(OM_PROP_ENABLED_CIPHER_SUITES))
+                        {
+                            String[] values = nameValue[1].split(",");
+                            if (decodeQuery)
                             {
-                                if (decode)
+                                for (int i = 0; i < values.length; i++)
                                 {
-                                    values.add(Uri.decode(value));
-                                }
-                                else
-                                {
-                                    values.add(value);
+                                    values[i] = Uri.decode(values[i]);
                                 }
                             }
                             configPropertiesMap.put(nameValue[0], values);
                         }
-
                         else if (nameValue[0]
                                 .equalsIgnoreCase(OM_PROP_CUSTOM_AUTH_HEADERS)
                                 || nameValue[0]
                                 .equalsIgnoreCase(OM_PROP_CUSTOM_HEADERS_FOR_MOBILE_AGENT))
                         {
                             String[] headers = nameValue[1].split(",");
-                            HashMap<String, String> map = new HashMap<>();
-                            for (String header : headers)
-                            {
-                                String[] data = header.split(":");
-                                if (data.length == 2)
-                                    map.put(data[0], data[1]);
-                            }
+                            Map<String, String> map = StringUtils.covertToMap(
+                                    headers, decodeQuery);
                             if (!map.isEmpty())
                             {
                                 configPropertiesMap.put(nameValue[0], map);
@@ -537,11 +609,21 @@ public abstract class OMMobileSecurityConfiguration {
                                     OM_PROP_OAUTH_AUTHORIZATION_GRANT_TYPE,
                                     OAuthAuthorizationGrantType
                                             .valueOfGrantType(nameValue[1]));
-                        } else if(nameValue[0]
+                        }
+                        else if (nameValue[0]
                                 .equalsIgnoreCase(OM_PROP_OAM_OAUTH_SERVICE_ENDPOINT))
                         {
                             configPropertiesMap.put(
-                                    OM_PROP_OAM_OAUTH_SERVICE_ENDPOINT, nameValue[1]);
+                                    OM_PROP_OAM_OAUTH_SERVICE_ENDPOINT,
+                                    nameValue[1]);
+                        }
+                        else if (nameValue[0]
+                                .equalsIgnoreCase(OM_PROP_HOSTNAME_VERIFICATION))
+                        {
+                            configPropertiesMap
+                                    .put(OM_PROP_HOSTNAME_VERIFICATION,
+                                            HostnameVerification
+                                                    .valueOfHostnameVerification(nameValue[1]));
                         }
                         else
                         {
@@ -555,8 +637,17 @@ public abstract class OMMobileSecurityConfiguration {
                             }
                             else
                             {
-                                configPropertiesMap.put(nameValue[0],
-                                        nameValue[1]);
+                                if (decodeQuery)
+                                {
+                                    configPropertiesMap.put(nameValue[0],
+                                            Uri.decode(nameValue[1]));
+                                }
+                                else
+                                {
+                                    configPropertiesMap.put(nameValue[0],
+                                            nameValue[1]);
+                                }
+
                             }
                         }
                     }
@@ -571,8 +662,8 @@ public abstract class OMMobileSecurityConfiguration {
                     for (Map.Entry<String, Object> entry : configPropertiesMap
                             .entrySet())
                     {
-                        if (entry.getKey().equalsIgnoreCase(
-                                OM_PROP_OAUTH_SCOPE)
+                        if (entry.getKey()
+                                .equalsIgnoreCase(OM_PROP_OAUTH_SCOPE)
                                 || entry.getKey().equalsIgnoreCase(
                                 OM_PROP_USERNAME_PARAM_NAME)
                                 || entry.getKey().equalsIgnoreCase(
@@ -585,7 +676,19 @@ public abstract class OMMobileSecurityConfiguration {
                                     new JSONArray((Set<String>) entry
                                             .getValue()));
                         }
-                        else if (entry.getKey().equals(
+                        else if (entry.getKey().equalsIgnoreCase(
+                                OM_PROP_DEFAULT_PROTOCOL_FOR_CLIENT_SOCKET)
+                                || entry.getKey().equalsIgnoreCase(
+                                OM_PROP_ENABLED_CIPHER_SUITES))
+                        {
+                            JSONArray values = new JSONArray();
+                            for (String value : (String[]) entry.getValue())
+                            {
+                                values.put(value);
+                            }
+                            configPropertiesJSON.put(entry.getKey(), values);
+                        }
+                        else if (entry.getKey().equalsIgnoreCase(
                                 OM_PROP_CUSTOM_AUTH_HEADERS)
                                 || entry.getKey()
                                 .equalsIgnoreCase(
@@ -605,10 +708,12 @@ public abstract class OMMobileSecurityConfiguration {
                     OMLog.debug(TAG + "_parseConfigurationURI",
                             "JSON to be stored in SharedPreferences: "
                                     + configPropertiesJSON.toString(2));
-                    OMCredentialStore credentialStore = new OMCredentialStore(context, null, null);
+                    OMCredentialStore credentialStore = new OMCredentialStore(
+                            context, null, null);
                     if (keyInSharedPreferences != null)
                     {
-                        credentialStore.addConfigurationURI(keyInSharedPreferences,
+                        credentialStore.addConfigurationURI(
+                                keyInSharedPreferences,
                                 configPropertiesJSON.toString());
                     }
                     else
@@ -622,7 +727,8 @@ public abstract class OMMobileSecurityConfiguration {
                 catch (JSONException e)
                 {
                     OMLog.error(TAG, e.getMessage(), e);
-                    throw new OMMobileSecurityException(OMErrorCode.COULD_NOT_STORE_CONFIGURATION);
+                    throw new OMMobileSecurityException(
+                            OMErrorCode.COULD_NOT_STORE_CONFIGURATION);
                 }
 
             }
@@ -732,7 +838,8 @@ public abstract class OMMobileSecurityConfiguration {
                     || key.equals(OM_PROP_SEND_CUSTOM_AUTH_HEADERS_IN_LOGOUT)
                     || key.equals(OM_PROP_PARSE_TOKEN_RELAY_RESPONSE)
                     || key.equals(OM_PROP_OAUTH_ENABLE_PKCE)
-                    || key.equals(OM_PROP_CONFIRM_LOGOUT_AUTOMATICALLY))
+                    || key.equals(OM_PROP_CONFIRM_LOGOUT_AUTOMATICALLY)
+                    || key.equals(OM_PROP_REMOVE_ALL_SESSION_COOKIES))
             {
                 configPropertiesMap.put(key,
                         configPropertiesJSON.optBoolean(key));
@@ -745,7 +852,7 @@ public abstract class OMMobileSecurityConfiguration {
             else if (key.equals(OM_PROP_CRYPTO_SCHEME))
             {
                 configPropertiesMap.put(key, CryptoScheme
-                        .valueOf(configPropertiesJSON.optString(key)));
+                        .getCryptoScheme(configPropertiesJSON.optString(key)));
             }
             else if (key.equals(OM_PROP_IDLE_TIMEOUT_VALUE)
                     || key.equals(OM_PROP_MAX_LOGIN_ATTEMPTS)
@@ -778,6 +885,17 @@ public abstract class OMMobileSecurityConfiguration {
                 }
                 configPropertiesMap.put(key, values);
             }
+            else if (key.equals(OM_PROP_DEFAULT_PROTOCOL_FOR_CLIENT_SOCKET)
+                    || key.equals(OM_PROP_ENABLED_CIPHER_SUITES))
+            {
+                JSONArray jsonArray = configPropertiesJSON.optJSONArray(key);
+                String[] values = new String[jsonArray.length()];
+                for (int i = 0; i < jsonArray.length(); i++)
+                {
+                    values[i] = jsonArray.optString(i);
+                }
+                configPropertiesMap.put(key, values);
+            }
             else if (key.equals(OM_PROP_CUSTOM_AUTH_HEADERS)
                     || key.equals(OM_PROP_CUSTOM_HEADERS_FOR_MOBILE_AGENT))
             {
@@ -791,6 +909,11 @@ public abstract class OMMobileSecurityConfiguration {
 
                 }
                 configPropertiesMap.put(key, headers);
+            }
+            else if (key.equals(OM_PROP_HOSTNAME_VERIFICATION))
+            {
+                configPropertiesMap.put(key, HostnameVerification
+                        .valueOf(configPropertiesJSON.optString(key)));
             }
             else
             {
@@ -899,6 +1022,17 @@ public abstract class OMMobileSecurityConfiguration {
                 this.mDefaultProtcols = defaultProtocols;
             }
         }
+
+        Object enabledCipherSuitesObj = configProperties
+                .get(OM_PROP_ENABLED_CIPHER_SUITES);
+        if (enabledCipherSuitesObj instanceof String[]) {
+            String[] enabledCipherSuites = (String[]) enabledCipherSuitesObj;
+            if (enabledCipherSuites.length > 0) {
+                this.mEnabledCipherSuites = enabledCipherSuites;
+            }
+        }
+
+
         Object customHeaderMobAgentObj = configProperties
                 .get(OM_PROP_CUSTOM_HEADERS_FOR_MOBILE_AGENT);
         if (customHeaderMobAgentObj instanceof Map<?, ?>) {
@@ -972,6 +1106,21 @@ public abstract class OMMobileSecurityConfiguration {
             this.confirmLogoutButtonId = GenericsUtils
                     .castToSet((Set<?>) confirmLogoutButtonIdObj, String.class);
             checkElementsEmpty(confirmLogoutButtonId, OM_PROP_CONFIRM_LOGOUT_BUTTON_ID);
+        }
+
+        Object removeAllSessionCookiesObj = configProperties
+                .get(OMMobileSecurityService.OM_PROP_REMOVE_ALL_SESSION_COOKIES);
+
+        if (removeAllSessionCookiesObj instanceof Boolean)
+        {
+            this.removeAllSessionCookies = (Boolean) removeAllSessionCookiesObj;
+        }
+
+        Object hostNameVerificationObj = configProperties
+                .get(OM_PROP_HOSTNAME_VERIFICATION);
+        if (hostNameVerificationObj instanceof HostnameVerification)
+        {
+            this.hostnameVerification = (HostnameVerification) hostNameVerificationObj;
         }
 }
 
@@ -1602,6 +1751,14 @@ public abstract class OMMobileSecurityConfiguration {
         return mDefaultProtcols;
     }
 
+    public String[] getEnabledCipherSuites() {
+        return mEnabledCipherSuites;
+    }
+
+    public void setEnabledCipherSuites(String[] enabledCipherSuites) {
+        this.mEnabledCipherSuites = enabledCipherSuites;
+    }
+
     public Map<String, String> getCustomHeadersMobileAgent() {
         if (mCustomHeadersMobileAgent == null) {
             mCustomHeadersMobileAgent = new HashMap<>();
@@ -1752,6 +1909,16 @@ public abstract class OMMobileSecurityConfiguration {
 
     public boolean isConfirmLogoutAutomatically() {
         return confirmLogoutAutomatically;
+    }
+
+    public boolean isRemoveAllSessionCookies()
+    {
+        return removeAllSessionCookies;
+    }
+
+    public HostnameVerification getHostnameVerification()
+    {
+        return hostnameVerification;
     }
 
     public Set<String> getConfirmLogoutButtonId() {

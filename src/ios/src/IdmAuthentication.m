@@ -165,6 +165,21 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 /**
+ * Cancel the login process on the OMMSS instance.
+ * If an error occurs, the error code is communicated back to the javascript layer.
+ *
+ * @param commandDelegate: callback
+ * @param callbackId: callback id
+ */
+-(void) cancelLogin:(CDVCommandDelegateImpl*) commandDelegate
+        withCallbackId: (NSString*) callbackId {
+  IdmLog(@"cancelLogin invoked");
+  self.loginLogoutCommandDelegate = commandDelegate;
+  self.loginLogoutCallbackId = callbackId;
+  self.challenge.authChallengeHandler(nil, OMCancel);
+  IdmLog(@"cancelLogin invoked completed.");
+}
+/**
  * Finish the login process on the OMMSS instance. This method is invoked after
  * collecting required credentials from the user at the javascript layer.
  * If an error occurs, the error code is communicated back to the javascript layer.
@@ -280,11 +295,12 @@ withFedAuthSecuredUrl: (NSString*) fedAuthSecuredUrl
  * @param callbackId: callback id
  */
 -(void) logout:(CDVCommandDelegateImpl *)commandDelegate
-withCallbackId:(NSString *)callbackId {
-  IdmLog(@"logout invoked");
+withCallbackId:(NSString *)callbackId
+withForgetOption:(BOOL) forget {
+  IdmLog(@"logout invoked with forget %@", forget ? @"YES": @"NO");
   self.loginLogoutCommandDelegate = commandDelegate;
   self.loginLogoutCallbackId = callbackId;
-  [_ommss logout:NO];
+  [_ommss logout:forget];
   IdmLog(@"logout completed");
 }
 
@@ -362,7 +378,6 @@ completedSetupWithConfiguration:(OMMobileSecurityConfiguration *)configuration
     [fields removeObjectForKey:OM_MOBILESECURITY_EXCEPTION];
   }
 
-  IdmLog(@"Fields from challenge: %@", fields);
   if (challenge.challengeType == OMChallengeUsernamePassword) {
     CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:@{@"challengeFields": fields}];
     [self.loginLogoutCommandDelegate sendPluginResult:result callbackId:self.loginLogoutCallbackId];
@@ -389,6 +404,7 @@ completedSetupWithConfiguration:(OMMobileSecurityConfiguration *)configuration
       }
     } else {
       IdmLog(@"Invalid redirect challenge received. Throwing error to callback");
+      [self dismissAuthWebViewIfNeeded];
       [self throwErrorCodeToLoginCallback:INVALID_REDIRECT_ERR_CODE];
     }
   } else if (challenge.challengeType == OMChallengeExternalBrowser) {
@@ -398,9 +414,11 @@ completedSetupWithConfiguration:(OMMobileSecurityConfiguration *)configuration
     self.isExpectingExternalBrowserResponse = YES;
   } else if (challenge.challengeType == OMChallengeServerTrust) {
     IdmLog(@"Untrusted server challenge received. Throwing error to callback");
+    [self dismissAuthWebViewIfNeeded];
     [self throwErrorCodeToLoginCallback:UNTRUSTED_SERVER_ERR_CODE];
   } else {
     IdmLog(@"Unsupported challenge %lu.", (unsigned long)challenge.challengeType);
+    [self dismissAuthWebViewIfNeeded];
     [self throwErrorCodeToLoginCallback:UNSUPPORTED_CHALLENGE_ERR_CODE];
   }
 }

@@ -11,4 +11,4 @@
 #endif /* OMVersion_h */
 
 
-NSString *const OM_VERSION          = @"17.4.4-1.0.3";
+NSString *const OM_VERSION          = @"18.3.4-1.1.3";

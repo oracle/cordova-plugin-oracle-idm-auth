@@ -9,7 +9,6 @@
 #import "OMOAuthConfiguration.h"
 #import "OMAuthenticationChallenge.h"
 #import "OMAuthenticationService.h"
-#import <libkern/OSAtomic.h>
 #import "OMObject.h"
 #import "OMCredential.h"
 #import "OMCredentialStore.h"
@@ -34,11 +33,10 @@
                  onThread:self.oauthService.callerThread
                withObject:nil
             waitUntilDone:false];
-    while (false == OSAtomicCompareAndSwap32(1, 0, &_finished))
-    {
-        [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode
-                                 beforeDate:[NSDate distantFuture]];
-    }
+    
+    dispatch_semaphore_wait(self.oauthService.requestPauseSemaphore,
+                            DISPATCH_TIME_FOREVER);
+
     self.oauthService.userName = [self.oauthService.authData
                           valueForKey:OM_USERNAME];
     self.oauthService.password = [self.oauthService.authData
@@ -84,6 +82,9 @@
     challenge.challengeType = OMChallengeUsernamePassword;
     challenge.authData = challengeDict;
     __block __weak OMResourceOwnerGrant *weakSelf = self;
+    __block dispatch_semaphore_t blockSemaphore = self.oauthService.
+                                                    requestPauseSemaphore;
+
     challenge.authChallengeHandler = ^(NSDictionary *dict,
                                             OMChallengeResponse response)
     {
@@ -130,7 +131,7 @@
                         waitUntilDone:YES];
         }
         [authService storeRememberCredentialsPreference:dict];
-        OSAtomicCompareAndSwap32(0, 1, &_finished);
+        dispatch_semaphore_signal(blockSemaphore);
     };
     self.oauthService.challenge = challenge;
     [self.oauthService.delegate didFinishCurrentStep:self
@@ -159,7 +160,7 @@
         case OMConnectivityAuto:
             // Fall Through
         default:
-            if (![OMObject isHostReachable:offlineHost.host])
+            if (![OMObject checkConnectivityToHost:offlineHost])
                 offlineAuth = true;
     }
     if (offlineAuth)
@@ -186,11 +187,8 @@
                              onThread:self.oauthService.callerThread
                            withObject:nil
                         waitUntilDone:false];
-                while (false == OSAtomicCompareAndSwap32(1, 0, &_finished))
-                {
-                    [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode
-                                             beforeDate:[NSDate distantFuture]];
-                }
+                dispatch_semaphore_wait(self.oauthService.requestPauseSemaphore,
+                                        DISPATCH_TIME_FOREVER);
             }
             self.oauthService.userName = [self.oauthService.authData
                                           valueForKey:OM_USERNAME];

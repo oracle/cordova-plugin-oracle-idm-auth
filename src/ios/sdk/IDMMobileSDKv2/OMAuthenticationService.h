@@ -15,15 +15,16 @@
 @interface OMAuthenticationService : NSObject
 
 @property (nonatomic, weak) OMMobileSecurityService *mss;
-@property (nonatomic, strong) OMAuthenticationRequest *request;
+@property (nonatomic, weak) OMAuthenticationRequest *request;
 @property (nonatomic, strong) NSThread *callerThread;
 @property (nonatomic, strong) OMAuthenticationContext *context;
-@property (nonatomic, strong) id<OMAuthenticationDelegate> delegate;
+@property (nonatomic, weak) id<OMAuthenticationDelegate> delegate;
 @property (nonatomic, strong) OMAuthenticationChallenge *challenge;
 @property (nonatomic, strong) NSError *error;
 @property (nonatomic, strong) NSDictionary *authResponse;
 @property (nonatomic, strong) NSMutableDictionary *authData;
 @property(nonatomic) BOOL maxRetryError;
+@property (nonatomic, strong) dispatch_semaphore_t requestPauseSemaphore;
 
 -(id)initWithMobileSecurityService:(OMMobileSecurityService *)mss
              authenticationRequest:(OMAuthenticationRequest *)authReq

@@ -12,6 +12,9 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.text.ParseException;
 import java.util.Date;
 import java.util.HashSet;
@@ -19,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 import oracle.idm.mobile.auth.OAuthToken;
+import oracle.idm.mobile.logging.OMLog;
 
 /**
  * Representation of an Open ID Token.
@@ -69,8 +73,23 @@ public class OpenIDToken extends OAuthToken {
     private SignedJWT mSignedJWT;
     private JWTClaimsSet mClaims;
     private JWSHeader mJOSEHeaders;
-    private boolean isVerified = true;//TODO change this to when we have JWK in IDCS
+    private boolean isVerified = false;
 
+    /**
+     * Constructs the object based on the output given by
+     * {@link #toJSONObject()}.
+     *
+     * @param signedJWT this should be similar to the output of
+     *                  {@link #toJSONObject()}.
+     * @throws ParseException
+     * @hide
+     */
+    public OpenIDToken(JSONObject signedJWT) throws ParseException, JSONException {
+        this(SignedJWT.parse(signedJWT.getString(OPENID_CONNECT_TOKEN)));
+        /* ID Token would have been stored in Secure Storage only if Signature was verified.
+        * Hence, isVerified is set to true here.*/
+        this.isVerified = true;
+    }
 
     OpenIDToken(SignedJWT jwt) throws ParseException {
         super(OPENID_CONNECT_TOKEN, jwt.getParsedString());
@@ -157,9 +176,32 @@ public class OpenIDToken extends OAuthToken {
         return isVerified;
     }
 
+    void setVerified(boolean verified) {
+        isVerified = verified;
+    }
 
     public boolean matchStringClaim(TokenClaims claim, String expectedValue) {
         Object actualValue = mClaims.getClaims().get(claim.name());
         return actualValue instanceof String && !TextUtils.isEmpty(expectedValue) && expectedValue.equalsIgnoreCase((String) actualValue);
+    }
+
+    SignedJWT getSignedJWT() {
+        return mSignedJWT;
+    }
+
+    @Override
+    public String toString() {
+        return toJSONObject().toString();
+    }
+
+    @Override
+    public JSONObject toJSONObject() {
+        JSONObject jsonObject = new JSONObject();
+        try {
+            jsonObject.put(OPENID_CONNECT_TOKEN, mSignedJWT.getParsedString());
+        } catch (JSONException e) {
+            OMLog.error(TAG, e.getMessage(), e);
+        }
+        return jsonObject;
     }
 }

@@ -8,9 +8,10 @@ package oracle.idm.mobile.auth;
 
 import android.content.Context;
 import android.os.AsyncTask;
-
+import android.text.TextUtils;
 
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
@@ -49,10 +50,12 @@ import oracle.idm.mobile.connection.SSLExceptionEvent;
 import oracle.idm.mobile.credentialstore.OMCredential;
 import oracle.idm.mobile.credentialstore.OMCredentialStore;
 import oracle.idm.mobile.logging.OMLog;
+import oracle.idm.mobile.util.LogUtils;
 
-import static oracle.idm.mobile.OMSecurityConstants.Param.*;
-import static oracle.idm.mobile.OMSecurityConstants.*;
-import static oracle.idm.mobile.OMSecurityConstants.Challenge.*;
+import static oracle.idm.mobile.OMSecurityConstants.COOKIE_EXPIRY_DATE_PATTERN;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.MOBILE_SECURITY_EXCEPTION;
+import static oracle.idm.mobile.OMSecurityConstants.OAUTH_MS_VALID_CLIENT_ASSERTION_PRESENT;
+import static oracle.idm.mobile.OMSecurityConstants.Param.COLLECT_OFFLINE_CREDENTIAL;
 
 
 /**
@@ -102,6 +105,13 @@ public class AuthenticationServiceManager {
     private ASMInputController mASMInputController;
     private OAuthConnectionsUtil mOAuthConnectionsUtil;
     private OMAuthenticationContext mAuthContext;
+    /**
+     * This is used to store user input (username, password) and authentication
+     * exception details which need to be populated in the challenge
+     * when onAuthenticationChallenge is called again (e.g: after
+     * a failed authentication attempt because of invalid credentials)
+     */
+    private OMAuthenticationContext mTemporaryAuthContext;
     private RCUtility mRCUtility;
 
     private boolean isBasic;
@@ -124,6 +134,12 @@ public class AuthenticationServiceManager {
     }
 
     public OAuthConnectionsUtil getOAuthConnectionsUtil() {
+        if (mOAuthConnectionsUtil == null &&
+                getMSS().getMobileSecurityConfig() instanceof OMOAuthMobileSecurityConfiguration) {
+            mOAuthConnectionsUtil = new OAuthConnectionsUtil(getApplicationContext(),
+                    (OMOAuthMobileSecurityConfiguration) getMSS().getMobileSecurityConfig(),
+                    null);
+        }
         return mOAuthConnectionsUtil;
     }
 
@@ -251,8 +267,10 @@ public class AuthenticationServiceManager {
 
     private void checkBeforeLoad(Map<AuthenticationService.Type, AuthenticationService> authServices, AuthenticationService.Type serviceName) {
         if (!authServices.containsKey(serviceName)) {
-            authServices.put(serviceName,
-                    getAuthService(serviceName));
+            AuthenticationService authenticationService = getAuthService(serviceName);
+            if (authenticationService != null) {
+                authServices.put(serviceName, authenticationService);
+            }
         }
     }
 
@@ -337,6 +355,8 @@ public class AuthenticationServiceManager {
                 authService = new CBAAuthenticationService(this, null);
             } else if (type == AuthenticationService.Type.OAUTH20_CC_SERVICE) {
                 authService = new OAuthClientCredentialService(this, null);
+            } else if (type == AuthenticationService.Type.REFRESH_TOKEN_SERVICE) {
+                authService = new RefreshTokenAuthenticationService(this, null);
             }
         }
         if (authService != null) {
@@ -378,10 +398,21 @@ public class AuthenticationServiceManager {
         //determine initial state
         //do stuff required before authentication process.
         OMAuthenticationContext existingAuthContext = retrieveAuthenticationContext();
+        String authKey = getMSS().getMobileSecurityConfig().getAuthenticationKey();
+        OMAuthenticationContext newAuthContext = new OMAuthenticationContext(this, authRequest, authKey);
         boolean isIdleTimeout = false;
+        boolean useRefreshToken = false;
         if (existingAuthContext != null) {
-            // TODO check for validity when authsceme is OAuth on basis of scopes. Move the code to a new Authservice
-            boolean isValid = existingAuthContext.isValid(false);
+            boolean isValid;
+            if (authRequest.getAuthScheme() == OMAuthenticationScheme.OAUTH20
+                    || authRequest.getAuthScheme() == OMAuthenticationScheme.OPENIDCONNECT10) {
+                // If authContext is not valid with local checks, SDK tries to use refresh token.
+                isValid = existingAuthContext.isValid(
+                        ((OMOAuthMobileSecurityConfiguration) getMSS().getMobileSecurityConfig()).getOAuthScopes(),
+                        false);
+            } else {
+                isValid = existingAuthContext.isValid(false);
+            }
             if (isValid) {
                 if (authRequest.isForceAuthentication()) {
                     OMCookieManager.getInstance().removeSessionCookies(getApplicationContext());
@@ -393,6 +424,12 @@ public class AuthenticationServiceManager {
                     return;
                 }
             } else {
+                if ((authRequest.getAuthScheme() == OMAuthenticationScheme.OAUTH20
+                        || authRequest.getAuthScheme() == OMAuthenticationScheme.OPENIDCONNECT10)
+                        && existingAuthContext.hasRefreshToken()) {
+                    newAuthContext.copyFromAuthContext(existingAuthContext);
+                    useRefreshToken = true;
+                }
                 /*Check if idleTimeout of previous authContext has occurred,
                  * and set the idleTimeout flag in present authContext */
                 isIdleTimeout = existingAuthContext.checkIdleTimeout();
@@ -402,7 +439,8 @@ public class AuthenticationServiceManager {
                 }
             }
         }
-        String authKey = getMSS().getMobileSecurityConfig().getAuthenticationKey();
+
+        authRequest.setUseRefreshToken(useRefreshToken);
 
         //determine OAuth?
 //        if (authRequest.getAuthScheme() == OMAuthenticationScheme.OAUTH20) {
@@ -410,12 +448,12 @@ public class AuthenticationServiceManager {
 //        }
 
 
-        OMAuthenticationContext authContext = new OMAuthenticationContext(this, authRequest, authKey);
-        authContext.setIdleTimeout(isIdleTimeout);
+        setTemporaryAuthenticationContext(newAuthContext);
+        newAuthContext.setIdleTimeout(isIdleTimeout);
         //populate the inputParams MAP as required
         //may contain flags data like remember cred, or some specific input as when required.
-        authContext.setLogoutTimeout(authRequest.getLogoutTimeout());
-        authContext.setForceAuthentication(isForceAuthentication);
+        newAuthContext.setLogoutTimeout(authRequest.getLogoutTimeout());
+        newAuthContext.setForceAuthentication(isForceAuthentication);
         AuthenticationService authService = null;
         try {
             authService = getStateTransition().getInitialState(authRequest);
@@ -428,7 +466,7 @@ public class AuthenticationServiceManager {
             OAuthConnectionsUtil oauthConnectionUtil = getOAuthConnectionsUtil();
             // M&S OAuth update params for MS OAuth cases
             if (oauthConnectionUtil != null && oauthConnectionUtil.getOAuthType() == OAuthConnectionsUtil.OAuthType.MSOAUTH) {
-                updateInputParamsForMSOAuth(authContext);
+                updateInputParamsForMSOAuth(newAuthContext);
             }
         }
         //lets check for auto login.
@@ -453,10 +491,10 @@ public class AuthenticationServiceManager {
                                 "Replaying the username and password from the store");
                         OMLog.debug(TAG, "username : " + username);
                         OMLog.debug(TAG, "iddomain : " + identity);
-                        authContext.getInputParams().put(OMSecurityConstants.Challenge.USERNAME_KEY, username);
-                        authContext.getInputParams().put(OMSecurityConstants.Challenge.PASSWORD_KEY, password);
+                        newAuthContext.getInputParams().put(OMSecurityConstants.Challenge.USERNAME_KEY, username);
+                        newAuthContext.getInputParams().put(OMSecurityConstants.Challenge.PASSWORD_KEY, password);
                         if (identity != null && identity.length() > 0) {
-                            authContext.getInputParams().put(OMSecurityConstants.Challenge.IDENTITY_DOMAIN_KEY,
+                            newAuthContext.getInputParams().put(OMSecurityConstants.Challenge.IDENTITY_DOMAIN_KEY,
                                     identity);
                         }
                     }
@@ -465,7 +503,7 @@ public class AuthenticationServiceManager {
         }
 
         getMSS().refreshConnectionHandler(OMSecurityConstants.Flags.CONNECTION_FORCE_RESET, true);
-        processAuthRequest(mMSS.getCallback(), authRequest, authService, authContext);
+        processAuthRequest(mMSS.getCallback(), authRequest, authService, newAuthContext);
     }
 
     private void updateInputParamsForMSOAuth(OMAuthenticationContext authContext) {
@@ -620,7 +658,7 @@ public class AuthenticationServiceManager {
                     aMSE = e;
                     aAuthContext.setStatus(OMAuthenticationContext.Status.FAILURE);
                     aAuthContext.setException(e);
-                    e.printStackTrace();
+                    OMLog.error(TAG, e.getErrorMessage(), e);
                 }
             } else {
                 OMLog.info(TAG, "doInBackground authService: null");
@@ -730,7 +768,6 @@ public class AuthenticationServiceManager {
      * @param tokens            map of tokens
      * @param decodeCookieValue URL decode the cookie value before setting the same in cookie
      *                          store
-     * @return cookie string
      */
     public void storeCookieString(Map<String, OMToken> tokens,
                                   boolean decodeCookieValue) {
@@ -921,7 +958,7 @@ public class AuthenticationServiceManager {
             OMOAuthMobileSecurityConfiguration oAuthConfig = (OMOAuthMobileSecurityConfiguration) mMSS.getMobileSecurityConfig();
             if (oAuthConfig.isClientRegistrationRequired()) {
                 OMLog.debug(TAG, "_handleAuthenticationCompleted : client registration with OpenID/OAuth use-case");
-                String loginHint = null;
+                String loginHint;
                 if (authContext.getAuthenticationProvider() == OMAuthenticationContext.AuthenticationProvider.OPENIDCONNECT10) {
                     loginHint = authContext.getOpenIDUserInfo().getUsername();
                 } else {
@@ -950,6 +987,36 @@ public class AuthenticationServiceManager {
             OfflineAuthenticationService offlineService = (OfflineAuthenticationService) getAuthService(AuthenticationService.Type.OFFLINE_SERVICE);
             offlineService.handleAuthenticationCompleted(authRequest,
                     authContext);
+        }
+
+        /*
+         * Has to store the auth context into the credential store if
+         * AuthContextPersistence is allowed.
+         */
+        String credentialKey = authContext.getStorageKey() != null ?
+                authContext.getStorageKey() : getAppCredentialKey();
+
+        String authContextString = authContext.toString(true);
+        if (mMSS.getMobileSecurityConfig().isAuthContextPersistenceAllowed()) {
+            mMSS.getCredentialStoreService().addAuthContext(credentialKey,
+                    authContextString);
+
+            OMLog.debug(TAG, "Authentication context for the key " + credentialKey
+                    + " stored in the credential store is  : ");
+
+        } else {
+            OMLog.debug(TAG, "Authentication context for the key "
+                    + credentialKey
+                    + " is not stored in the credential store as this is a secure mode. AuthContext in-memory : ");
+
+        }
+        if (authContextString != null && OMSecurityConstants.DEBUG) {
+            try {
+                LogUtils.log("AuthContext: " +
+                        new JSONObject(authContextString).toString(3));
+            } catch (JSONException e) {
+                OMLog.error(TAG, e.getMessage(), e);
+            }
         }
 
         // RC
@@ -984,6 +1051,7 @@ public class AuthenticationServiceManager {
 
     void setAuthenticationContext(OMAuthenticationContext authContext) {
         this.mAuthContext = authContext;
+        setTemporaryAuthenticationContext(authContext);
         if (authContext == null) {
             OMLog.debug(TAG + "_setAuthenticationContext",
                     "Cleared in-memory authContext");
@@ -997,6 +1065,14 @@ public class AuthenticationServiceManager {
         return mAuthContext;
     }
 
+    public void setTemporaryAuthenticationContext(OMAuthenticationContext temporaryAuthContext) {
+        this.mTemporaryAuthContext = temporaryAuthContext;
+    }
+
+    public OMAuthenticationContext getTemporaryAuthenticationContext() {
+        return mTemporaryAuthContext;
+    }
+
     /**
      * Can be called by the client application to find out whether there is a
      * valid authentication context already available in the credential store
@@ -1004,7 +1080,7 @@ public class AuthenticationServiceManager {
      * @return {@link OMAuthenticationContext} instance
      */
     public OMAuthenticationContext retrieveAuthenticationContext() {
-        String storageKey = null;
+        String storageKey;
         if (mAuthContext != null) {
             storageKey = mAuthContext.getStorageKey() != null ? mAuthContext
                     .getStorageKey() : getAppCredentialKey();
@@ -1033,7 +1109,7 @@ public class AuthenticationServiceManager {
             String authCredKey = mAuthContext.getStorageKey() != null ? mAuthContext
                     .getStorageKey() : getAppCredentialKey();
             if (authCredKey != null && !authCredKey.equals(storageKey)) {
-                mAuthContext = null;
+                setAuthenticationContext(null);
             }
         }
 
@@ -1042,13 +1118,22 @@ public class AuthenticationServiceManager {
             String authContextString = getMSS().getCredentialStoreService()
                     .getAuthContext(storageKey);
 
-            OMLog.debug(TAG,
-                    " Authentication context for the key " + storageKey
-                            + " retrieved from the credential store is  : " + authContextString);
+            if (OMSecurityConstants.DEBUG
+                    && !TextUtils.isEmpty(authContextString)) {
+                OMLog.trace(TAG,
+                        " Authentication context for the key " + storageKey
+                                + " retrieved from the credential store is  : ");
+                try {
+                    LogUtils.log(new JSONObject(authContextString).toString(3));
+                } catch (JSONException e) {
+                    OMLog.error(TAG, e.getMessage(), e);
+                }
+            }
 
             if (authContextString != null) {
-                mAuthContext = new OMAuthenticationContext(this,
+                OMAuthenticationContext authContext = new OMAuthenticationContext(this,
                         authContextString, storageKey);
+                setAuthenticationContext(authContext);
                 mAuthContext.setStatus(OMAuthenticationContext.Status.SUCCESS);
             }
         } else {
@@ -1069,8 +1154,8 @@ public class AuthenticationServiceManager {
                              OMAuthenticationContext authContext) {
         resetRedirectionPreferences();//redirect preferences are only valid for that network request for security.
         authContext.clearFields();
-        callback.onAuthenticationCompleted(getMSS(), authContext, null);
         setAuthenticationContext(authContext);
+        callback.onAuthenticationCompleted(getMSS(), authContext, null);
 //        setAuthenticationCallback(null);
         // resetting the failure count to 0 since it is successful
         // authentication
@@ -1093,7 +1178,7 @@ public class AuthenticationServiceManager {
             authContext.setException(exception);
         } else {
             authContext.setStatus(OMAuthenticationContext.Status.FAILURE);
-            authContext.deleteAuthContext(true, true, true, false, false);
+            authContext.deleteAuthContext(true, true, true, false);
             authContext.setException(exception);
             authContext.clearAllFields();
         }
@@ -1138,8 +1223,6 @@ public class AuthenticationServiceManager {
                         ((InvalidCredentialEvent) exceptionEvent).setRetryCount(failureCount);
                     }
                     authContext.getInputParams().put(MOBILE_SECURITY_EXCEPTION, exception);
-                    //update local copy
-                    setAuthenticationContext(authContext);
                     AuthenticationService authService = null;
                     try {
                         authService = getStateTransition().getInitialState(authContext.getAuthRequest());

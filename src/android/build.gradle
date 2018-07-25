@@ -1,0 +1,24 @@
+ext.postBuildExtras = {
+    android {
+        compileSdkVersion 27 // Always compile using highest available SDK version.
+        compileOptions {
+            sourceCompatibility JavaVersion.VERSION_1_8
+            targetCompatibility JavaVersion.VERSION_1_8
+        }
+        defaultConfig {
+            minSdkVersion 21  // Minimum plugin support is Android 5.0.
+            targetSdkVersion 27 // Always try to make this equal to compileSdkVersion after testing.
+            versionCode 2712110
+            versionName "1.1.0"
+        }
+    }
+}
+
+android {
+    buildTypes {
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'src/main/lib-proguard-rules.pro'
+        }
+    }
+}

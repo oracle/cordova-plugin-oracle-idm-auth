@@ -335,7 +335,7 @@ char *OMBase32Encode(const void *buffer,
         free(outputBuffer);
     }
 
-	return result;
+    return (result.length > 0) ? result : nil;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

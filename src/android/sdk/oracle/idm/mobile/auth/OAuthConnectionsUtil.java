@@ -625,7 +625,7 @@ public class OAuthConnectionsUtil {
 
     Set<String> getDefaultOAuthScope() {
         if (defaultScopeSet == null) {
-            defaultScopeSet = new HashSet<String>();
+            defaultScopeSet = new HashSet<>();
             defaultScopeSet.add(DEFAULT_SCOPE_BY_SDK);
         }
         return defaultScopeSet;
@@ -678,6 +678,9 @@ public class OAuthConnectionsUtil {
     }
 
     public String getLogoutUrl(OMAuthenticationContext authenticationContext) {
+        if (oAuthConfig.getLogoutUrl() == null) {
+            return null;
+        }
         StringBuilder logoutUrl = new StringBuilder(oAuthConfig.getLogoutUrl().toString());
         if (oAuthConfig instanceof OMOICMobileSecurityConfiguration) {
             String redirectEndpoint = oAuthConfig.getOAuthRedirectEndpoint();

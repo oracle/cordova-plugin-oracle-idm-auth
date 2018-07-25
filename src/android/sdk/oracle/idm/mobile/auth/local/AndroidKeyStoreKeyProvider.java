@@ -20,7 +20,9 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 
 import oracle.idm.mobile.OMErrorCode;
+import oracle.idm.mobile.OMSecurityConstants;
 import oracle.idm.mobile.crypto.Base64;
+import oracle.idm.mobile.logging.OMLog;
 
 /**
  * A key provider that uses Android's 4.3+'s underlying
@@ -28,6 +30,7 @@ import oracle.idm.mobile.crypto.Base64;
  */
 public class AndroidKeyStoreKeyProvider implements KeyProvider {
 
+    private static final String TAG = AndroidKeyStoreKeyProvider.class.getSimpleName();
     private static final String DEFAULT_KEY_ALIAS = OMDefaultAuthenticator.class.getSimpleName() + "_default_key";
 
     private Context context;
@@ -48,6 +51,9 @@ public class AndroidKeyStoreKeyProvider implements KeyProvider {
             SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
             String wrappedKeyString = sp.getString(DEFAULT_KEY_ALIAS, null);
 
+            if (OMSecurityConstants.DEBUG) {
+                OMLog.trace(TAG, "****wrappedKeyString obtained from SharedPreferences = " + wrappedKeyString);
+            }
             SecretKeyWrapper keyWrapper = new SecretKeyWrapper(context, DEFAULT_KEY_ALIAS, false);
             if (wrappedKeyString == null) {
                 synchronized (DEFAULT_KEY_ALIAS.intern()) {
@@ -58,6 +64,9 @@ public class AndroidKeyStoreKeyProvider implements KeyProvider {
                         byte[] wrapped = keyWrapper.wrap(secretKey);
                         wrappedKeyString = Base64.encode(wrapped);
                         sp.edit().putString(DEFAULT_KEY_ALIAS, wrappedKeyString).apply();
+                        if (OMSecurityConstants.DEBUG) {
+                            OMLog.trace(TAG, "****wrappedKeyString stored in SharedPreferences = " + wrappedKeyString);
+                        }
                         return secretKey;
                     }
                 }
@@ -65,7 +74,9 @@ public class AndroidKeyStoreKeyProvider implements KeyProvider {
 
             byte[] blob = Base64.decode(wrappedKeyString);
             SecretKey secretKey = keyWrapper.unwrap(blob);
-
+            if (OMSecurityConstants.DEBUG) {
+                OMLog.trace(TAG, "****Unwrapped key = " + Base64.encode(secretKey.getEncoded()));
+            }
             return secretKey;
         } catch (InvalidKeyException e) {
             throw new OMAuthenticationManagerException(OMErrorCode.KEY_UNWRAP_FAILED, e.getMessage(), e);
@@ -81,6 +92,7 @@ public class AndroidKeyStoreKeyProvider implements KeyProvider {
 
     /**
      * Random key.
+     *
      * @return
      * @throws NoSuchAlgorithmException
      */

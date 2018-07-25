@@ -6,9 +6,23 @@
 
 package oracle.idm.mobile.auth;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.Serializable;
 import java.util.Calendar;
 import java.util.Date;
+
+import oracle.idm.mobile.OMSecurityConstants;
+import oracle.idm.mobile.logging.OMLog;
+
+import static oracle.idm.mobile.OMSecurityConstants.DOMAIN;
+import static oracle.idm.mobile.OMSecurityConstants.EXPIRY_SECS;
+import static oracle.idm.mobile.OMSecurityConstants.HTTP_ONLY;
+import static oracle.idm.mobile.OMSecurityConstants.PATH;
+import static oracle.idm.mobile.OMSecurityConstants.SECURE;
+import static oracle.idm.mobile.OMSecurityConstants.TOKEN_NAME;
+import static oracle.idm.mobile.OMSecurityConstants.TOKEN_VALUE;
 
 /**
  * OMToken class which holds the token name, its value and its expiry time.
@@ -18,6 +32,8 @@ public class OMToken implements Serializable {
     //TODO remove the cookie specific attributes from the OMTOken class
 
     private static final long serialVersionUID = 1464960246265793413L;
+    private static final String TAG = OMToken.class.getSimpleName();
+
     private String url;
     private String domain;
     private String path;
@@ -28,6 +44,25 @@ public class OMToken implements Serializable {
     protected Date expiryTime;
     protected int expiryInSecs;
     protected boolean cookie = false;
+
+    OMToken(JSONObject token) {
+        String url = token.optString(OMSecurityConstants.URL);
+        String tokenName = token.optString(TOKEN_NAME, "");
+        String tokenValue = token.optString(TOKEN_VALUE, "");
+        long expiryStr = token.optLong(EXPIRY_SECS, -1);
+
+        Date expiry = null;
+        if (expiryStr != -1) {
+            expiry = new Date(expiryStr);
+        }
+
+        String domain = token.optString(DOMAIN, null);
+        String path = token.optString(PATH, null);
+        boolean httpOnly = token.optBoolean(HTTP_ONLY);
+        boolean secure = token.optBoolean(SECURE);
+
+        setValues(url, tokenName, tokenValue, domain, path, expiry, httpOnly, secure);
+    }
 
     OMToken(String name, String value, int expiryInSecs) {
         this.name = name;
@@ -43,20 +78,26 @@ public class OMToken implements Serializable {
     }
 
     protected OMToken(String name, String tokenValue) {
-        this.name = name;
-        this.value = tokenValue;
-    }
-
-    OMToken(String name, String value, String domain) {
-        super();
-        this.name = name;
-        this.value = value;
-        this.domain = domain;
+        this(name, tokenValue, null);
     }
 
     OMToken(String url, String name, String value, String domain, String path,
             Date expiry, boolean httpOnly, boolean secure) {
-        super();
+        setValues(url, name, value, domain, path, expiry, httpOnly, secure);
+    }
+
+    OMToken(String url, String name, String value, String domain, String path,
+            int expiryInSeconds, boolean httpOnly, boolean secure) {
+        setValues(url, name, value, domain, path, null, httpOnly, secure);
+        this.expiryInSecs = expiryInSeconds;
+        populateExpiryDate();
+    }
+
+    public OMToken() {
+    }
+
+    private void setValues(String url, String name, String value, String domain, String path,
+                           Date expiry, boolean httpOnly, boolean secure) {
         this.url = url;
         this.name = name;
         this.value = value;
@@ -66,24 +107,6 @@ public class OMToken implements Serializable {
         this.httpOnly = httpOnly;
         this.secure = secure;
         cookie = true;
-    }
-
-    OMToken(String url, String name, String value, String domain, String path,
-            int expiryInSeconds, boolean httpOnly, boolean secure) {
-        super();
-        this.url = url;
-        this.name = name;
-        this.value = value;
-        this.domain = domain;
-        this.path = path;
-        this.expiryInSecs = expiryInSeconds;
-        this.httpOnly = httpOnly;
-        this.secure = secure;
-        populateExpiryDate();
-        cookie = true;
-    }
-
-    public OMToken() {
     }
 
     /**
@@ -97,12 +120,9 @@ public class OMToken implements Serializable {
             return false;
         }
 
-        if (expiryTime != null) {
-            Date currentTime = Calendar.getInstance().getTime();
-
-            if (currentTime.after(expiryTime) || currentTime.equals(expiryTime)) {
-                return true;
-            }
+        Date currentTime = Calendar.getInstance().getTime();
+        if (currentTime.after(expiryTime) || currentTime.equals(expiryTime)) {
+            return true;
         }
         return false;
     }
@@ -182,20 +202,34 @@ public class OMToken implements Serializable {
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder();
-        if (cookie) {
-            builder.append("OMToken [name=").append(name).append(", domain=")
-                    .append(domain).append(", path=").append(path)
-                    .append(", httpOnly=").append(httpOnly).append(", secure=")
-                    .append(secure).append(", value=").append(value)
-                    .append(", expiryTime=").append(expiryTime)
-                    .append(", expiryInSecs=").append(expiryInSecs)
-                    .append(", url=").append(url).append("]");
-        } else {
-            builder.append("OMToken [name=").append(name).append(", value=").append(value).append(", expiryTime=").append(expiryTime)
-                    .append(", expiryInSecs=").append(expiryInSecs);
+        return toJSONObject().toString();
+    }
+
+    public JSONObject toJSONObject() {
+        JSONObject tokenJson = new JSONObject();
+        try {
+            tokenJson.put(TOKEN_NAME, name);
+            tokenJson.put(TOKEN_VALUE, value);
+
+            if (expiryTime != null) {
+                tokenJson.put(EXPIRY_SECS, expiryTime.getTime());
+            }
+
+            if (cookie) {
+                tokenJson.put(OMSecurityConstants.URL, url);
+                if (domain != null) {
+                    tokenJson.put(DOMAIN, domain);
+                }
+                if (path != null) {
+                    tokenJson.put(PATH, path);
+                }
+                tokenJson.put(HTTP_ONLY, httpOnly);
+                tokenJson.put(SECURE, secure);
+            }
+        } catch (JSONException e) {
+            OMLog.error(TAG, e.getMessage(), e);
         }
-        return builder.toString();
+        return tokenJson;
     }
 
 }

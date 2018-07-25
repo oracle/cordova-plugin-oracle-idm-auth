@@ -110,7 +110,7 @@ public final class OMMSOAuthMobileSecurityConfiguration extends
         final OMConnectionHandler connectionHandler = new OMConnectionHandler(context);
         profileResponse = connectionHandler.httpGet(new URL(appProfileUrl), headers);
         if (profileResponse != null) {
-            if (profileResponse.getResponseCode() / 100 == 2) {
+            if (profileResponse.isSuccess()) {
                 profileResponseString = profileResponse.getResponseStringOnSuccess();
             } else {
                 profileResponseString = profileResponse.getResponseStringOnFailure();

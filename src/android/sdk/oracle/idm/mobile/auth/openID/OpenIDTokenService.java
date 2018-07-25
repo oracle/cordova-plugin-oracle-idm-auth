@@ -6,8 +6,19 @@
 
 package oracle.idm.mobile.auth.openID;
 
+import android.util.Log;
+
+import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.crypto.factories.DefaultJWSVerifierFactory;
+import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.JWKMatcher;
+import com.nimbusds.jose.jwk.JWKSelector;
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jose.proc.JWSVerifierFactory;
 import com.nimbusds.jwt.SignedJWT;
 
 import java.security.Key;
@@ -18,7 +29,7 @@ import java.util.Map;
 import oracle.idm.mobile.logging.OMLog;
 
 /**
- * Created by ajulka on 5/2/2016.
+ * This is a utility class for generating token objects and verifying the id token.
  */
 public class OpenIDTokenService {
 
@@ -30,13 +41,11 @@ public class OpenIDTokenService {
     private TokenType mType = TokenType.JWT;//for now default
 
 
-    public OpenIDToken generate(String raw, boolean signed) throws ParseException {
-        if (raw != null) {
+    public OpenIDToken generate(String rawToken, boolean signed)
+            throws ParseException {
+        if (rawToken != null) {
             if (signed) {
-                SignedJWT signedJWT;
-                JWTClaimsSet claims;
-                JWSHeader headers;
-                return new OpenIDToken(SignedJWT.parse(raw));
+                return new OpenIDToken(SignedJWT.parse(rawToken));
             }
         }
         return null;
@@ -128,6 +137,54 @@ public class OpenIDTokenService {
             }
         }
         return true;
+    }
+
+    /**
+     * Verifies the signature in idToken with the public key obtained from jwksResponse
+     *
+     * @param idToken
+     * @param jwksResponse
+     * @return
+     */
+    public boolean verifySignature(OpenIDToken idToken, String jwksResponse) {
+        boolean verificationStatus = false;
+        try {
+            JWKSet jwkSet = JWKSet.parse(jwksResponse);
+            JWSHeader jwsHeader = idToken.getSignedJWT().getHeader();
+            if (jwkSet != null) {
+                List<JWK> matchingJWKs = new JWKSelector(new JWKMatcher.Builder()
+                        .keyID(jwsHeader.getKeyID())
+                        .algorithm(jwsHeader.getAlgorithm())
+                        .build())
+                        .select(jwkSet);
+                OMLog.trace(TAG, "Found " + matchingJWKs.size() + " matching JWKs");
+
+                JWSVerifierFactory jwsVerifierFactory = new DefaultJWSVerifierFactory();
+                for (JWK jwk : matchingJWKs) {
+                    try {
+                        Key key = null;
+                        if (jwk instanceof RSAKey) {
+                            key = ((RSAKey) jwk).toRSAPublicKey();
+                        } else if (jwk instanceof ECKey) {
+                            key = ((ECKey) jwk).toECPublicKey();
+                        }
+                        if (key != null) {
+                            JWSVerifier jwsVerifier = jwsVerifierFactory.createJWSVerifier(jwsHeader, key);
+                            verificationStatus = idToken.getSignedJWT().verify(jwsVerifier);
+                            if (verificationStatus) {
+                                idToken.setVerified(true);
+                                break;
+                            }
+                        }
+                    } catch (JOSEException e) {
+                        OMLog.error(TAG, e.getMessage(), e);
+                    }
+                }
+            }
+        } catch (ParseException e) {
+            Log.e(TAG, e.getMessage(), e);
+        }
+        return verificationStatus;
     }
 
 }

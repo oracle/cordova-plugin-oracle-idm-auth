@@ -19,6 +19,7 @@ import android.webkit.SslErrorHandler;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -48,8 +49,21 @@ import oracle.idm.mobile.credentialstore.OMCredential;
 import oracle.idm.mobile.crypto.Base64;
 import oracle.idm.mobile.logging.OMLog;
 
-import static oracle.idm.mobile.OMSecurityConstants.Challenge.*;
-import static oracle.idm.mobile.OMSecurityConstants.*;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.HTTP_AUTH_HOST;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.HTTP_AUTH_REALM;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.IDENTITY_DOMAIN_KEY;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.IS_FORCE_AUTHENTICATION;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.MOBILE_SECURITY_EXCEPTION;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.PASSWORD_KEY;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.UNTRUSTED_SERVER_CERTIFICATE_AUTH_TYPE_KEY;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.UNTRUSTED_SERVER_CERTIFICATE_CHAIN_KEY;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.USERNAME_KEY;
+import static oracle.idm.mobile.OMSecurityConstants.ConnectionConstants;
+import static oracle.idm.mobile.OMSecurityConstants.DOMAIN;
+import static oracle.idm.mobile.OMSecurityConstants.EXPIRES;
+import static oracle.idm.mobile.OMSecurityConstants.HTTP_ONLY;
+import static oracle.idm.mobile.OMSecurityConstants.PATH;
+import static oracle.idm.mobile.OMSecurityConstants.SECURE;
 
 
 /**
@@ -124,12 +138,18 @@ public abstract class AuthenticationService {
          * openID Connect Authentication Service
          */
         OPENIDCONNECT10,
-        /*
-        Authentication service to handle dynamic client registration for Mobile and Social*/
+        /**
+         * Authentication service to handle dynamic client registration for Mobile and Social
+         */
         OAUTH_MS_PREAUTHZ,
-        /*
-        Authentication service to handle dynamic client registration for Mobile and Social*/
-        OAUTH_MS_DYCR
+        /**
+         * Authentication service to handle dynamic client registration for Mobile and Social
+         */
+        OAUTH_MS_DYCR,
+        /**
+         * Authentication service to obtain new access tokens using refresh token.
+         */
+        REFRESH_TOKEN_SERVICE
     }
 
     public static void onUntrustedServerCertificate(AuthenticationServiceManager asm, SslErrorHandler handler, SslError sslError) {
@@ -232,6 +252,7 @@ public abstract class AuthenticationService {
         clientCertHandler.createChallengeRequest(asm.getMSS(), cbaChallenge, null);
     }
 
+
     protected final AuthenticationServiceManager mASM;
     final OMAuthenticationCompletionHandler mAuthCompletionHandler;
     final OMLogoutCompletionHandler mLogoutCompletionHandler;
@@ -333,6 +354,15 @@ public abstract class AuthenticationService {
                 }
                 String domain = getAttributeValue(
                         setCookieHeaderValue, DOMAIN);
+                if (TextUtils.isEmpty(domain)) {
+                    try {
+                        URL visitedURL = new URL(url);
+                        domain = visitedURL.getHost();
+                    } catch (MalformedURLException e) {
+                        OMLog.error(TAG, e.getMessage(), e);
+                    }
+                }
+
                 String path = getAttributeValue(
                         setCookieHeaderValue, PATH);
                 String expiryDateStr = getAttributeValue(
@@ -383,7 +413,7 @@ public abstract class AuthenticationService {
             Log.i(TAG, "Adding RC challenge fields");
         }
         // add input params present in authContext to challenge
-        OMAuthenticationContext authContext = mASM.getAuthenticationContext();
+        OMAuthenticationContext authContext = mASM.getTemporaryAuthenticationContext();
         if (authContext != null && authContext.getMobileException() != null) {
             challenge.addChallengeField(MOBILE_SECURITY_EXCEPTION, authContext.getMobileException());
             if (authContext.getInputParams() != null) {
@@ -408,7 +438,7 @@ public abstract class AuthenticationService {
      */
     public void updateChallengeWithException(OMAuthenticationChallenge challenge) {
         if (mASM != null) {
-            OMAuthenticationContext authContext = mASM.getAuthenticationContext();
+            OMAuthenticationContext authContext = mASM.getTemporaryAuthenticationContext();
             if (authContext != null && authContext.getMobileException() != null) {
                 challenge.addChallengeField(MOBILE_SECURITY_EXCEPTION, authContext.getMobileException());
                 //resetting the exception before new challenge is thrown
@@ -432,14 +462,20 @@ public abstract class AuthenticationService {
      * @param mss
      * @param code
      */
-    protected void reportLogoutCompleted(OMMobileSecurityService mss, boolean isLogoutCall, OMErrorCode code) {
+    protected void reportLogoutCompleted(OMMobileSecurityService mss, boolean isLogoutCall,
+                                         OMErrorCode code) {
+        reportLogoutCompleted(mss, isLogoutCall,
+                ((code != null) ? new OMMobileSecurityException(code) : null));
+    }
+
+    protected void reportLogoutCompleted(OMMobileSecurityService mss, boolean isLogoutCall,
+                                         OMMobileSecurityException mse) {
         mss.onLogoutCompleted();
         if (isLogoutCall) {
             OMMobileSecurityServiceCallback callback = mss.getCallback();
             if (callback != null) {
                 OMLog.info(TAG, "Invoking onLogoutCompleted callback");
-                callback.onLogoutCompleted(mss,
-                        ((code != null) ? new OMMobileSecurityException(code) : null));
+                callback.onLogoutCompleted(mss, mse);
             } else {
                 OMLog.error(TAG, "Cannot invoke app callback for logout, as the callback is not registered");
             }
@@ -480,6 +516,7 @@ public abstract class AuthenticationService {
 
         @Override
         protected OMMobileSecurityException doInBackground(Void... params) {
+            OMMobileSecurityException exception = null;
             try {
                 OMLog.debug(TAG, "Logout url is being invoked");
                 int logoutTimeout = authContext.getLogoutTimeout();
@@ -547,32 +584,46 @@ public abstract class AuthenticationService {
                             OMLog.debug(TAG, "Added User authorization header!");
                         }
                     }
-                    connHandler.httpGet(logoutUrl, headers);
+                    OMHTTPResponse response = connHandler.httpGet(logoutUrl, headers);
+                    if (response == null) {
+                        exception = new OMMobileSecurityException(OMErrorCode.LOGOUT_FAILED);
+                    } else if (!response.isSuccess()) {
+                        exception = new OMMobileSecurityException(OMErrorCode.LOGOUT_FAILED,
+                                response.constructErrorMessage());
+                    }
                 } else {
                     Log.e(TAG, "Connection Handler Null [fatal]");
-                    return new OMMobileSecurityException(
-                            OMErrorCode.INTERNAL_ERROR);
+                    exception = new OMMobileSecurityException(OMErrorCode.INTERNAL_ERROR);
                 }
             } catch (OMMobileSecurityException e) {
                 OMLog.error(TAG,
                         "Error occurred while invoking logout url: "
                                 + e.getMessage());
-                return e;
+                exception = e;
             }
-            return null;
+            return exception;
         }
 
         @Override
         protected void onPostExecute(OMMobileSecurityException result) {
-            OMLog.debug(TAG, "[AccessLogoutUrlTask] onPostExecute ");
-            OMMobileSecurityService mss = mASM.getMSS();
-            // if it is a logout call then only invoke the call back
-            if (isLogoutCall) {
-                mss.onLogoutCompleted();
-                mss.getCallback().onLogoutCompleted(mss, result);
-            }
+            OMLog.debug(TAG, "onPostExecute ");
             authContext.deleteCookies();
             OMLog.debug(TAG, "Deleted cookies locally after invoking logout url");
+            /* To clear the cookies on idle timeout if offline authentication is disabled,
+            * SDK invokes logout url. mss.onLogoutCompleted() clears entire state including
+            * cancelling any pending timer. But, we need the session timer to be running
+            * so that we clear the remembered credentials on session timeout. So, it is not
+            * called unless this code is executed as part of mss.logout() call i.e.
+            * [isLogoutCall = true].
+            * */
+            if (isLogoutCall) {
+                OMMobileSecurityService mss = mASM.getMSS();
+                mss.onLogoutCompleted();
+                OMMobileSecurityServiceCallback callback = mss.getCallback();
+                if (callback != null) {
+                    callback.onLogoutCompleted(mss, result);
+                }
+            }
         }
     }
 }

@@ -63,8 +63,11 @@
     else if ([self isKeyStoreCreated:keyStoreId kek:kek])
     {
         keyStore = [[OMKeyStore alloc] initWithKeyStoreId:keyStoreId kek:kek];
-        [keyStore loadKeys];
-        self.keyStoreMap[keyStoreId] = keyStore;
+        if (keyStore)
+        {
+            [keyStore loadKeys];
+            self.keyStoreMap[keyStoreId] = keyStore;
+        }
     }
     else if(errorCode && error)
     {

@@ -7,10 +7,10 @@ package oracle.idm.auth.plugin;
 import java.util.HashMap;
 import java.util.Map;
 
-import android.content.res.Resources;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import oracle.idm.mobile.OMMobileSecurityService;
+import oracle.idm.auth.plugin.util.ResourceHelper;
 import oracle.idm.mobile.OMSecurityConstants;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
@@ -20,7 +20,6 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import oracle.idm.mobile.logging.OMLog;
 
 /**
  * Activity containing a webView which is used to address IDM's authentication flows that needs an embedded WebView.
@@ -30,17 +29,12 @@ public class WebViewActivity extends Activity
   public static final String FINISH_WEB_VIEW_INTENT = "finishWebView";
   public static final String CANCEL_WEB_VIEW_INTENT = "cancelFromWebView";
 
-  private String redirectEndPoint;
-
   @Override
   protected void onCreate(Bundle savedInstanceState)
   {
     super.onCreate(savedInstanceState);
-    Resources resources = getApplication().getResources();
-    String packageName = getApplication().getPackageName();
-    redirectEndPoint = getIntent().getStringExtra(OMMobileSecurityService.OM_PROP_OAUTH_REDIRECT_ENDPOINT);
-    setContentView(resources.getIdentifier(_ACTIVITY_WEB_VIEW, _LAYOUT, packageName));
-    _webView = (WebView) findViewById(resources.getIdentifier(_IDM_WEB_VIEW, _ID, packageName));
+    setContentView(_R.getLayout(_ACTIVITY_WEB_VIEW));
+    _webView = (WebView) findViewById(_R.getIdentifier(_IDM_WEB_VIEW));
     _webView.getSettings().setJavaScriptEnabled(true);
     _webView.getSettings().setDomStorageEnabled(true);
 
@@ -49,17 +43,17 @@ public class WebViewActivity extends Activity
     IdmAuthentication.CompletionHandler completionHandler = IdmAuthentication.getCompletionHandler();
     final IdmAuthentication.CompletionHandler.CHALLENGE_TYPE challengeType = completionHandler.getChallengeType();
 
-    final Button backBtn = _getBackButton(resources, packageName);
-    final Button forwardBtn = _getForwardButton(resources, packageName);
-    final Button reloadBtn = _getReloadButton(resources, packageName);
-    final Button cancelBtn = _getCancelButton(resources, packageName, challengeType);
+    final Button backBtn = _getBackButton();
+    final Button forwardBtn = _getForwardButton();
+    final Button reloadBtn = _getReloadButton();
+    final Button cancelBtn = _getCancelButton(challengeType);
 
     _webViewClient = _createWebViewClient(challengeType, backBtn, forwardBtn, reloadBtn, cancelBtn);
     _broadcastReceiver = _createBroadcastReceiver();
     registerReceiver(_broadcastReceiver, new IntentFilter(FINISH_WEB_VIEW_INTENT));
 
     _proceed(completionHandler);
-    OMLog.debug(TAG,"Created webview activity and passed on to IDM SDK.");
+    Log.d(TAG, "Created webview activity and passed on to IDM SDK.");
   }
 
   @Override
@@ -67,7 +61,7 @@ public class WebViewActivity extends Activity
   {
     super.onDestroy();
     unregisterReceiver(_broadcastReceiver);
-    OMLog.debug(TAG,"Destroyed webview activity.");
+    Log.d(TAG,"Destroyed webview activity.");
   }
 
   private void _proceed(IdmAuthentication.CompletionHandler completionHandler)
@@ -88,7 +82,7 @@ public class WebViewActivity extends Activity
           String action = intent.getAction();
           if (FINISH_WEB_VIEW_INTENT.equals(action))
           {
-            OMLog.debug(TAG, "Finishing the activity.");
+            Log.d(TAG, "Finishing the activity.");
             // TODO: Bug 26048182, Destroy the webview once we are done with it.
             finish();
           }
@@ -105,29 +99,17 @@ public class WebViewActivity extends Activity
     return new WebViewClient()
     {
       @Override
-      public boolean shouldOverrideUrlLoading(WebView view, String url) {
-        if (redirectEndPoint != null
-            && !redirectEndPoint.isEmpty()
-            && url.startsWith(redirectEndPoint)) {
-          OMLog.debug(TAG,"Finishing webview for OAUTH redirect end point: " + url);
-          finish();
-        }
-
-        return super.shouldOverrideUrlLoading(view, url);
-      }
-
-      @Override
       public void onPageFinished(WebView view, String url)
       {
         // TODO: Bug 26134480
         // This is not getting invoked now. Ideally the buttons should be
         // enabled after page is rendered.
-        OMLog.debug(TAG, "WebView is loaded now. Enabling buttons...");
+        Log.d(TAG, "WebView is loaded now. Enabling buttons...");
         backBtn.setEnabled(true);
         forwardBtn.setEnabled(true);
         if (challengeType == IdmAuthentication.CompletionHandler.CHALLENGE_TYPE.LOGIN)
         {
-          OMLog.debug(TAG,"Enabling cancel button for LOGIN challenge.");
+          Log.d(TAG,"Enabling cancel button for LOGIN challenge.");
           cancelBtn.setEnabled(true);
         }
 
@@ -136,11 +118,9 @@ public class WebViewActivity extends Activity
     };
   }
 
-  private Button _getCancelButton(Resources resources,
-                                  String packageName,
-                                  IdmAuthentication.CompletionHandler.CHALLENGE_TYPE challengeType)
+  private Button _getCancelButton(IdmAuthentication.CompletionHandler.CHALLENGE_TYPE challengeType)
   {
-    Button cancelBtn = (Button) findViewById(resources.getIdentifier(_CANCEL_BTN_ID, _ID, packageName));
+    Button cancelBtn = (Button) findViewById(_R.getIdentifier(_CANCEL_BTN_ID));
     cancelBtn.setOnClickListener(new View.OnClickListener()
     {
       @Override
@@ -160,15 +140,15 @@ public class WebViewActivity extends Activity
 
     if (challengeType == IdmAuthentication.CompletionHandler.CHALLENGE_TYPE.LOGIN)
     {
-      OMLog.debug(TAG,"Enabling cancel button for LOGIN challenge.");
+      Log.d(TAG,"Enabling cancel button for LOGIN challenge.");
       cancelBtn.setEnabled(true);
     }
     return cancelBtn;
   }
 
-  private Button _getReloadButton(Resources resources, String packageName)
+  private Button _getReloadButton()
   {
-    Button reloadBtn = (Button) findViewById(resources.getIdentifier(_RELOAD_BTN_ID, _ID, packageName));
+    Button reloadBtn = (Button) findViewById(_R.getIdentifier(_RELOAD_BTN_ID));
     reloadBtn.setOnClickListener(new View.OnClickListener()
     {
       @Override
@@ -181,9 +161,9 @@ public class WebViewActivity extends Activity
     return reloadBtn;
   }
 
-  private Button _getForwardButton(Resources resources, String packageName)
+  private Button _getForwardButton()
   {
-    Button forwardBtn = (Button) findViewById(resources.getIdentifier(_FORWARD_BTN_ID, _ID, packageName));
+    Button forwardBtn = (Button) findViewById(_R.getIdentifier(_FORWARD_BTN_ID));
     forwardBtn.setOnClickListener(new View.OnClickListener()
     {
       @Override
@@ -199,9 +179,9 @@ public class WebViewActivity extends Activity
     return forwardBtn;
   }
 
-  private Button _getBackButton(Resources resources, String packageName)
+  private Button _getBackButton()
   {
-    Button backBtn = (Button) findViewById(resources.getIdentifier(_BACK_BTN_ID, _ID, packageName));
+    Button backBtn = (Button) findViewById(_R.getIdentifier(_BACK_BTN_ID));
     backBtn.setOnClickListener(new View.OnClickListener()
     {
       @Override
@@ -222,9 +202,8 @@ public class WebViewActivity extends Activity
   private BroadcastReceiver _broadcastReceiver;
 
   private static final String TAG = WebViewActivity.class.getSimpleName();
+  private static final ResourceHelper _R = ResourceHelper.INSTANCE;
   private static final String _ACTIVITY_WEB_VIEW = "activity_web_view";
-  private static final String _ID = "id";
-  private static final String _LAYOUT = "layout";
   private static final String _IDM_WEB_VIEW = "idmWebView";
   private static final String _CANCEL_BTN_ID = "webViewCancelBtn";
   private static final String _RELOAD_BTN_ID = "webViewReloadBtn";

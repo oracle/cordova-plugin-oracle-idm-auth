@@ -18,6 +18,7 @@
 @property (nonatomic, strong) OMAuthenticationChallenge *challenge;
 @property (nonatomic, strong) OMWebViewClient *webViewClient;
 @property(nonatomic, strong) OMWKWebViewClient *wkWebViewClient;
+@property (nonatomic,retain) NSTimer *timer;
 
 @property (nonatomic, assign) BOOL clearPersistentCookies;
 @end
@@ -26,41 +27,53 @@
 
 -(void)performLogout:(BOOL)clearRegistrationHandles
 {
-    self.callerThread = [NSThread currentThread];
-    self.clearPersistentCookies = clearRegistrationHandles;
-    
-    self.challenge = [[OMAuthenticationChallenge alloc] init];
-    self.challenge.authData = [NSMutableDictionary dictionary];
-    self.challenge.challengeType = OMChallengeEmbeddedBrowser;
-    
-    __block __weak OMFedAuthLogoutService *weakself = self;
-    
-    self.challenge.authChallengeHandler = ^(NSDictionary *dict,
-                                            OMChallengeResponse response)
+    if (self.mss.authenticationContext)
     {
-        if (response == OMProceed)
+        self.callerThread = [NSThread currentThread];
+        self.clearPersistentCookies = clearRegistrationHandles;
+        
+        self.challenge = [[OMAuthenticationChallenge alloc] init];
+        self.challenge.authData = [NSMutableDictionary dictionary];
+        self.challenge.challengeType = OMChallengeEmbeddedBrowser;
+        
+        __block __weak OMFedAuthLogoutService *weakself = self;
+        
+        self.challenge.authChallengeHandler = ^(NSDictionary *dict,
+                                                OMChallengeResponse response)
         {
-            weakself.authData = [NSMutableDictionary
-                                 dictionaryWithDictionary:dict];
-            [weakself proceedWithChallengeResponce];
-        }
-        else
-        {
-            //no webview error
-            NSError *error = [OMObject createErrorWithCode:OMERR_USER_CANCELED_AUTHENTICATION];
+            if (response == OMProceed)
+            {
+                weakself.authData = [NSMutableDictionary
+                                     dictionaryWithDictionary:dict];
+                [weakself proceedWithChallengeResponce];
+            }
+            else
+            {
+                //no webview error
+                NSError *error = [OMObject createErrorWithCode:
+                                  OMERR_USER_CANCELED_AUTHENTICATION];
+                
+                [weakself performSelector:@selector(sendFinishLogout:)
+                                 onThread:weakself.callerThread
+                               withObject:error
+                            waitUntilDone:YES];
+                
+            }
+        };
+        
+        if ([self.mss.delegate respondsToSelector:@selector(mobileSecurityService:didReceiveLogoutAuthenticationChallenge:)]) {
             
-            [weakself performSelector:@selector(sendFinishLogout:)
-                         onThread:weakself.callerThread
-                       withObject:error
+            [self.mss.delegate mobileSecurityService:self.mss
+             didReceiveLogoutAuthenticationChallenge:self.challenge];
+        }
+    }
+    else
+    {
+        [self performSelector:@selector(sendFinishLogout:)
+                         onThread:[NSThread currentThread]
+                       withObject:nil
                     waitUntilDone:YES];
 
-        }
-    };
-
-    if ([self.mss.delegate respondsToSelector:@selector(mobileSecurityService:didReceiveLogoutAuthenticationChallenge:)]) {
-
-        [self.mss.delegate mobileSecurityService:self.mss
-         didReceiveLogoutAuthenticationChallenge:self.challenge];
     }
 }
 
@@ -69,13 +82,25 @@
     if([(OMFedAuthConfiguration*)self.mss.configuration enableWKWebView])
     {
         [self clearWkWebViewCookies];
+        [self.wkWebViewClient stopRequest];
     }
     else
     {
         [self clearWebViewCookies];
+        [self.webViewClient stopRequest];
     }
     
     [self.mss.cacheDict removeAllObjects];
+    if (self.clearPersistentCookies)
+    {
+        self.mss.authManager.curentAuthService.context = nil;
+    }
+
+    if (self.mss.configuration.sessionActiveOnRestart)
+    {
+        [[OMCredentialStore sharedCredentialStore]
+         deleteAuthenticationContext:self.mss.authKey];
+    }
 
     [self.mss.delegate mobileSecurityService:self.mss
                              didFinishLogout:error];
@@ -131,16 +156,22 @@
 #pragma mark -
 #pragma UIWebView Delegate Methods -
 
+- (void)webViewDidStartLoad:(UIWebView *)webView
+{
+    if ([self.timer isValid])
+    {
+        [self.timer invalidate];
+    }
+}
+
 - (void)webViewDidFinishLoad:(UIWebView *)webView
 {
 
     if (webView.isLoading)
         return;
-
     
     NSURL *URL = webView.request.URL;
 
-    
     OMFedAuthConfiguration *fedauthconfig = (OMFedAuthConfiguration*)self.mss.configuration;
 
     if (fedauthconfig.autoConfirmLogout)
@@ -195,20 +226,31 @@
         [self processLogoutWithUrl:URL];
 
     }
-    else
+    else if (fedauthconfig.logoutSuccessURL == nil)
     {
-        [self performSelector:@selector(sendFinishLogout:)
-                     onThread:self.callerThread
-                   withObject:nil
-                waitUntilDone:YES];
-
+        self.timer = [NSTimer scheduledTimerWithTimeInterval:3 target:self
+                                                    selector:@selector(validatePageRedirects)
+                                                    userInfo:nil
+                                                     repeats:NO];
+        
     }
-
     
 }
 
 - (void)webView:(UIWebView *)webView didFailLoadWithError:(NSError *)error
 {
+    OMFedAuthConfiguration *fedauthconfig = (OMFedAuthConfiguration*)self.mss.configuration;
+    
+    if (fedauthconfig.autoConfirmLogout && (error.code == NSURLErrorCancelled))
+    {
+        error = nil;
+    }
+    
+    if ([self.timer isValid])
+    {
+        [self.timer invalidate];
+    }
+
     [self performSelector:@selector(sendFinishLogout:)
                  onThread:self.callerThread
                withObject:error
@@ -222,7 +264,13 @@
 didFailProvisionalNavigation:(null_unspecified WKNavigation *)navigation
      withError:(nonnull NSError *)error
 {
+    OMFedAuthConfiguration *fedauthconfig = (OMFedAuthConfiguration*)self.mss.configuration;
     
+    if (fedauthconfig.autoConfirmLogout && (error.code == NSURLErrorCancelled))
+    {
+        error = nil;
+    }
+
     [self performSelector:@selector(sendFinishLogout:)
                  onThread:self.callerThread
                withObject:error
@@ -366,13 +414,26 @@ didFailProvisionalNavigation:(null_unspecified WKNavigation *)navigation
     }
     else if (YES == [OMObject isCurrentURL:logoutUrl EqualTo:fedAuthConfig.logoutFailureURL])
     {
-        NSError *error = [OMObject createErrorWithCode:OMERR_USER_AUTHENTICATION_FAILED];
+        NSError *error = [OMObject createErrorWithCode:OMERR_LOGOUT_FAILED];
         [self performSelector:@selector(sendFinishLogout:)
                      onThread:self.callerThread
                    withObject:error
                 waitUntilDone:YES];
-        
     }
 
 }
+
+- (void)validatePageRedirects
+{
+    if ([self.timer isValid])
+    {
+        [self.timer invalidate];
+    }
+    
+    [self performSelector:@selector(sendFinishLogout:)
+                 onThread:self.callerThread
+               withObject:nil
+            waitUntilDone:YES];
+}
+
 @end

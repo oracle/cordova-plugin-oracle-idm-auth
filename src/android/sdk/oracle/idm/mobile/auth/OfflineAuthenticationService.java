@@ -142,7 +142,7 @@ final class OfflineAuthenticationService extends AuthenticationService implement
                 .getMaxFailureAttempts()) {
             OMLog.debug(TAG,
                     " - Maximum Failure attempts has reached.");
-            authContext.deleteAuthContext(true, true, true, false, false);
+            authContext.deleteAuthContext(true, true, true, false);
             mASM.resetFailureCount(authContext);
             return null;
         }
@@ -206,26 +206,21 @@ final class OfflineAuthenticationService extends AuthenticationService implement
              * is the same as the initial one. For basic auth, it is changed as
              * part of OMSS-15577.
              */
-            boolean isNetworkAvail = mASM.getMSS().getConnectionHandler()
-                    .isNetworkAvailable(
-                            authRequest.getAuthenticationURL().toString());
             if (authRequest.getAuthScheme() == OMAuthenticationScheme.BASIC) {
                 OMAuthenticationContext prevContext = mASM
                         .retrieveAuthenticationContext();
                 String userName = (String) authContext.getInputParams().get(USERNAME_KEY);
                 if (prevContext != null && !TextUtils.isEmpty(userName) && !userName.equals(prevContext.getUserName())) {
                     OMLog.debug(TAG + "_handleAuthentication", "Session for user: " + prevContext.getUserName() + " already available!");
-                    // if previous username and the current username mismatch
-                    // then do not perform the check for cookie validation, as
-                    // previous user's cookies are going to get validated.
-
-                    // to avoid that simply return and do fresh online
-                    // Authentication for the new user.
-                    if (isNetworkAvail) {
-                        return null;
-                    } else {
-                        return performOfflineAuthentication(authContext);
-                    }
+                    /*
+                     * If previous username and the current username mismatch
+                     * then do not perform the check for cookie validation, as
+                     * previous user's cookies are going to get validated. To
+                     * avoid that simply return and do fresh online
+                     * Authentication for the new user, irrespective of network
+                     * availability
+                     */
+                    return null;
                 }
                 try {
                     Map<String, String> headers = new HashMap<>(
@@ -254,6 +249,9 @@ final class OfflineAuthenticationService extends AuthenticationService implement
                     return performOfflineAuthentication(authContext);
                 }
             } else {
+                boolean isNetworkAvail = mASM.getMSS().getConnectionHandler()
+                        .isNetworkAvailable(
+                                authRequest.getAuthenticationURL().toString());
                 if (isNetworkAvail) {
                     return null;
                 } else {
@@ -297,7 +295,7 @@ final class OfflineAuthenticationService extends AuthenticationService implement
                     mASM.getRCUtility()
                             .inValidateRememberedCredentials();
                 }
-                authContext.deleteAuthContext(true, true, true, false, false);
+                authContext.deleteAuthContext(true, true, true, false);
                 return false;
             }
 
@@ -312,10 +310,8 @@ final class OfflineAuthenticationService extends AuthenticationService implement
                 idleTimeOut = true;
                 return false;
             } else {
-                if (authContext.getIdleTimeExpInSecs() > 0) {
-                    authContext.resetIdleTime();
-                    OMLog.debug(TAG, " - Idle time is reset to : "
-                            + authContext.getIdleTimeExpiry().getTime());
+                if (authContext.getIdleTimeExpInSecs() > 0 && !authContext.resetIdleTime()) {
+                    return false;
                 }
             }
         }
@@ -551,7 +547,7 @@ final class OfflineAuthenticationService extends AuthenticationService implement
                                             && !prevTokens.isEmpty()) {
                                         OMLog.debug(TAG, "Adding the previously retained access tokens ("
                                                 + prevTokens.size() + ") to the new auth context!");
-                                        authContext.setOAuthTokenList(new ArrayList<OAuthToken>(prevTokens));
+                                        authContext.setOAuthTokenList(new ArrayList<>(prevTokens));
                                     }
 
                                 case BASIC:
@@ -560,7 +556,7 @@ final class OfflineAuthenticationService extends AuthenticationService implement
                                         OMLog.debug(TAG, "Session for user: " + prevContext.getUserName()
                                                 + " is already avaliable, hence clearing it off to complete offline authentication for user: "
                                                 + username);
-                                        prevContext.deleteAuthContext(true, true, true, false, false);
+                                        prevContext.deleteAuthContext(true, true, true, false);
                                     }
                                     break;
                                 default:

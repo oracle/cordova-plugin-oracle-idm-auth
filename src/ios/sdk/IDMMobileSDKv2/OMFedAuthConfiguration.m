@@ -35,7 +35,13 @@
             id parseTokenRelayResponse = [properties
                                           valueForKey:
                                           OM_PROP_PARSE_TOKEN_RELAY_RESPONSE];
-
+            id usernameParamName = [properties
+                                    valueForKey:OM_PROP_USERNAME_PARAM_NAME];
+            if (requiredTokens &&
+                [requiredTokens isKindOfClass:[NSSet class]] == true)
+            {
+                _fedAuthUsernameParamName = usernameParamName;
+            }
             if (requiredTokens &&
                 [requiredTokens isKindOfClass:[NSSet class]] == false)
             {

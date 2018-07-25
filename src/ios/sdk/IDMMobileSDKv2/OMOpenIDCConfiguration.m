@@ -138,9 +138,9 @@
     [[NSMutableDictionary alloc] initWithDictionary:appProperties];
     NSMutableDictionary  *jsonDict = discoveryJSON;
     
-    if (nil != [jsonDict valueForKey:@"openid-configuration"])
+    if (nil != [jsonDict valueForKey:OM_PROP_OPENID_CONFIGURATION])
     {
-        jsonDict = [jsonDict valueForKey:@"openid-configuration"];
+        jsonDict = [jsonDict valueForKey:OM_PROP_OPENID_CONFIGURATION];
     }
     
     [sdkProps setObject:OM_PROP_OPENID_CONNECT_SERVER
@@ -149,13 +149,13 @@
     [sdkProps setObject:OM_OAUTH_AUTHORIZATION_CODE
                  forKey:OM_PROP_OAUTH_AUTHORIZATION_GRANT_TYPE];
     
-    NSString *tokenEndpoint = [jsonDict valueForKey:@"token_endpoint"];
+    NSString *tokenEndpoint = [jsonDict valueForKey:OM_PROP_TOKEN_ENDPOINT];
     if (nil != tokenEndpoint)
     {
         [sdkProps setObject:tokenEndpoint forKey:OM_PROP_OAUTH_TOKEN_ENDPOINT];
     }
     
-    NSString *authEndpoint = [jsonDict valueForKey:@"authorization_endpoint"];
+    NSString *authEndpoint = [jsonDict valueForKey:OM_PROP_AUTHORIZATION_ENDPOINT];
     if (nil != authEndpoint)
     {
         [sdkProps setObject:authEndpoint
@@ -167,14 +167,15 @@
     [sdkProps setObject:[NSSet setWithArray:scopesArray]
                  forKey:OM_PROP_OAUTH_SCOPE];
     
-    NSString *revocationEndpoint = [jsonDict valueForKey:@"revocation_endpoint"];
+    NSString *revocationEndpoint = [jsonDict
+                                    valueForKey:OM_PROP_REVOCATION_ENDPOINT];
     if (nil != revocationEndpoint)
     {
         [sdkProps setObject:revocationEndpoint
                      forKey:OM_PROP_OPENID_CONNECT_REVOCATION_ENDPOINT];
     }
     
-    NSString *userInfoEndpoint = [jsonDict valueForKey:@"userinfo_endpoint"];
+    NSString *userInfoEndpoint = [jsonDict valueForKey:OM_PROP_USERINFO_ENDPOINT];
     if (nil != userInfoEndpoint)
     {
         [sdkProps setObject:userInfoEndpoint
@@ -189,7 +190,7 @@
     }
     
     NSString *issuer = [jsonDict valueForKey:@"issuer"];
-    if (nil == issuer)
+    if (nil != issuer)
     {
         [sdkProps setObject:issuer forKey:OM_PROP_OPENID_CONNECT_ISSUER];
     }

@@ -3,26 +3,41 @@
     xmlns:rim="http://www.blackberry.com/ns/widgets"
     xmlns:android="http://schemas.android.com/apk/res/android"
     id="cordova-plugin-oracle-idm-auth-tests"
-    version="1.0.4">
+    version="1.1.0">
     <name>cordova-plugin-oracle-idm-auth-tests</name>
     <description>JasmineJS tests written for cordova-plugin-oracle-idm-auth plugin</description>
 
-     The trick to add multiple files is to have a unique name that ends with '.tests'
-    <js-module src="basic-tests.js" name="basic.tests">
+    <!-- The trick to add multiple JS files is to have a unique name that ends with '.tests' -->
+    <!-- TestConfig and TestUtils should be loaded first, as it contains the test environment configuration and utility methods. -->
+    <js-module src="TestConfig.js" name="config.tests">
     </js-module>
-    <js-module src="init-tests.js" name="init.tests">
+    <js-module src="TestUtil.js" name="util.tests">
     </js-module>
-    <js-module src="login-tests.js" name="login.tests">
+
+    <!-- Test cases. -->
+    <js-module src="dep-api-tests.js" name="depapi.tests">
     </js-module>
-    <js-module src="logout-tests.js" name="logout.tests">
+    <js-module src="dep-builder-tests.js" name="builder.tests">
     </js-module>
-    <js-module src="is-authenticated-tests.js" name="is.authenticated.tests">
+    <js-module src="api-tests.js" name="api.tests">
     </js-module>
-    <js-module src="timeout-tests.js" name="timeout.tests">
+    <js-module src="http-basic-builder-tests.js" name="http.basic.builder.tests">
     </js-module>
-    <js-module src="basic-auth-tests.js" name="basic.auth.tests">
+    <js-module src="fed-builder-tests.js" name="fed.builder.tests">
     </js-module>
-    <js-module src="basic-auth-with-headers-tests.js" name="basic.auth.with.headers.tests">
+    <js-module src="oauth-builder-tests.js" name="oauth.builder.tests">
+    </js-module>
+    <js-module src="openid-builder-tests.js" name="open.id.builder.tests">
+    </js-module>
+    <js-module src="local-builder-tests.js" name="local.builder.tests">
+    </js-module>
+    <js-module src="http-basic-auth-flow-tests.js" name="http.basic.auth.flow.tests">
+    </js-module>
+    <js-module src="http-basic-auth-flow-tests-2.js" name="http.basic.auth.flow.2.tests">
+    </js-module>
+    <js-module src="mcs-http-basic-auth-flow-tests.js" name="mcs.http.basic.auth.flow.tests">
+    </js-module>
+    <js-module src="pin-auth-tests.js" name="pin.auth.tests">
     </js-module>
     <js-module src="web-sso-tests.js" name="web.sso.tests">
     </js-module>

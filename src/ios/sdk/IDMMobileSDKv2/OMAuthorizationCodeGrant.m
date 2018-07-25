@@ -7,7 +7,6 @@
 #import "OMAuthorizationCodeGrant.h"
 #import "OMOAuthConfiguration.h"
 #import "OMDefinitions.h"
-#import <libkern/OSAtomic.h>
 #import "OMErrorCodes.h"
 #import "OMCryptoService.h"
 #import "NSData+OMBase64.h"
@@ -167,9 +166,7 @@ NSString *clientAssertionType = @"urn:ietf:params:oauth:client-assertion-type:jw
                                               initWithURL:
                                               weakSelf.frontChannelRequestURL];
                     weakSelf.handler.webView = webView;
-                    weakSelf.handler.previousDelegate = webView.delegate;
-                    webView.delegate = weakSelf.handler;
-                    [webView loadRequest:request];
+                    [weakSelf.handler loadRequest:request];
                 }
                 else
                 {
@@ -279,5 +276,10 @@ NSString *clientAssertionType = @"urn:ietf:params:oauth:client-assertion-type:jw
                           @"+" withString:@"-"];
     }
     return _codeChallenge;
+}
+
+- (void)cancelAuthentication
+{
+    [self.handler stopRequest];
 }
 @end

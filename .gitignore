@@ -1,5 +1,7 @@
 *.iml
 .idea
 .idea/*
+tests/TestConfig.js
 !.gitignore
+
 

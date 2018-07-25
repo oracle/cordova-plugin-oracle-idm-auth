@@ -17,7 +17,7 @@
 
 @interface OMMobileSecurityService : NSObject
 
-@property (nonatomic, strong) id<OMMobileSecurityServiceDelegate> delegate;
+@property (nonatomic, weak) id<OMMobileSecurityServiceDelegate> delegate;
 @property (nonatomic, strong) OMMobileSecurityConfiguration *configuration;
 @property (nonatomic, strong) OMAuthenticationManager *authManager;
 
@@ -43,7 +43,12 @@
 -(NSData *)symmetricEncryptionKey;
 -(NSDictionary *)logoutHeaders:(OMAuthenticationContext *)ctx;
 -(void)clearOfflineCredentials:(BOOL)clearPreferences;
+- (void)saveAuthContext:(OMAuthenticationContext *)context;
 
+#pragma mark -
+- (BOOL)isNSURLProtocolActive;
+- (void)registerNSURLProtocol;
+- (void)deregisterNSURLProtocol;
 
 @end
 

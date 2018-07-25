@@ -31,10 +31,23 @@
 @property (nonatomic) BOOL sendCustomHeadersLogout;
 @property (nonatomic) BOOL sendAuthHeaderLogout;
 @property (nonatomic, strong) NSString *localAuthenticatorIntanceId;
+@property (nonatomic, strong) NSString *authKey;
+@property (nonatomic, strong) NSDictionary *mobileAgentCustomHeaders;
+@property (nonatomic, assign) BOOL sessionActiveOnRestart;
 
 + (NSDictionary *)parseConfigurationURL: (NSURL *)configURL
                   persistInUserDefaults: (BOOL)persist
                                 withKey: (NSString *)key;
+
++ (NSDictionary *)parseConfigurationURL: (NSURL *)configURL
+                  persistInUserDefaults: (BOOL)persist
+                                withKey: (NSString *)key
+                             andFilters:(NSSet *) filters;
+
++ (NSDictionary *)parseConfigurationURLWithURLComponents: (NSURL *)configURL
+                                   persistInUserDefaults: (BOOL)persist
+                                                 withKey: (NSString *)key
+                                              andFilters: (NSSet *) filters;
 
 - (id)initWithProperties:(NSDictionary *)properties error:(NSError **)error;
 - (BOOL)isValidString:(NSString*)str;

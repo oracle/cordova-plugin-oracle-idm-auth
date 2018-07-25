@@ -6,6 +6,8 @@
 
 package oracle.idm.mobile.auth;
 
+import android.os.Handler;
+import android.os.Looper;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
@@ -22,16 +24,17 @@ import oracle.idm.mobile.OMAuthenticationRequest;
 import oracle.idm.mobile.OMErrorCode;
 import oracle.idm.mobile.OMMobileSecurityException;
 import oracle.idm.mobile.OMSecurityConstants;
+import oracle.idm.mobile.auth.OAuthConnectionsUtil.OAuthResponseParameters;
 import oracle.idm.mobile.auth.logout.OAuthAuthorizationCodeLogoutHandler;
 import oracle.idm.mobile.auth.logout.OMLogoutCompletionHandler;
-import oracle.idm.mobile.auth.OAuthConnectionsUtil.OAuthResponseParameters;
 import oracle.idm.mobile.auth.webview.LogoutWebViewClient;
 import oracle.idm.mobile.configuration.OAuthAuthorizationGrantType;
 import oracle.idm.mobile.configuration.OMMobileSecurityConfiguration;
 import oracle.idm.mobile.connection.OMHTTPResponse;
 import oracle.idm.mobile.logging.OMLog;
 
-import static oracle.idm.mobile.OMSecurityConstants.Challenge.*;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.MOBILE_SECURITY_EXCEPTION;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.REDIRECT_RESPONSE_KEY;
 
 /**
  * OAuth authentication service to handle authorization code grant type.
@@ -163,26 +166,20 @@ class OAuthAuthorizationCodeService extends OAuthAuthenticationService implement
                         //embedded
                         final WebView webview = (WebView) inputs.get(OMSecurityConstants.Challenge.WEBVIEW_KEY);
                         final WebViewClient webViewClient = (WebViewClient) inputs.get(OMSecurityConstants.Challenge.WEBVIEW_CLIENT_KEY);
-                        if (webview != null) {
-                            final android.os.Handler handler = mASM.getMSS().getCallback().getHandler();
-                            if (handler != null) {
-                                final String logoutURL = mASM.getOAuthConnectionsUtil().
-                                        getLogoutUrl(mASM.getAuthenticationContext());
-                                handler.post(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        loadLogoutURL(webview, new LogoutWebViewClient(webview, webViewClient,
-                                                mASM.getMSS(), handler, mConfig, authContext.getLogoutTimeout(),
-                                                report), logoutURL);
-                                    }
-                                });
-                            } else {
-                                loaded = false;
-                                OMLog.error(TAG, "logout_onInput()- handler null!");
-                            }
+                        final String logoutURL = mASM.getOAuthConnectionsUtil().getLogoutUrl(mASM.getAuthenticationContext());
+                        if (webview != null && logoutURL != null) {
+                            final Handler handler = new Handler(Looper.getMainLooper());
+                            handler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    loadLogoutURL(webview, new LogoutWebViewClient(webview, webViewClient,
+                                            mASM.getMSS(), handler, mConfig, authContext.getLogoutTimeout(),
+                                            report), logoutURL);
+                                }
+                            });
                         } else {
                             loaded = false;
-                            OMLog.error(TAG, "logout_onInput()- WebView null!");
+                            OMLog.error(TAG, "logout_onInput()- WebView is null or logoutURL is null");
                         }
                         if (!loaded) {
                             OMLog.info(TAG, "Unable to load logout URL, so removing all session cookies");
@@ -200,7 +197,7 @@ class OAuthAuthorizationCodeService extends OAuthAuthenticationService implement
                          */
                         clearOAuthTokens(authContext, true);
                         if (report) {
-                            reportLogoutCompleted(mASM.getMSS(), true, null);
+                            reportLogoutCompleted(mASM.getMSS(), true, (OMMobileSecurityException) null);
                         }
                     }
                 }
@@ -241,7 +238,7 @@ class OAuthAuthorizationCodeService extends OAuthAuthenticationService implement
                 //2. logout - with no logout URL
                 //3. logout - non 3-legged flows
                 clearOAuthTokens(authContext, isLogoutCall);
-                reportLogoutCompleted(mASM.getMSS(), isLogoutCall, null);
+                reportLogoutCompleted(mASM.getMSS(), isLogoutCall, (OMMobileSecurityException) null);
             }
         }
     }

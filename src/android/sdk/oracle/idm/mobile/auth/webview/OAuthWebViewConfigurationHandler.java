@@ -129,12 +129,11 @@ public class OAuthWebViewConfigurationHandler extends LoginWebViewHandler {
                         url);
                 redirectReported = true;
                 callback.onInput(inputParams);
-                /* The below line makes sure that app's WebViewClient
-                 * gets this callback. But, SDK always returns true
-                 * irrespective of the return value given by the
-                 * app's WebViewClient.Returning true makes sure that
-                 * webview does not proceed with loading this url.
-                 */
+                /*The below line makes sure that app's WebViewClient
+                * gets this callback. But, SDK always returns true
+                * irrespective of the return value given by the
+               * app's WebViewClient.Returning true makes sure that
+               * webview does not proceed with loading this url.*/
                 super.shouldOverrideUrlLoading(view, url);
                 return true;
             } else {

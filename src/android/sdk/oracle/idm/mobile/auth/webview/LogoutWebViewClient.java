@@ -16,6 +16,7 @@ import android.util.Log;
 import android.webkit.SslErrorHandler;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
@@ -24,6 +25,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import oracle.idm.mobile.OMErrorCode;
 import oracle.idm.mobile.OMMobileSecurityException;
@@ -44,7 +46,7 @@ import static oracle.idm.mobile.util.URLUtils.areUrlsEqual;
  * onPageFinished is called, then it is assumed that logout url is
  * completely loaded. Also, a maximum time of MAX_TIME_FOR_LOGOUT is allowed
  * for the logout call to be finished.
- *
+ * <p>
  * If logout success/failure urls are given, they are used instead of the above
  * logic.
  *
@@ -68,7 +70,7 @@ public class LogoutWebViewClient extends BaseWebViewClient {
     private CheckLogoutMaxTimeRunnable checkLogoutMaxTimeRunnable;
     private int logoutTimeout = DEFAULT_LOGOUT_TIMEOUT;
     /* This is the timeout for each page redirect. */
-    private boolean logoutDone;
+    private AtomicBoolean logoutDone = new AtomicBoolean(false);
     private boolean isLogoutCall;
 
     private boolean receivedErrorLoadingUrl;
@@ -148,19 +150,27 @@ public class LogoutWebViewClient extends BaseWebViewClient {
         onLogoutFailed(OMErrorCode.LOGOUT_FAILED, "Unexpected: Received SSL error while loading logout url");
     }
 
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    @Override
+    public void onReceivedHttpError(WebView view, WebResourceRequest request,
+                                    WebResourceResponse errorResponse) {
+        Log.d(TAG + "_logout", "onReceivedHttpError: StatusCode: "
+                + errorResponse.getStatusCode());
+        receivedErrorLoadingUrl = true;
+        super.onReceivedHttpError(view, request, errorResponse);
+        onLogoutFailed(OMErrorCode.LOGOUT_FAILED,
+                "Received Http error:" + errorResponse.getStatusCode() + " : "
+                        + errorResponse.getReasonPhrase());
+    }
+
     @Override
     public void onPageStarted(WebView view, String url, Bitmap favicon) {
         if (logoutSuccessUriAbsent) {
             if (checkLogoutDoneRunnable != null) {
                 handler.removeCallbacks(checkLogoutDoneRunnable, null);
             }
-            if (checkLogoutMaxTimeRunnable == null) {
-                checkLogoutMaxTimeRunnable = new CheckLogoutMaxTimeRunnable();
-                handler.postDelayed(checkLogoutMaxTimeRunnable,
-                        logoutTimeout * 1000);
-            }
         } else {
-            if (logoutDone) {
+            if (logoutDone.get()) {
                 Log.d(TAG,
                         "Success or Failure url already hit. Hence, not loading the page.");
                 view.stopLoading();
@@ -170,6 +180,11 @@ public class LogoutWebViewClient extends BaseWebViewClient {
             if (receivedErrorLoadingUrl) {
                 receivedErrorLoadingUrl = false;
             }
+        }
+        if (checkLogoutMaxTimeRunnable == null) {
+            checkLogoutMaxTimeRunnable = new CheckLogoutMaxTimeRunnable();
+            handler.postDelayed(checkLogoutMaxTimeRunnable,
+                    logoutTimeout * 1000);
         }
         super.onPageStarted(view, url, favicon);
 
@@ -206,7 +221,7 @@ public class LogoutWebViewClient extends BaseWebViewClient {
              */
                 return;
             }
-            if (logoutDone) {
+            if (logoutDone.get()) {
                 Log.d(TAG,
                         "Success or Failure url already hit. Hence, not loading the page.");
                 view.stopLoading();
@@ -225,10 +240,10 @@ public class LogoutWebViewClient extends BaseWebViewClient {
 
             }
 
-            if ((currentURL!=null && logoutSuccessUrl != null && areUrlsEqual(currentURL, logoutSuccessUrl)) ||
-                    (currentURI != null && logoutSuccessUri!= null && areUrisEqual(currentURI, logoutSuccessUri, false)) ) {
+            if ((currentURL != null && logoutSuccessUrl != null && areUrlsEqual(currentURL, logoutSuccessUrl)) ||
+                    (currentURI != null && logoutSuccessUri != null && areUrisEqual(currentURI, logoutSuccessUri, false))) {
                 onLogoutSuccessful();
-            } else if (currentURL!=null && logoutFailureUrl != null && areUrlsEqual(currentURL, logoutFailureUrl)) {
+            } else if (currentURL != null && logoutFailureUrl != null && areUrlsEqual(currentURL, logoutFailureUrl)) {
                     /*Even though user has cancelled logout, we do clear all session cookies.
                     * This is done to avoid making additional changes for this specific use-case.
                     * Also, SIM has not enabled cancel button in logout consent screen.*/
@@ -269,12 +284,12 @@ public class LogoutWebViewClient extends BaseWebViewClient {
     }
 
     private void onLogoutSuccessful() {
-        if (logoutDone) {
+        // Following is equivalent to if (logoutDone)
+        if (!logoutDone.compareAndSet(false, true)) {
             return;
         }
         performCleanup();
         mss.onLogoutCompleted();
-        logoutDone = true;
         if (isLogoutCall) {
             OMMobileSecurityServiceCallback callback = mss.getCallback();
             if (callback != null) {
@@ -287,7 +302,8 @@ public class LogoutWebViewClient extends BaseWebViewClient {
     }
 
     private void onLogoutFailed(OMErrorCode errorCode, String msgParam) {
-        if (logoutDone) {
+        // Following is equivalent to if (logoutDone)
+        if (!logoutDone.compareAndSet(false, true)) {
             return;
         }
         performCleanup();
@@ -297,7 +313,6 @@ public class LogoutWebViewClient extends BaseWebViewClient {
 
         OMCookieManager.getInstance().removeSessionCookies(mss.getApplicationContext());
         mss.onLogoutCompleted();
-        logoutDone = true;
         if (isLogoutCall) {
             OMMobileSecurityServiceCallback callback = mss.getCallback();
             if (callback != null) {

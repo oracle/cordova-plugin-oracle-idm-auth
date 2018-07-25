@@ -89,7 +89,9 @@ public class DefaultAuthenticationUtils {
             }
 
         }
-        defaultAuthenticator.setAuthData(null);
+        if (!defaultAuthenticator.isAuthDataSet()) {
+            defaultAuthenticator.setAuthData(null);
+        }
         if (!defaultAuthenticator.isAuthenticated()) {
             OMLog.debug(TAG, "Going to perform default local auth");
             defaultAuthenticator.authenticate(null);

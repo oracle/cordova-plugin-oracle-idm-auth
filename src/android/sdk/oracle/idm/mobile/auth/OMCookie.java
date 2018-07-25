@@ -39,7 +39,7 @@ public class OMCookie extends OMToken {
         this.value = tokenValue;
     }
 
-    OMCookie(String name, String value, String domain) {
+    public OMCookie(String name, String value, String domain) {
         super();
         this.name = name;
         this.value = value;
@@ -152,19 +152,6 @@ public class OMCookie extends OMToken {
 
     public void setUrl(String url) {
         this.url = url;
-    }
-
-    @Override
-    public String toString() {
-        StringBuilder builder = new StringBuilder();
-        builder.append("OMCookie [name=").append(name).append(", domain=")
-                .append(domain).append(", path=").append(path)
-                .append(", URL=").append(url)
-                .append(", httpOnly=").append(httpOnly).append(", secure=")
-                .append(secure).append(", value=").append(value)
-                .append(", expiryTime=").append(expiryTime)
-                .append(", expiryInSecs=").append(expiryInSecs);
-        return builder.toString();
     }
 
 }

@@ -26,6 +26,8 @@
 #import "OMOAMOAuthClientAssertionService.h"
 #import "OMOAMUserAssertionService.h"
 #import "OMIDCSClientRegistrationService.h"
+#import "OMCredentialStore.h"
+#import "OMErrorCodes.h"
 
 @implementation OMAuthenticationManager
 -(id)initWithMobileSecurityService:(OMMobileSecurityService *)mss
@@ -201,7 +203,12 @@
 -(void)sendAuthenticationContext:(OMAuthenticationContext *)context
                            error:(NSError *)error
 {
+    [self.mss saveAuthContext:context];
     [self setIsAuthRequestInProgress:NO];
+    if (error)
+    {
+        error = [self mapOSErrorWithOMError:error];
+    }
     [self.mss.delegate mobileSecurityService:self.mss
                      didFinishAuthentication:context error:error];
 }
@@ -212,4 +219,20 @@
            didReceiveAuthenticationChallenge:self.curentAuthService.challenge];
 }
 
+- (NSError*)mapOSErrorWithOMError:(NSError*)currentError
+{
+    NSError *newError = nil;
+    
+    if (currentError.code == NSURLErrorCancelled)
+    {
+        newError = [OMObject createErrorWithCode:
+                    OMERR_USER_CANCELED_AUTHENTICATION];
+    }
+    else
+    {
+        newError = currentError;
+    }
+    
+    return newError;
+}
 @end

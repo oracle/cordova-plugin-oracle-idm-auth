@@ -29,6 +29,7 @@
 #import "OMOAMOAuthConfiguration.h"
 #import "OMOIDCLogoutService.h"
 #import "OMServiceDiscoveryHandler.h"
+#import "OMURLProtocol.h"
 
 @interface OMMobileSecurityService()
 
@@ -45,78 +46,93 @@
     if (self)
     {
         self.delegate = delegate;
-        NSString *authServerType =
-        [properties valueForKey:OM_PROP_AUTHSERVER_TYPE];
-        
-        if ([OM_PROP_AUTHSERVER_HTTPBASIC
-             caseInsensitiveCompare:authServerType] == NSOrderedSame)
+        if (properties)
         {
-            _configuration = [[OMHTTPBasicConfiguration alloc]
-                              initWithProperties:properties error:error];
-        }
-        else if ([OM_PROP_AUTHSERVER_CLIENT_CERT
-                  caseInsensitiveCompare:authServerType] == NSOrderedSame)
-        {
-            _configuration = [[OMClientCertConfiguration alloc]
-                              initWithProperties:properties error:error];
-        }
-        else if ([OM_PROP_OAUTH_OAUTH20_SERVER
-                  caseInsensitiveCompare:authServerType] == NSOrderedSame)
-        {
-            id oauthServiceEndpoint =
-            [properties valueForKey:OM_PROP_OAUTH_OAM_SERVICE_ENDPOINT];
-            if (oauthServiceEndpoint)
+            NSString *authServerType =
+            [properties valueForKey:OM_PROP_AUTHSERVER_TYPE];
+            if (![authServerType isKindOfClass:[NSString class]])
             {
-                _configuration = [[OMOAMOAuthConfiguration alloc]
-                                  initWithProperties:properties
-                                  error:error];
+                if(error)
+                {
+                    *error = [OMObject
+                              createErrorWithCode:OMERR_INVALID_AUTH_SERVER_TYPE];
+                }
+            }
+            else if ([OM_PROP_AUTHSERVER_HTTPBASIC
+                      caseInsensitiveCompare:authServerType] == NSOrderedSame)
+            {
+                _configuration = [[OMHTTPBasicConfiguration alloc]
+                                  initWithProperties:properties error:error];
+            }
+            else if ([OM_PROP_AUTHSERVER_CLIENT_CERT
+                      caseInsensitiveCompare:authServerType] == NSOrderedSame)
+            {
+                _configuration = [[OMClientCertConfiguration alloc]
+                                  initWithProperties:properties error:error];
+            }
+            else if ([OM_PROP_OAUTH_OAUTH20_SERVER
+                      caseInsensitiveCompare:authServerType] == NSOrderedSame)
+            {
+                id oauthServiceEndpoint =
+                [properties valueForKey:OM_PROP_OAUTH_OAM_SERVICE_ENDPOINT];
+                if (oauthServiceEndpoint)
+                {
+                    _configuration = [[OMOAMOAuthConfiguration alloc]
+                                      initWithProperties:properties
+                                      error:error];
+                }
+                else
+                {
+                    _configuration = [[OMOAuthConfiguration alloc]
+                                      initWithProperties:properties error:error];
+                }
+            }
+            else if ([OM_PROP_AUTHSERVER_FED_AUTH
+                      caseInsensitiveCompare:authServerType] == NSOrderedSame)
+            {
+                _configuration = [[OMFedAuthConfiguration alloc]
+                                  initWithProperties:properties error:error];
+                
+            }
+            else if ([OM_PROP_OPENID_CONNECT_SERVER
+                      caseInsensitiveCompare:authServerType] == NSOrderedSame)
+            {
+                _configuration = [[OMOIDCConfiguration alloc]
+                                  initWithProperties:properties error:error];
+                
+            }
+            else if(error)
+            {
+                *error = [OMObject
+                          createErrorWithCode:OMERR_INVALID_AUTH_SERVER_TYPE];
+            }
+            if (!_configuration)
+            {
+                self = nil;
+                if (error && [*error code] < 999)
+                {
+                    *error = [OMObject
+                              createErrorWithCode:OMERR_INITIALIZATION_FAILED];
+                }
+                
             }
             else
             {
-                _configuration = [[OMOAuthConfiguration alloc]
-                                  initWithProperties:properties error:error];
+                _cacheDict = [[NSMutableDictionary alloc] init];
+                
+                if (_configuration.localAuthenticatorIntanceId)
+                {
+                    [[OMCredentialStore sharedCredentialStore]
+                     setLocalAuthenticatorInstanceId:
+                     _configuration.localAuthenticatorIntanceId];
+                }
+                
             }
-        }
-        else if ([OM_PROP_AUTHSERVER_FED_AUTH
-                  caseInsensitiveCompare:authServerType] == NSOrderedSame)
-        {
-            _configuration = [[OMFedAuthConfiguration alloc]
-                              initWithProperties:properties error:error];
-
-        }
-        else if ([OM_PROP_OPENID_CONNECT_SERVER
-                  caseInsensitiveCompare:authServerType] == NSOrderedSame)
-        {
-            _configuration = [[OMOIDCConfiguration alloc]
-                              initWithProperties:properties error:error];
-            
-        }
-        else if(error)
-        {
-            *error = [OMObject
-                      createErrorWithCode:OMERR_INVALID_AUTH_SERVER_TYPE];
-        }
-        if (!_configuration)
-        {
-            self = nil;
-            if (error && [*error code] < 999)
-            {
-                *error = [OMObject
-                          createErrorWithCode:OMERR_INITIALIZATION_FAILED];
-            }
-
         }
         else
         {
-            _cacheDict = [[NSMutableDictionary alloc] init];
-            
-            if (_configuration.localAuthenticatorIntanceId)
-            {
-                [[OMCredentialStore sharedCredentialStore]
-                 setLocalAuthenticatorInstanceId:
-                 _configuration.localAuthenticatorIntanceId];
-            }
-
+            *error = [OMObject
+                      createErrorWithCode:OMERR_INITIALIZATION_FAILED];
         }
     }
     return self;
@@ -202,6 +218,15 @@
         [self.authManager sendAuthenticationContext:self.authManager.curentAuthService.context
                                               error:nil];
     }
+    else if ([[self authenticationContext] isValid:YES])
+    {
+        self.authManager = [[OMAuthenticationManager alloc]
+                            initWithMobileSecurityService:self
+                            authenticationRequest:request];
+
+        [self.authManager sendAuthenticationContext:[self authenticationContext]
+                                              error:nil];        
+    }
     else
     {
         self.authManager = [[OMAuthenticationManager alloc]
@@ -271,12 +296,16 @@
 -(NSString *)key
 {
     NSString *key = nil;
+    NSString *credentialKey = (self.configuration.authKey != nil)?
+                                self.configuration.authKey:
+                                self.configuration.appName;
+    
     if ([self.configuration isKindOfClass:[OMHTTPBasicConfiguration class]])
     {
         OMHTTPBasicConfiguration *config = (OMHTTPBasicConfiguration *)
         self.configuration;
         key = [NSString stringWithFormat:@"%@_%@",
-               config.loginURL,config.appName];
+               config.loginURL,credentialKey];
     }
     else if ([self.configuration
               isKindOfClass:[OMClientCertConfiguration class]])
@@ -284,7 +313,7 @@
         OMClientCertConfiguration *config = (OMClientCertConfiguration *)
         self.configuration;
         key = [NSString stringWithFormat:@"%@_%@",
-               config.loginURL,config.appName];
+               config.loginURL,credentialKey];
     }
     else if ([self.configuration
               isKindOfClass:[OMFedAuthConfiguration class]])
@@ -292,7 +321,7 @@
         OMFedAuthConfiguration *config = (OMFedAuthConfiguration *)
         self.configuration;
         key = [NSString stringWithFormat:@"%@_%@",
-               config.loginURL,config.appName];
+               config.loginURL,credentialKey];
     }
     else if ([self.configuration
               isKindOfClass:[OMOAuthConfiguration class]])
@@ -300,7 +329,7 @@
         OMOAuthConfiguration *config = (OMOAuthConfiguration *)
         self.configuration;
         key = [NSString stringWithFormat:@"%@_%@",
-               config.tokenEndpoint,config.appName];
+               config.tokenEndpoint,credentialKey];
     }
     return key;
 }
@@ -347,10 +376,26 @@
              OM_AUTH_SUCCESS]];
     if (clearPreferences)
     {
+        [[NSUserDefaults standardUserDefaults] setObject:
+         [NSNumber numberWithBool:FALSE]
+        forKey:[NSString stringWithFormat:@"%@_%@",rememberCredKey,
+                OM_AUTO_LOGIN_PREF]];
+       
+        [[NSUserDefaults standardUserDefaults]
+         setObject:[NSNumber numberWithBool:FALSE]
+         forKey:[NSString stringWithFormat:@"%@_%@",rememberCredKey,
+                 OM_REMEMBER_CREDENTIALS_PREF]];
+        
+        [[NSUserDefaults standardUserDefaults]
+         setObject:[NSNumber numberWithBool:FALSE]
+         forKey:[NSString stringWithFormat:@"%@_%@",rememberCredKey,
+                 OM_REMEMBER_USERNAME_PREF]];
+
         [[NSUserDefaults standardUserDefaults]
          setObject:[NSNumber numberWithBool:FALSE]
          forKey:[NSString stringWithFormat:@"%@_%@", rememberCredKey,
                  OM_REMEMBER_CRED_PREF_SET]];
+
         [[OMCredentialStore sharedCredentialStore]
          deleteCredential:rememberCredKey];
     }
@@ -364,25 +409,25 @@
     }
 }
 
+-(void)clearOfflineCredentials:(BOOL)clearPreferences
+{
+    OMAuthenticationContext *context = [self.cacheDict valueForKey:self.authKey];
+    if (clearPreferences)
+    {
+        NSString *key = [self
+                         offlineAuthenticationKeyWithIdentityDomain:
+                         context.identityDomain
+                         username:context.userName];
+        [[OMCredentialStore sharedCredentialStore]
+         deleteCredential:key];
+        
+    }
+
+}
 -(void)cancelAuthentication
 {
     [self.authManager cancelAuthentication];
 
-}
-
--(void)clearOfflineCredentials:(BOOL)clearPreferences
- {
-   OMAuthenticationContext *context = [self.cacheDict valueForKey:self.authKey];
-    
-    if (clearPreferences)
-     {
-           NSString *key = [self offlineAuthenticationKeyWithIdentityDomain:
-                                context.identityDomain
-                                username:context.userName];
-        
-             [[OMCredentialStore sharedCredentialStore]
-                    deleteCredential:key];
-        }
 }
 
 +(NSArray *)cookiesForURL: (NSURL *)theURL
@@ -398,7 +443,23 @@
 {
     OMAuthenticationContext *context = [self.cacheDict
                                         valueForKey:self.authKey];
-    return context.isValid?context:nil;
+    if (!context)
+    {
+        context = [self retriveAuthenticationContext];
+        
+        if (context)
+        {
+            [context setMss:self];
+            
+            if (!self.cacheDict)
+            {
+                self.cacheDict = [NSMutableDictionary dictionary];
+            }
+            [self.cacheDict setObject:context forKey:self.authKey];
+
+        }
+    }
+    return context;
 }
 
 -(NSData *)symmetricEncryptionKey
@@ -477,4 +538,50 @@
     credString = nil;
     return [credData base64EncodedString];
 }
+
+- (void)saveAuthContext:(OMAuthenticationContext *)context
+{
+    if (context && self.configuration.sessionActiveOnRestart)
+    {
+        [[OMCredentialStore sharedCredentialStore]
+         saveAuthenticationContext:context forKey:[self authKey]];
+    }
+}
+
+- (OMAuthenticationContext*)retriveAuthenticationContext
+{
+    OMAuthenticationContext *authContext = nil;
+    
+    if (self.configuration.sessionActiveOnRestart)
+    {
+       authContext = [[OMCredentialStore sharedCredentialStore]
+                      retriveAuthenticationContext:[self authKey]];
+    }
+    
+    return authContext;
+}
+- (BOOL)isNSURLProtocolActive
+{
+    BOOL isActive = NO;
+
+    if (self.authManager.curentAuthService == [OMURLProtocol currentOMAObject])
+    {
+        isActive = YES;
+    }
+    
+    return isActive;
+}
+
+- (void)registerNSURLProtocol
+{
+    [OMURLProtocol setOMAObject:self.authManager.curentAuthService];
+    [NSURLProtocol registerClass:[OMURLProtocol class]];
+
+}
+- (void)deregisterNSURLProtocol
+{
+    [OMURLProtocol setOMAObject:nil];
+    [NSURLProtocol unregisterClass:[OMURLProtocol class]];
+}
+
 @end

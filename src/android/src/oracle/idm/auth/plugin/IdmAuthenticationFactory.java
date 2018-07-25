@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import oracle.idm.mobile.logging.OMLog;
+import android.util.Log;
 import org.apache.cordova.CallbackContext;
 import org.json.JSONObject;
 
@@ -19,14 +19,15 @@ import android.app.Activity;
  * The plugin supports multiple authentication flows in parallel. This factory inits the authentication flow and looks up
  * the flow based on UUID when requested.
  */
-public class IdmAuthenticationFactory
+public enum IdmAuthenticationFactory
 {
+  INSTANCE;
   /**
    * Retrieve auth object based on UUID.
    * @param uuid identifier for the auth.
    * @return auth object if found, null otherwise.
    */
-  public static IdmAuthentication get(String uuid)
+  public IdmAuthentication get(String uuid)
   {
     return _AUTH_CACHE.get(uuid);
   }
@@ -38,9 +39,9 @@ public class IdmAuthenticationFactory
    * @param props authentication properties to be used to create IDM OMMSS instance.
    * @return auth object
    */
-  public static String create(Activity context, CallbackContext callback, JSONObject props)
+  public String create(Activity context, CallbackContext callback, JSONObject props)
   {
-    OMLog.debug(TAG, "Creating new Authentication flow.");
+    Log.d(TAG, "Creating new Authentication flow.");
     IdmAuthentication idmAuthentication = new IdmAuthentication(context, props);
     if (idmAuthentication.setup(callback))
     {
@@ -49,7 +50,7 @@ public class IdmAuthenticationFactory
       return key;
     }
 
-    OMLog.debug(TAG, "Failed to creating new Authentication flow.");
+    Log.d(TAG, "Failed to creating new Authentication flow.");
     return null;
   }
 
@@ -58,11 +59,11 @@ public class IdmAuthenticationFactory
    * @param uuid identifier for the auth.
    * @return auth object.
    */
-  public static boolean isValidAuthFlowKey(String uuid)
+  public boolean isValidAuthFlowKey(String uuid)
   {
     return _AUTH_CACHE.containsKey(uuid);
   }
 
-  private static final Map<String, IdmAuthentication> _AUTH_CACHE = new HashMap<String, IdmAuthentication>();
-  private static final String TAG = IdmAuthenticationFactory.class.getSimpleName();
+  private final Map<String, IdmAuthentication> _AUTH_CACHE = new HashMap<String, IdmAuthentication>();
+  private final String TAG = IdmAuthenticationFactory.class.getSimpleName();
 }

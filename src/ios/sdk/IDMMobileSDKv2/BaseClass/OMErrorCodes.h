@@ -39,17 +39,20 @@
 #define OMERR_INVALID_USERNAME_PASSWORD                                   10003
 #define OMERR_OIC_SERVER_RETURNED_ERROR                                   10005
 #define OMERR_INITIALIZATION_FAILED                                       10025
+#define OMERR_LOGOUT_FAILED                                               10035
 #define OMERR_USER_AUTHENTICATION_FAILED                                  10408
-#define OMERR_INVALID_PASSWORD                                            10011
+#define OMERR_INVALID_USERNAME_PASSWORD_IDENTITY                          10011
 #define OMERR_USER_CANCELED_AUTHENTICATION                                10029
 #define OMERR_DENIED_ACTION                                               10030
 #define OMERR_NO_IDENTITY                                                 10037
+#define OMERR_INVALID_PASSWORD                                            10038
 #define OMERR_AUTHENTICATION_TIMED_OUT                                    10042
 #define OMERR_OUT_OF_RANGE                                                10403
 #define OMERR_WEBVIEW_REQUIRED                                            10017
 #define OMERR_INVALID_SEND_CUSTOM_HEADERS_LOGOUT                          10018
 #define OMERR_INVALID_SEND_AUTH_HEADER_LOGOUT                             10019
 #define OMERR_WKWEBVIEW_REQUIRED                                          10020
+#define OMERR_INVALID_CUSTOM_HEADERS                                      10021
 
 #define OMERR_KEY_IS_NIL                                                  10501
 #define OMERR_INVALID_INPUT                                               10502

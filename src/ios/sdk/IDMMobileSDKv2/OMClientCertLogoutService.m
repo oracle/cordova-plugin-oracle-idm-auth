@@ -38,6 +38,7 @@
 
 -(void)sendFinishLogout:(NSError *)error
 {
+    self.mss.authManager.curentAuthService.context = nil;
     [self.mss.delegate mobileSecurityService:self.mss
                              didFinishLogout:error];
 }

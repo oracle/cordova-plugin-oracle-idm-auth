@@ -17,16 +17,17 @@ import java.net.CookiePolicy;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import oracle.idm.mobile.BuildConfig;
+import oracle.idm.mobile.OMSecurityConstants;
 import oracle.idm.mobile.auth.OMCookie;
 import oracle.idm.mobile.logging.OMLog;
-import oracle.idm.mobile.logging.OMLogger;
 
 /**
  * This makes webkit's cookie store as the cookie store of HttpUrlConnection. It also provides certain cookie related utility methods.
@@ -38,7 +39,6 @@ public class OMCookieManager extends CookieManager {
 
     public static final String SET_COOKIE_HEADER = "Set-Cookie";
     public static final String SET_COOKIE2_HEADER = "Set-Cookie2";
-    private static final OMLogger mLogger = new OMLogger(OMCookieManager.class);
     private static final String TAG = OMCookieManager.class.getSimpleName();
     private static final String COOKIE_HEADER = "Cookie";
 
@@ -48,6 +48,10 @@ public class OMCookieManager extends CookieManager {
     private android.webkit.CookieManager mWebkitCookieManager;
     private boolean trackURLs;
     private Set<URI> visitedURLs;
+    /**
+     * The key is URL, Value is List of Set-Cookie/Set-Cookie2 header values.
+     */
+    private Map<String, List<String>> mVisitedUrlsCookiesMap;
 
     public static OMCookieManager getInstance() {
         return mCookieManager;
@@ -69,7 +73,7 @@ public class OMCookieManager extends CookieManager {
         if (trackURLs) {
             visitedURLs.add(uri);
         }
-        Map<String, List<String>> reqHeadersWithCookies = new java.util.HashMap<>(requestHeaders);
+        Map<String, List<String>> reqHeadersWithCookies = new HashMap<>(requestHeaders);
         String url = uri.toString();
         String cookie = this.mWebkitCookieManager.getCookie(url);
         if (!TextUtils.isEmpty(cookie)) {
@@ -77,7 +81,7 @@ public class OMCookieManager extends CookieManager {
         }
 
         OMLog.debug(TAG, "REQUEST Headers:");
-        if (BuildConfig.DEBUG) {
+        if (OMSecurityConstants.DEBUG) {
             log(reqHeadersWithCookies);
         }
         return Collections.unmodifiableMap(reqHeadersWithCookies);
@@ -87,12 +91,13 @@ public class OMCookieManager extends CookieManager {
     public void put(URI uri, Map<String, List<String>> responseHeaders) throws IOException {
         OMLog.trace(TAG, "INSIDE put");
         OMLog.debug(TAG, "RESPONSE Headers:");
-        if (BuildConfig.DEBUG) {
-            log(responseHeaders);
-        }
 
         if ((uri == null) || (responseHeaders == null)) {
             return;
+        }
+
+        if (OMSecurityConstants.DEBUG) {
+            log(responseHeaders);
         }
 
         String url = uri.toString();
@@ -100,10 +105,31 @@ public class OMCookieManager extends CookieManager {
             if ((headerKey == null) || !(headerKey.equalsIgnoreCase(SET_COOKIE_HEADER) || headerKey.equalsIgnoreCase(SET_COOKIE2_HEADER))) {
                 continue;
             }
-            for (String headerValue : responseHeaders.get(headerKey)) {
+            List<String> newSetCookieHeaderValues = responseHeaders.get(headerKey);
+            for (String headerValue : newSetCookieHeaderValues) {
                 this.mWebkitCookieManager.setCookie(url, headerValue);
             }
+            if (trackURLs) {
+                updateSetCookieHeaderValues(url, newSetCookieHeaderValues);
+            }
+
         }
+    }
+
+    /**
+     * Updates Set-Cookie/Set-Cookie2 header values in {@link #mVisitedUrlsCookiesMap} for the
+     * url passed.
+     */
+    private void updateSetCookieHeaderValues(String url, List<String> newSetCookieHeaderValues) {
+        List<String> existingSetCookieHeaderValues = mVisitedUrlsCookiesMap.get(url);
+        List<String> finalSetCookieHeaderValues;
+        if (existingSetCookieHeaderValues != null) {
+            finalSetCookieHeaderValues = new ArrayList<>(existingSetCookieHeaderValues);
+            finalSetCookieHeaderValues.addAll(newSetCookieHeaderValues);
+        } else {
+            finalSetCookieHeaderValues = newSetCookieHeaderValues;
+        }
+        mVisitedUrlsCookiesMap.put(url, finalSetCookieHeaderValues);
     }
 
     /**
@@ -144,7 +170,7 @@ public class OMCookieManager extends CookieManager {
 
     @SuppressWarnings("deprecation")
     public void removeSessionCookies(Context context, List<OMCookie> cookieList) {
-        if (cookieList == null || (cookieList != null && cookieList.isEmpty())) {
+        if (cookieList == null || cookieList.isEmpty()) {
             return;
         }
 
@@ -234,6 +260,7 @@ public class OMCookieManager extends CookieManager {
     public void startURLTracking() {
         trackURLs = true;
         visitedURLs = new HashSet<>();
+        mVisitedUrlsCookiesMap = new HashMap<>();
     }
 
     /**
@@ -285,16 +312,130 @@ public class OMCookieManager extends CookieManager {
         return requiredCookies.size() <= filteredCookies.size();
     }
 
+    /**
+     * If requiredCookies given is valid, only matching cookies are filtered and returned,
+     * Else, all cookies corresponding to visitedURLs are returned.
+     */
+    public Map<String, OMCookie> filterCookies(Set<String> requiredCookies, Set<String> visitedURLs) {
+        Map<String, OMCookie> filteredCookies = new HashMap<>();
+
+        for (String visitedUrl : visitedURLs) {
+            String host = null;
+            try {
+                URL url = new URL(visitedUrl);
+                host = url.getHost();
+            } catch (MalformedURLException e) {
+                OMLog.error(TAG, e.getMessage(), e);
+            }
+
+            String cookiesOfVisitedUrl = mWebkitCookieManager.getCookie(visitedUrl);
+            /* The key in this map is <cookie name>_<host>. Host and port are
+             appended as there can be multiple cookies with the same name
+             issued by different servers.*/
+            Map<String, OMCookie> filteredCookiesOfUrl = filterCookies(cookiesOfVisitedUrl,
+                    requiredCookies, host);
+            if (filteredCookiesOfUrl != null) {
+                filteredCookies.putAll(filteredCookiesOfUrl);
+            }
+        }
+        return filteredCookies;
+    }
+
+    private Map<String, OMCookie> filterCookies(String cookies,
+                                                Set<String> requiredCookies, String host) {
+
+        if (TextUtils.isEmpty(cookies)) {
+            return null;
+        }
+
+        Map<String, OMCookie> filteredCookies = new HashMap<>();
+        ArrayList<String> cookieNames = filterCookieNames(cookies);
+        String keyToBeAppendedToCookieName = "_" + host;
+
+        /*
+            If requiredCookies given is valid, only matching cookies are filtered and returned,
+            Else, all cookies corresponding to visitedURLs are returned.
+        */
+        boolean toBeFiltered = requiredCookies != null && !requiredCookies.isEmpty();
+        int beginIndex, endIndex;
+
+        for (String cookieName : cookieNames) {
+            if (!toBeFiltered
+                    || (toBeFiltered && requiredCookies.contains(cookieName))) {
+                beginIndex = cookies.indexOf(cookieName) + cookieName.length() + 1;
+                if (beginIndex < cookies.length()) {
+                    endIndex = cookies.indexOf(';', beginIndex);
+                    if (endIndex > 0) {
+                        filteredCookies.put(
+                                cookieName + keyToBeAppendedToCookieName,
+                                new OMCookie(cookieName, cookies.substring(
+                                        beginIndex, endIndex), host));
+                    } else {
+                        filteredCookies.put(cookieName
+                                + keyToBeAppendedToCookieName, new OMCookie(
+                                cookieName, cookies.substring(beginIndex), host));
+                    }
+                } else {
+                    /* This can happen if tokens end with <cookie_name>=
+                     e.g: ORA_ADF_VIEW_PAGE_ID= */
+                    filteredCookies.put(cookieName + keyToBeAppendedToCookieName,
+                            new OMCookie(cookieName, "", host));
+                }
+
+            }
+        }
+
+        return filteredCookies;
+
+    }
+
+    /**
+     * Returns the name of all the cookies available in the given cookie string.
+     * <p>
+     * <b>Note</b> This method filter out the cookie names based on the
+     * {@link CookieManager} implementation
+     * <p>
+     * <code> cookie1=value1;cookie2=;cookie3=value3 will be filtered to
+     * [cookie1,cookie2,cookie3] </code>
+     *
+     * @param cookieString
+     * @return
+     */
+    private ArrayList<String> filterCookieNames(String cookieString) {
+        ArrayList<String> names = new ArrayList<>();
+        String[] namevalues = cookieString.split(";[\\s]*");
+        if (namevalues != null) {
+            for (String namevalue : namevalues) {
+                int index = namevalue.indexOf('=', 0);
+                if (index != -1) {
+                    String name = namevalue.substring(0, index);
+                    if (!TextUtils.isEmpty(name)) {
+                        name = name.trim();
+                        /* REMOVE ANY LEADING OR TRAILING
+                         SPACES, If found in the cookie
+                         name.*/
+                        names.add(name);
+                    }
+                }
+            }
+        }
+
+        return names;
+    }
+
     public Set<URI> getVisitedURLs() {
         return visitedURLs;
     }
 
+    public Map<String, List<String>> getVisitedUrlsCookiesMap() {
+        return mVisitedUrlsCookiesMap;
+    }
+
     private void log(Map<String, List<String>> headers) {
         for (Map.Entry<String, List<String>> requestHeaderEntry : headers.entrySet()) {
-            if (!requestHeaderEntry.getKey().toLowerCase().equals("authorization")) {
-                //Avoid logging sensitive info
-                OMLog.trace(TAG, requestHeaderEntry.getKey() + " : " + requestHeaderEntry.getValue());
-            }
+            /*Even sensitive info like Authorization header is logged as this method
+            will be called only in debug mode.*/
+            OMLog.trace(TAG, requestHeaderEntry.getKey() + " : " + requestHeaderEntry.getValue());
         }
     }
 

@@ -7,7 +7,7 @@
 
 #import <Foundation/Foundation.h>
 
-@class OMCredential;
+@class OMCredential,OMAuthenticationContext;
 
 @interface OMCredentialStore : NSObject
 {
@@ -71,4 +71,38 @@
 - (void)setLocalAuthenticatorInstanceId:(NSString *)instanceId;
 
 - (NSUInteger)deleteCredentialForProperties:(NSDictionary *)properties;
+
+/**
+ * @brief Saves the OMAuthenticationContext
+ *
+ * @param context - OMAuthenticationContext Object to be saved
+ *
+ * @param key - Key for saving for data
+ *
+ * @return Error object if there is error while saving credential otherwise nil
+ */
+- (NSError *)saveAuthenticationContext:(OMAuthenticationContext*)context
+                                forKey:(NSString*)key;
+
+
+/**
+ * @brief Returns the OMAuthenticationContext
+ *
+ * @param key - Key of the data to be retrieved
+ *
+ * @return OMAuthenticationContext object
+ */
+- (OMAuthenticationContext *)retriveAuthenticationContext:(NSString*)key;
+
+/**
+ * @brief Deletes an entry in secure store
+ *
+ * Delets all details stored in secure store against given key
+ *
+ * @param key - key using secure details are stored
+ * @return NSError object if the secure store key passed is nil
+ */
+- (NSError *)deleteAuthenticationContext:(NSString*)key;
+
+
 @end

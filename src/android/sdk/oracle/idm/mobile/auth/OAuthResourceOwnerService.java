@@ -141,7 +141,7 @@ class OAuthResourceOwnerService extends OAuthAuthenticationService implements Ch
         if (authContext.getAuthenticationProvider() == OMAuthenticationContext.AuthenticationProvider.OAUTH20) {
             if (isDeleteTokens) {
                 clearOAuthTokens(authContext, isLogoutCall);
-                reportLogoutCompleted(mASM.getMSS(), isLogoutCall, null);
+                reportLogoutCompleted(mASM.getMSS(), isLogoutCall, (OMMobileSecurityException) null);
             }
         } else {
             OMLog.info(TAG, "Not an OAuth (resource_owner) logout use case!");

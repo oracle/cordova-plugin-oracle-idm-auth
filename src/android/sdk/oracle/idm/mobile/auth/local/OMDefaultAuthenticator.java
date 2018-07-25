@@ -13,9 +13,11 @@ import android.util.Log;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import oracle.idm.mobile.OMSecurityConstants;
 import oracle.idm.mobile.crypto.Base64;
 import oracle.idm.mobile.crypto.OMKeyManagerException;
 import oracle.idm.mobile.crypto.OMKeyStore;
+import oracle.idm.mobile.logging.OMLog;
 
 /**
  * Default authenticator that doesn't depend on any user input.
@@ -67,6 +69,9 @@ public class OMDefaultAuthenticator extends OMPinAuthenticator {
 
         byte[] encodedKey = keyProvider.getKey().getEncoded();
         encodedPassword = getPasswordFromKey(encodedKey);
+        if (OMSecurityConstants.DEBUG) {
+            OMLog.trace(TAG, "**** Inside initialize: encodedPassword = " + encodedPassword);
+        }
 
         this.initialized = true;
     }
@@ -110,6 +115,9 @@ public class OMDefaultAuthenticator extends OMPinAuthenticator {
 
     @Override
     public void setAuthData(OMAuthData authData) throws OMAuthenticationManagerException {
+        if (OMSecurityConstants.DEBUG) {
+            OMLog.trace(TAG, "Inside setAuthData: encodedPassword = " + encodedPassword);
+        }
         super.setAuthData(new OMAuthData(encodedPassword));
     }
 

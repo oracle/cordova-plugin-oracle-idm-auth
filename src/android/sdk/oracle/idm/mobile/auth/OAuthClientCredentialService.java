@@ -92,7 +92,7 @@ class OAuthClientCredentialService extends OAuthAuthenticationService {
         OMLog.info(TAG, "logout");
         if (authContext.getAuthenticationProvider() == OMAuthenticationContext.AuthenticationProvider.OAUTH20) {
             clearOAuthTokens(authContext, isLogoutCall);
-            reportLogoutCompleted(mAsm.getMSS(), isLogoutCall, null);
+            reportLogoutCompleted(mAsm.getMSS(), isLogoutCall, (OMMobileSecurityException) null);
         } else {
             OMLog.info(TAG, "Not this config");
         }

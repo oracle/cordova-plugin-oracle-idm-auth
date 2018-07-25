@@ -65,9 +65,9 @@
             [OMKeyChain setItem:salt forKey:[self saltKey] accessGroup:nil];
             
             
-            NSString *passPhare = [authData authDataStr];
+            NSString *passphrase = [authData authDataStr];
             
-            _kek = [OMCryptoService generatePBKDF2EncryptionKeywithPassphrase:passPhare
+            _kek = [OMCryptoService generatePBKDF2EncryptionKeywithPassphrase:passphrase
                                     salt:salt hashAlgorithm:OMAlgorithmSSHA256
                                     iteration:PBKDF2_ITERATION_COUNT
                                     keySize:PBKDF2_KEY_LENGTH outError:error];
@@ -109,6 +109,10 @@
             [[OMLocalAuthenticationManager sharedManager]
              addAuthKeyToList:[self pinValidationKey]];
             [self setIsAuthenticated:YES];
+            
+            [self.secureStorage saveDataForId:[self pinLengthKey]
+                                data:[NSNumber numberWithInteger:[passphrase length]]
+                                        error:error];
         }
         else
         {
@@ -127,7 +131,8 @@
     }
 }
 
-- (void)updateAuthData:(OMAuthData *)currentAuthData newAuthData:(OMAuthData *)newAuthData
+- (void)updateAuthData:(OMAuthData *)currentAuthData
+           newAuthData:(OMAuthData *)newAuthData
                         error:(NSError **)error;
 {
     NSUInteger errorCode= 0;
@@ -139,25 +144,34 @@
         if ([self authenticate:currentAuthData error:error])
         {
             NSString *newPin = [newAuthData authDataStr];
-            NSString *salt = [OMKeyChain itemForKey:[self saltKey] accessGroup:nil];
+            NSString *salt = [OMKeyChain itemForKey:[self saltKey]
+                                        accessGroup:nil];
+            NSData *newKek = [OMCryptoService
+                              generatePBKDF2EncryptionKeywithPassphrase:newPin
+                              salt:salt hashAlgorithm:OMAlgorithmSSHA256
+                              iteration:PBKDF2_ITERATION_COUNT
+                              keySize:PBKDF2_KEY_LENGTH outError:error];
             
-            NSData *newKek = [OMCryptoService generatePBKDF2EncryptionKeywithPassphrase:newPin
-                                                                         salt:salt hashAlgorithm:OMAlgorithmSSHA256
-                                                                    iteration:PBKDF2_ITERATION_COUNT
-                                                                      keySize:PBKDF2_KEY_LENGTH outError:error];
             [[OMKeyManager sharedManager] updateKeyStore:self.instanceId
-                                            kek:self.kek newKek:newKek error:error];
+                                        kek:self.kek newKek:newKek error:error];
 
             if (!*error)
             {
-                _kek = newKek;
+            _kek = newKek;
+            [self.secureStorage saveDataForId:[self pinLengthKey]
+                                    data:[NSNumber numberWithInteger:[newPin length]]
+                                    error:error];
             }
         }
         else
         {
             errorCode = OMERR_INCORRECT_CURRENT_AUTHDATA;
-
         }
+    }
+    else
+    {
+        errorCode = OMERR_INCORRECT_CURRENT_AUTHDATA;
+
     }
     
     if (errorCode && error)
@@ -171,6 +185,7 @@
 {
     if (self.isAuthenticated)
     {
+        [self.secureStorage deleteDataForId:[self pinLengthKey] error:error];
         [[OMKeyManager sharedManager] deleteKeyStore:self.instanceId
                                                  kek:self.kek error:error];
         [OMKeyChain deleteItemForKey:[self pinValidationKey] accessGroup:nil];
@@ -185,20 +200,25 @@
 {
     NSUInteger errorCode= 0;
     error = nil;
+    
+    BOOL authenticated = NO;
+    
     if (authData && [[authData data] length])
     {
         if ([self isAuthDataSet])
         {
-            NSString *salt = [OMKeyChain itemForKey:[self saltKey] accessGroup:nil];
+            NSString *salt = [OMKeyChain itemForKey:[self saltKey]
+                                        accessGroup:nil];
             NSString *currentPin = [authData authDataStr];
             
-            self.kek = [OMCryptoService generatePBKDF2EncryptionKeywithPassphrase:currentPin
-                                                salt:salt hashAlgorithm:OMAlgorithmSSHA256
-                                                iteration:PBKDF2_ITERATION_COUNT
-                                                keySize:PBKDF2_KEY_LENGTH outError:error];
+            NSData *newKek = [OMCryptoService
+                             generatePBKDF2EncryptionKeywithPassphrase:currentPin
+                             salt:salt hashAlgorithm:OMAlgorithmSSHA256
+                             iteration:PBKDF2_ITERATION_COUNT
+                             keySize:PBKDF2_KEY_LENGTH outError:error];
             
             OMKeyStore *keystore = [[OMKeyManager sharedManager] keyStore:
-                                    self.instanceId kek:self.kek error:nil];
+                                    self.instanceId kek:newKek error:nil];
             
             OMSecureStorage *secureStore = [[OMSecureStorage alloc]
                                             initWithKeyStore:keystore
@@ -209,16 +229,14 @@
             NSData *previousData = [OMKeyChain itemForKey:[self pinValidationKey]
                                                accessGroup:nil];
             
-            self.secureStorage = secureStore;
             
 
             if ([validationData isEqualToData:previousData])
             {
                 self.isAuthenticated = YES;
-            }
-            else
-            {
-                self.isAuthenticated = NO;
+                authenticated = YES;
+                self.secureStorage = secureStore;
+                self.kek = newKek;
             }
             
         }else
@@ -237,7 +255,7 @@
         *error = [OMObject createErrorWithCode:errorCode];
     }
 
-    return self.isAuthenticated;
+    return authenticated;
 }
 
 - (void)inValidate;
@@ -262,6 +280,15 @@
     return isDataSet;
 }
 
+- (NSInteger)authDataLength
+{
+    NSError *error = nil;
+    
+    NSNumber *pinLength = [self.secureStorage dataForId:[self pinLengthKey]
+                                                  error:&error];
+    return   (pinLength != nil) ? [pinLength integerValue] : -1 ;
+}
+
 #pragma mark -
 
 - (NSString*)pinValidationKey
@@ -272,6 +299,11 @@
 - (NSString*)saltKey
 {
     return [NSString stringWithFormat:@"%@%@",self.instanceId,OM_PBKDF2_SALT_ID];
+}
+
+- (NSString*)pinLengthKey
+{
+    return [NSString stringWithFormat:@"%@%@",self.instanceId, OM_PIN_LENGTH_KEY];
 }
 
 - (OMKeyStore*)keyStore;

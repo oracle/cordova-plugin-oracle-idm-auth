@@ -12,9 +12,8 @@
 @interface OMClientCertAuthenticationService :
                                 OMAuthenticationService<NSURLSessionDelegate>
 
-@property(nonatomic) volatile int32_t finished;
-@property(nonatomic, strong) NSURLSession *session;
 @property(nonatomic, weak) OMClientCertConfiguration *configuration;
 @property(nonatomic, assign) BOOL authChallengeReceived;
+@property(nonatomic, strong) NSURLSessionDataTask *sessionDataTask;
 
 @end

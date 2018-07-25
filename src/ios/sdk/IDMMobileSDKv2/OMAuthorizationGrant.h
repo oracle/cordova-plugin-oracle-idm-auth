@@ -20,4 +20,5 @@
 - (NSDictionary *)backChannelRequestHeader;
 - (BOOL)doOfflineAuthentication:(NSURL *)offlineHost;
 -(void)sendFrontChannelChallenge;
+- (void)cancelAuthentication;
 @end

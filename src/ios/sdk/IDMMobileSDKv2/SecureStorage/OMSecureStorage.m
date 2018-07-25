@@ -187,13 +187,38 @@
 {
     // The file name should conatin less that 255 charachters, else the file
     // will not be stored on the disk.
-    return [[OMCryptoService MD5HashAndBase64EncodeData:
-      [dataId dataUsingEncoding:NSUTF8StringEncoding]
-                             withSaltOfBitLength:0
-                                         outSalt:nil
-                                        outError:nil]
-     stringByReplacingOccurrencesOfString:@"/"
-     withString:@""];
+    NSString *relativeFileName = [[OMCryptoService MD5HashAndBase64EncodeData:
+                                [dataId dataUsingEncoding:NSUTF8StringEncoding]
+                                                        withSaltOfBitLength:0
+                                                                    outSalt:nil
+                                                                   outError:nil]
+                                  stringByReplacingOccurrencesOfString:@"/"
+                                  withString:@""];
+    NSString *filePath = [self filePathForDataId:relativeFileName];
+    //In the previos version the file saved would be base64 of dataID.
+    //Now we save the hash value of base64 to avoid the file name exceeding 256 characters.
+    //We check the file with hash value, if we dont find we rename the base64 file
+    //to hash and return the file name
+    if (![[NSFileManager defaultManager] fileExistsAtPath:filePath])
+    {
+        BOOL isRenamed;
+        NSString *oldFile = [[self stringToBase64:dataId]
+                             stringByReplacingOccurrencesOfString:@"/"
+                             withString:@""];
+        NSString *oldFilepath = [self filePathForDataId:oldFile];
+        NSError *error = nil;
+        
+        if ([[NSFileManager defaultManager] fileExistsAtPath:oldFilepath])
+        {
+            isRenamed = [[NSFileManager defaultManager] moveItemAtPath:oldFilepath
+                                                toPath:filePath error:&error];
+            if (!isRenamed)
+            {
+                return oldFile;
+            }
+        }
+    }
+    return relativeFileName;
 }
 
 - (NSString *)filePathForDataId:(NSString*)dataId

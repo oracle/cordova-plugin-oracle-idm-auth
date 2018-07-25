@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Home</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Home</h1>
+
+    
+
+
+
+    
+
+
+    <h3> </h3>
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+<section>
+
+<header>
+    
+        <h2>IdmAuthFlows.js</h2>
+        
+    
+</header>
+
+<article>
+    <div class="container-overview">
+    
+        
+            <div class="description"><a href="https://github.com/oracle/cordova-plugin-oracle-idm-auth">cordova-plugin-oracle-idm-auth</a>
+is a plugin that provides authentication and authorization functionality for
+cordova based mobile applications, supporting standard protocols for remote authentication
+such as Basic Auth, OAuth, OpenID Connect and webSSO / Federated auth.
+The plugin also supports local device level authentication such as PIN and fingerprint based.
+The plugin abstracts all aspects of authentication and authorization and enforces security best practices for mobile application developers.
+Typically an app will use a single remote authentication and possibly local authentication.
+But the plugin can handle multiple authentication flows in parallel, be it remote or local.
+The APIs of this plugin are exposed through an object <code>IdmAuthFlows</code> in <code>cordova.plugins</code> namespace.
+All objects in this documentation be it in "Global" or "Classes" are part of this object.
+They have to be accessed as <code>cordova.plugins.IdmAuthFlows.&lt;Class&gt;</code>
+or <code>cordova.plugins.IdmAuthFlows.&lt;Object&gt;</code>.
+<p>Usage of this plugin:</p>
+<p>Create authentication properties object for the type of authentication to be performed.
+Use one of the builders for this:
+<ul style="list-style: none;">
+ <li><a href="HttpBasicAuthPropertiesBuilder.html">HttpBasicAuthPropertiesBuilder</a></li>
+ <li><a href="FedAuthPropertiesBuilder.html">FedAuthPropertiesBuilder</a></li>
+ <li><a href="OAuthPropertiesBuilder.html">OAuthPropertiesBuilder</a></li>
+ <li><a href="OpenIDConnectPropertiesBuilder.html">OpenIDConnectPropertiesBuilder</a></li>
+ <li><a href="LocalAuthPropertiesBuilder.html">LocalAuthPropertiesBuilder</a></li>
+</ul>
+</p>
+<p><a href="global.html#init">Init</a> the authentication flow using properties. The promise resolves with an object which is subclass of <a href="AuthenticationFlow.html">AuthenticationFlow</a>.
+   Preserve this object for further operations.</p>
+<p>AuthenticationFlow can be used for performing operations such as
+   <a href="AuthenticationFlow.html#login">login</a>, <a href="AuthenticationFlow.html#logout">logout</a> etc.
+ Depending on the type of authentication used, the object returned can be of these types. These support operations specific to the authentication used.
+ <ul style="list-style: none;">
+   <li><a href="RemoteAuthenticationFlow.html">RemoteAuthenticationFlow</a></li>
+   <li><a href="HttpBasicAuthenticationFlow.html">HttpBasicAuthenticationFlow</a></li>
+   <li><a href="LocalAuthenticationFlow.html">LocalAuthenticationFlow</a></li>
+ </ul>
+</p>
+<p> Sample usage:</p>
+<pre>
+ // Preserve this authentication flow object to interact with the particular flow.
+ var authFlow;
+
+ // The plugin will be available in onDeviceReady or an equivalent callback
+ // which is executed after the application is loaded by the device.
+ document.addEventListener("deviceready", onDeviceReady);
+ function onDeviceReady() {
+   // Create the authentication properties
+   var authProperties = cordova.plugins.IdmAuthFlows.newHttpBasicAuthPropertiesBuilder(...).build();
+
+   var authPromise = cordova.plugins.IdmAuthFlows.init(authProperties);
+   authPromise.then(function(flow) {
+     authFlow = flow;
+   });
+ }
+
+ // Do login.
+ var loginPromise = authFlow.login();
+ loginPromise.then(function(resp) {
+   // Perform after login tasks.
+ })
+
+ // Retrieve headers - If applicable for the auth type.
+ var getHeadersPromise = authFlow.getHeaders(options);
+ getHeadersPromise.then(function(headers) {
+   // Use headers for setting appropriate headers for performing an XHR request.
+ });
+
+ // Find our use's authentication status.
+ var isAuthenticatedPromise = authFlow.isAuthenticated(options);
+ isAuthenticatedPromise.then(function(authenticated) {
+   // Use headers for setting appropriate headers for performing an XHR request.
+ });
+
+ // Logout from a particular authentication flow.
+ var logoutPromise = authFlow.logout();
+ logoutPromise.then(function(resp) {
+   // Do after logout tasks
+ });
+</pre></div>
+        
+
+        
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line7">line 7</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+        
+    
+    </div>
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</article>
+
+</section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="AuthenticationFlow.html">AuthenticationFlow</a></li><li><a href="FedAuthPropertiesBuilder.html">FedAuthPropertiesBuilder</a></li><li><a href="HttpBasicAuthenticationFlow.html">HttpBasicAuthenticationFlow</a></li><li><a href="HttpBasicAuthPropertiesBuilder.html">HttpBasicAuthPropertiesBuilder</a></li><li><a href="LocalAuthenticationFlow.html">LocalAuthenticationFlow</a></li><li><a href="LocalAuthenticationFlowManager.html">LocalAuthenticationFlowManager</a></li><li><a href="LocalAuthPropertiesBuilder.html">LocalAuthPropertiesBuilder</a></li><li><a href="OAuthPropertiesBuilder.html">OAuthPropertiesBuilder</a></li><li><a href="OpenIDConnectPropertiesBuilder.html">OpenIDConnectPropertiesBuilder</a></li><li><a href="PropertiesBuilder.html">PropertiesBuilder</a></li><li><a href="RemoteAuthenticationFlow.html">RemoteAuthenticationFlow</a></li><li><a href="RemoteAuthPropertiesBuilder.html">RemoteAuthPropertiesBuilder</a></li></ul><h3>Global</h3><ul><li><a href="global.html#AuthChallenge">AuthChallenge</a></li><li><a href="global.html#BrowserMode">BrowserMode</a></li><li><a href="global.html#ConnectivityModes">ConnectivityModes</a></li><li><a href="global.html#Error">Error</a></li><li><a href="global.html#ErrorSource">ErrorSource</a></li><li><a href="global.html#ErrorSources">ErrorSources</a></li><li><a href="global.html#init">init</a></li><li><a href="global.html#newFedAuthPropertiesBuilder">newFedAuthPropertiesBuilder</a></li><li><a href="global.html#newHttpBasicAuthPropertiesBuilder">newHttpBasicAuthPropertiesBuilder</a></li><li><a href="global.html#newOAuthPropertiesBuilder">newOAuthPropertiesBuilder</a></li><li><a href="global.html#newOpenIDConnectPropertiesBuilder">newOpenIDConnectPropertiesBuilder</a></li><li><a href="global.html#OAuthAuthorizationGrantTypes">OAuthAuthorizationGrantTypes</a></li><li><a href="global.html#TimeoutResponse">TimeoutResponse</a></li><li><a href="global.html#TimeoutType">TimeoutType</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Fri Jun 15 2018 11:13:00 GMT+0530 (IST)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

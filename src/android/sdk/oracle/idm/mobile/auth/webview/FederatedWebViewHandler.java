@@ -14,6 +14,9 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
@@ -29,6 +32,7 @@ import oracle.idm.mobile.auth.AuthenticationServiceManager;
 import oracle.idm.mobile.configuration.OMFederatedMobileSecurityConfiguration;
 import oracle.idm.mobile.configuration.OMMobileSecurityConfiguration;
 import oracle.idm.mobile.logging.OMLog;
+import oracle.idm.mobile.util.CustomLinkedHashSet;
 import oracle.idm.mobile.util.StringUtils;
 
 import static oracle.idm.mobile.OMSecurityConstants.Challenge.WEBVIEW_CLIENT_KEY;
@@ -41,17 +45,19 @@ import static oracle.idm.mobile.util.URLUtils.areUrlsEqual;
  */
 public class FederatedWebViewHandler extends LoginWebViewHandler
 {
-    private static final String TAG = FederatedWebViewHandler.class.getName();
+    private static final String TAG = FederatedWebViewHandler.class.getSimpleName();
     /*
      * The following Javascript code is minified using Google Closure Compiler.
      * The original javascript code (which is not minified) is present in
      * idmmobile\Headless\Android\IDMMobileSDKNotShippedResources\
      */
-    private static final String USERNAME_EXTRACTION_JAVASCRIPT = "'oracle_access_interceptor'!==HTMLFormElement.prototype.submit.name&&(HTMLFormElement.prototype.originalSubmit=HTMLFormElement.prototype.submit);HTMLFormElement.prototype.submit=oracle_access_interceptor;window.addEventListener('submit',function(a){oracle_access_interceptor(a)},!0);var oracle_access_usernameParams;function oracle_acess_setUsernameParams(a){'undefined'!=typeof a&&(oracle_access_usernameParams=a.split(','))}"
-            + "function oracle_access_interceptor(a){a=a instanceof Event&&'undefined'!=typeof a?a.target:this;oracle_access_interceptorOnSubmit(a);a.originalSubmit()}function oracle_access_interceptorOnSubmit(a){if(a instanceof HTMLFormElement)for(i=0;i<a.elements.length;i++){var b=a.elements[i].name,c=a.elements[i].type,b=b.toLocaleLowerCase();if(('text'==c||'email'==c)&&oracle_access_containsUsername(b)){window.FederatedJSI.setUsername(a.elements[i].value);break}}}XMLHttpRequest.prototype.originalOpen=XMLHttpRequest.prototype.open;"
-            + "XMLHttpRequest.prototype.open=function(a,b,c,d,e){'undefined'!=typeof d&&null!==d&&window.FederatedJSI.setUsername(d);this.originalOpen(a,b,c,d,e)};XMLHttpRequest.prototype.originalSend=XMLHttpRequest.prototype.send;XMLHttpRequest.prototype.send=function(a){oracle_access_containsUsername(a)&&window.FederatedJSI.setUsername(oracle_access_parseUsername(a));this.originalSend(a)};"
-            + "function oracle_access_containsUsername(a){if('undefined'!=typeof oracle_access_usernameParams&&null!==oracle_access_usernameParams&&'undefined'!=typeof a&&null!==a&&'string'===typeof a||a instanceof String)for(var b=0;b<oracle_access_usernameParams.length;b++)if(-1!=a.indexOf(oracle_access_usernameParams[b].toLocaleLowerCase()))return!0;return!1}"
-            + "function oracle_access_parseUsername(a){if('undefined'!=typeof a&&null!==a&&'string'===typeof a||a instanceof String){a=a.split('&');for(var b=0;b<a.length;b++){var c=a[b].split('=');if(oracle_access_containsUsername(c[0]))return c[1]}}};";
+    private static final String USERNAME_EXTRACTION_JAVASCRIPT = "\"oracle_access_interceptUsernameOnSubmit\"!==HTMLFormElement.prototype.submit.name&&(HTMLFormElement.prototype.originalSubmit=HTMLFormElement.prototype.submit);HTMLFormElement.prototype.submit=oracle_access_interceptUsernameOnSubmit;\"oracle_access_interceptUsernameOnXHROpen\"!==XMLHttpRequest.prototype.open.name&&(XMLHttpRequest.prototype.originalOpen=XMLHttpRequest.prototype.open);XMLHttpRequest.prototype.open=oracle_access_interceptUsernameOnXHROpen;" +
+            "\"oracle_access_interceptUsernameOnXHRSend\"!==XMLHttpRequest.prototype.send.name&&(XMLHttpRequest.prototype.originalSend=XMLHttpRequest.prototype.send);XMLHttpRequest.prototype.send=oracle_access_interceptUsernameOnXHRSend;window.addEventListener(\"submit\",function(a){oracle_access_interceptUsername.call(this,a,!1)},!0);var oracle_access_usernameParams;function oracle_acess_setUsernameParams(a){\"undefined\"!=typeof a&&(oracle_access_usernameParams=a.split(\",\"))}" +
+            "function oracle_access_interceptUsernameOnSubmit(a){oracle_access_interceptUsername.call(this,a,!0)}function oracle_access_interceptUsername(a,b){var c;c=a instanceof Event&&\"undefined\"!=typeof a?a.target:this;oracle_access_interceptUsernameFromForm(c);b&&c.originalSubmit()}" +
+            "function oracle_access_interceptUsernameFromForm(a){if(a instanceof HTMLFormElement)for(i=0;i<a.elements.length;i++){var b=a.elements[i].name,c=a.elements[i].type,b=b.toLocaleLowerCase();if((\"text\"==c||\"email\"==c)&&oracle_access_containsUsername(b)&&\"undefined\"!=typeof a.elements[i].value&&null!==a.elements[i].value){window.FederatedJSI.setUsername(a.elements[i].value);break}}}" +
+            "function oracle_access_interceptUsernameOnXHROpen(a,b,c,d,e){\"undefined\"!=typeof d&&null!==d&&window.FederatedJSI.setUsername(d);this.originalOpen(a,b,c,d,e)}function oracle_access_interceptUsernameOnXHRSend(a){if(oracle_access_containsUsername(a)){var b=oracle_access_parseUsername(a);\"undefined\"!=typeof b&&null!==b&&window.FederatedJSI.setUsername(b)}this.originalSend(a)}" +
+            "function oracle_access_containsUsername(a){if(\"undefined\"!=typeof oracle_access_usernameParams&&null!==oracle_access_usernameParams&&\"undefined\"!=typeof a&&null!==a&&(\"string\"===typeof a||a instanceof String))for(var b=0;b<oracle_access_usernameParams.length;b++)if(-1!=a.indexOf(oracle_access_usernameParams[b].toLocaleLowerCase()))return!0;return!1}" +
+            "function oracle_access_parseUsername(a){if(\"undefined\"!=typeof a&&null!==a&&(\"string\"===typeof a||a instanceof String)){a=a.split(\"&\");for(var b=0;b<a.length;b++){var c=a[b].split(\"=\");if(oracle_access_containsUsername(c[0]))return c[1]}}};";
     private static final String PARSE_JSON_RESPONSE_JAVASCRIPT = "function parseJSONResponse(){var a=document.getElementsByTagName('pre');return 0<a.length?a[0].innerHTML:document.getElementsByTagName('body')[0].innerHTML};";
     private static final String SET_TOKEN_RELAY_RESPONSE_JAVASCRIPT = "javascript:window.FederatedJSI.setTokenRelayResponse(parseJSONResponse());";
     private final String usernameParamNamesStr;
@@ -189,7 +195,7 @@ public class FederatedWebViewHandler extends LoginWebViewHandler
             this.inputParams = inputParams;
             this.loginSuccessUrl = loginSuccessUrl;
             this.loginFailureUrl = loginFailureUrl;
-            visitedUrls = new HashSet<>();
+            visitedUrls = new CustomLinkedHashSet<>();
             this.parseTokenRelayResponse = mConfig.parseTokenRelayResponse();
 
             isKitKatOrAbove = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT);
@@ -286,10 +292,43 @@ public class FederatedWebViewHandler extends LoginWebViewHandler
         public void onReceivedError(WebView view, int errorCode,
                 String description, String failingUrl)
         {
-            super.onReceivedError(view, errorCode, description, failingUrl);
-            OMLog.error(TAG + "_onReceivedError", "errorCode " + errorCode
+            OMLog.error(TAG, "onReceivedError deprecated: errorCode " + errorCode
                     + " description = " + description + " failingUrl = " + failingUrl);
+            super.onReceivedError(view, errorCode, description, failingUrl);
             receivedErrorLoadingUrl = true;
+        }
+
+        @TargetApi(Build.VERSION_CODES.M)
+        @Override
+        public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+            OMLog.error(TAG, "onReceivedError code: " + error.getErrorCode()
+                    + " description: " + error.getDescription() + " failingUrl = " + request.getUrl());
+            super.onReceivedError(view, request, error);
+            String lastUrl = (String) ((CustomLinkedHashSet) visitedUrls).getLastElement();
+            /* Refer onReceivedHttpError below where the same thing is done
+            for explanation of the following:*/
+            if (lastUrl != null && lastUrl.equals(request.getUrl().toString())) {
+                receivedErrorLoadingUrl = true;
+            }
+        }
+
+        /*App will get to know of Http errors like 502 only from LOLLIPOP onwards.
+        * If 502 error happens on loading login url in versions below LOLLIPOP,
+        * authentication will not succeed anyways, as cookies check will not pass.*/
+        @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+        @Override
+        public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse errorResponse) {
+            OMLog.trace(TAG, "onReceivedHttpError: Status Code: " + errorResponse.getStatusCode());
+            super.onReceivedHttpError(view, request, errorResponse);
+            String lastUrl = (String) ((CustomLinkedHashSet) visitedUrls).getLastElement();
+            /*This callback will be called for any resource (iframe, image, etc.),
+             not just for the main page. receivedErrorLoadingUrl needs to be set
+             only for main page so that we don't indicate a false positive for
+             authentication. Error for any resource need not hold back authentication
+             as there may be some small images which can result in 404 sometimes.*/
+            if (lastUrl != null && lastUrl.equals(request.getUrl().toString())) {
+                receivedErrorLoadingUrl = true;
+            }
         }
 
         @TargetApi(Build.VERSION_CODES.KITKAT)
@@ -320,7 +359,7 @@ public class FederatedWebViewHandler extends LoginWebViewHandler
         /**
          * Returns the control to Federated Authentication service with the set
          * of visited urls and login status
-         * 
+         *
          * @param view
          *            the instance of WebView being used
          * @param successUrlHit
@@ -362,7 +401,8 @@ public class FederatedWebViewHandler extends LoginWebViewHandler
     /**
      * JavascriptInterface to obtain username using javascript from the login
      * page and pass it on to SDK Java code.
-     * 
+     *
+     * @author arunpras
      *
      */
     static class FederatedJavascriptInterface

@@ -6,7 +6,6 @@
 
 package oracle.idm.mobile.auth;
 
-import android.os.Handler;
 import android.text.TextUtils;
 import android.webkit.WebViewDatabase;
 
@@ -15,6 +14,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.net.URI;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -28,6 +28,7 @@ import oracle.idm.mobile.OMAuthenticationRequest;
 import oracle.idm.mobile.OMMobileSecurityException;
 import oracle.idm.mobile.OMMobileSecurityService;
 import oracle.idm.mobile.OMSecurityConstants;
+import oracle.idm.mobile.auth.openID.OpenIDToken;
 import oracle.idm.mobile.auth.openID.OpenIDUserInfo;
 import oracle.idm.mobile.callback.OMMobileSecurityServiceCallback;
 import oracle.idm.mobile.configuration.OMFederatedMobileSecurityConfiguration;
@@ -44,14 +45,13 @@ import static oracle.idm.mobile.OMSecurityConstants.Challenge.USERNAME_KEY;
 import static oracle.idm.mobile.OMSecurityConstants.DOMAIN;
 import static oracle.idm.mobile.OMSecurityConstants.EXPIRES;
 import static oracle.idm.mobile.OMSecurityConstants.EXPIRY_DATE;
-import static oracle.idm.mobile.OMSecurityConstants.EXPIRY_SECS;
-import static oracle.idm.mobile.OMSecurityConstants.HTTP_ONLY;
+import static oracle.idm.mobile.OMSecurityConstants.IDENTITY_DOMAIN;
 import static oracle.idm.mobile.OMSecurityConstants.IS_HTTP_ONLY;
 import static oracle.idm.mobile.OMSecurityConstants.IS_SECURE;
 import static oracle.idm.mobile.OMSecurityConstants.OAUTH_ACCESS_TOKEN;
 import static oracle.idm.mobile.OMSecurityConstants.OAUTH_TOKEN_SCOPE;
 import static oracle.idm.mobile.OMSecurityConstants.PATH;
-import static oracle.idm.mobile.OMSecurityConstants.SECURE;
+import static oracle.idm.mobile.OMSecurityConstants.Param.AUTHENTICATION_MECHANISM;
 import static oracle.idm.mobile.OMSecurityConstants.TOKEN_NAME;
 import static oracle.idm.mobile.OMSecurityConstants.TOKEN_VALUE;
 
@@ -61,7 +61,6 @@ import static oracle.idm.mobile.OMSecurityConstants.TOKEN_VALUE;
  * after a successful authentication with the server. It contains tokens
  * obtained from the server, expiry time, idle time, mode of authentication, type of
  * authentication provider and the user name for which the tokens are obtained.
- *
  */
 public class OMAuthenticationContext {
 
@@ -153,21 +152,22 @@ public class OMAuthenticationContext {
     public static final String CREDENTIALS_UNAVAILABLE = "Credentials unavailable";
     public static final String COOKIES = "cookies";
     public static final String HEADERS = "headers";
-    private static final String PROVIDER = "provider";
-    private static final String TOKENS = "tokens";
-    private static final String URL = "url";
     private static final String OWSM_MA_COOKIES = "owsmMACookies";
 
-    //TODO @arunpras please confirm if this is required here or can we move this to OMKeyManager
     private static final String TAG = OMAuthenticationContext.class.getSimpleName();
-    private static final String MA_PWD_ENCRYPTION_PASSPHRASE = "SDKOWSMKEY";
-    private static final String MA_PWD_ENCRYPTION_SALT = "SDKOWSMSALT";
-    private static final String MA_PWD_ENCRYPTION_PADDING = "pkcs7padding";
-    private static final String MA_PWD_ENCRYPTION_MODE = "cbc";
-    private static int MA_PWD_ENCRYPTION_ITERATIONS = 4096;
-    private static int MA_PWD_ENCRYPTION_KEYSIZE = 128;
-    private static int MA_PWD_ENCRYPTION_IV_LENGTH = 16;
-    // ===---=== OWSM_MA end ===---===
+
+    // Begin: Keys against which value will be stored in the String representation of OMAuthenticationContext
+    private static final String USERNAME = "username";
+    private static final String AUTHEN_MODE = "authenticatedMode";
+    private static final String AUTHEN_PROVIDER = "authenticationProvider";
+    private static final String TOKENS = "tokens";
+    private static final String OAUTH_TOKEN = "oauthTokenSet";
+    private static final String SESSION_EXPIRY = "sessionExpiry";
+    private static final String IDLETIME_EXPIRY = "idleTimeExpiry";
+    private static final String SESSION_EXPIRY_SECS = "sessionExpInSecs";
+    private static final String IDLETIME_EXPIRY_SECS = "idleTimeExpInSecs";
+    private static final String LOGOUT_TIMEOUT_VALUE = "logoutTimeoutValue";
+    // End: Keys against which value will be stored in the String representation of OMAuthenticationContext
 
     private Status mStatus;
     private String mStorageKey;
@@ -179,7 +179,7 @@ public class OMAuthenticationContext {
     private AuthenticationMechanism authenticationMechanism;
     private String offlineCredentialKey;
     private String identityDomain;
-    Map<String, Object> mInputParams;
+    private Map<String, Object> mInputParams;
     private boolean authContextDeleted;
     private String userName;
     // Field used internally for validation
@@ -188,19 +188,12 @@ public class OMAuthenticationContext {
     private int sessionExpInSecs;
     private int idleTimeExpInSecs;
     private TimeoutManager mTimeoutManager;
-    private static final String SESSION_EXPIRY = "sessionExpiry";
-    private static final String IDLETIME_EXPIRY = "idleTimeExpiry";
-    private static final String SESSION_EXPIRY_SECS = "sessionExpInSecs";
-    private static final String IDLETIME_EXPIRY_SECS = "idleTimeExpInSecs";
-    private static final String AUTHEN_MODE = "authenticatedMode";
-    private String LOGOUT_TIMEOUT_VALUE = "logoutTimeoutValue";
-    boolean isIdleTimeout = false;
+    private boolean isIdleTimeout = false;
     private List<OAuthToken> oAuthTokenList;
     private Map<String, OMToken> tokens;
     private Map<String, OMToken> owsmMACookies;
 
     private int logoutTimeout;
-    private Handler mHandler;
     private Set<URI> mVisitedUrls;
     private List<OMCookie> mCookies;
     private OpenIDUserInfo mOpenIDUserInfo;
@@ -317,14 +310,12 @@ public class OMAuthenticationContext {
                 idleTimeExpiry = futureIdleTime.getTime();
                 idleTimeExpInSecs = idleExp;
             }
-            mHandler = appCallback.getHandler();
-            mTimeoutManager = new TimeoutManager(mASM.getMSS().getAuthenticationContextCallback(), this, mHandler);
-			//TODO
+            mTimeoutManager = new TimeoutManager(mASM.getMSS().getAuthenticationContextCallback(), this);
             if (authenticationProvider == AuthenticationProvider.OAUTH20 && authenticatedMode == AuthenticationMode.OFFLINE && idleExp > 0) {
-                mTimeoutManager.startIdleTimeoutTimer();
+                mTimeoutManager.startIdleTimeoutAdvanceNotificationTimer();
             } else if (authenticationProvider != AuthenticationProvider.OAUTH20) {
                 if (idleExp > 0) {
-                    mTimeoutManager.startIdleTimeoutTimer();
+                    mTimeoutManager.startIdleTimeoutAdvanceNotificationTimer();
                 }
                 if (expTime > 0) {
                     mTimeoutManager.startSessionTimeoutTimer();
@@ -468,7 +459,7 @@ public class OMAuthenticationContext {
                 OMLog.debug(TAG, "AuthContext validity check online ? "
                         + validateOnline);
 
-                String credentialKey = this.mStorageKey;
+                String credentialKey = getStorageKey() != null ? getStorageKey() : mASM.getAppCredentialKey();
                 String authenticationUrl = mASM.getMSS().getMobileSecurityConfig().getAuthenticationURL().toString();
 
                 String serverSpecificKey = OfflineAuthenticationService
@@ -497,7 +488,6 @@ public class OMAuthenticationContext {
                                 .isOfflineAuthenticationAllowed());
 
                         boolean isDeleteTokensAndCookies = true;
-                        boolean justRetainIdleTimeExpiryAsEpoch = false;
 
                         if (authService instanceof BasicAuthenticationService) {
                             if (authContextDeleted) {
@@ -510,8 +500,7 @@ public class OMAuthenticationContext {
                              */
                             isDeleteUnPwd = basicAuthenticationService
                                     .isSessionTimedOut();
-                            idleTimeExpired = basicAuthenticationService
-                                    .isIdleTimeOut();
+                            idleTimeExpired = isIdleTimeout();
                             isDeleteTokensAndCookies = !(idleTimeExpired && credentialsAvailable);
 
                         } else if (authService instanceof OfflineAuthenticationService) {
@@ -522,7 +511,7 @@ public class OMAuthenticationContext {
 
                         deleteAuthContext(isDeleteUnPwd,
                                 isDeleteTokensAndCookies, isDeleteTokensAndCookies,
-                                false, justRetainIdleTimeExpiryAsEpoch);
+                                false);
                         if (authService instanceof BasicAuthenticationService
                                 && ((BasicAuthenticationService) authService)
                                 .isSessionTimedOut()
@@ -552,6 +541,10 @@ public class OMAuthenticationContext {
      * Checks the validity of the OAuth tokens. If a token that matches the
      * request scopes is expired, it is refreshed if the refreshExpiredTokens
      * flag passed is true.
+     * <p>
+     * <b>Note:</b> If refreshExpiredTokens is passed as true, this method MUST be called
+     * from a background thread. This is because new tokens will be obtained only
+     * by contacting OAuth server.
      *
      * @param scopes               The set of OAuth scopes to check in the token
      * @param refreshExpiredTokens {@code}true if the expired tokens should be refreshed.
@@ -641,14 +634,19 @@ public class OMAuthenticationContext {
     }
 
     boolean resetIdleTime() {
+        boolean resetIdleTimeStatus = false;
         if (idleTimeExpInSecs > 0) {
-            Calendar futureTime = Calendar.getInstance();
-            futureTime.add(Calendar.SECOND, idleTimeExpInSecs);
-            idleTimeExpiry = futureTime.getTime();
-            return mTimeoutManager.resetTimer();
+            resetIdleTimeStatus = mTimeoutManager.resetTimer();
+            if (resetIdleTimeStatus) {
+                Calendar futureTime = Calendar.getInstance();
+                futureTime.add(Calendar.SECOND, idleTimeExpInSecs);
+                idleTimeExpiry = futureTime.getTime();
+                OMLog.debug(TAG, "Idle time is reset to : " + idleTimeExpiry);
+            }
         } else {
-            return false;
+            OMLog.info(TAG, "Need not reset idle timer, since idle timeout is not specified or is 0 (which means no idle timeout)");
         }
+        return resetIdleTimeStatus;
     }
 
 
@@ -681,14 +679,12 @@ public class OMAuthenticationContext {
      * various conditions such as forget device, remove user token when logout,
      * remove offline credentials etc.,
      *
-     * @param isDeleteUnPwd                   should we delete user name and password
-     * @param isDeleteCookies                 should we delete cookies
-     * @param justRetainIdleTimeExpiryAsEpoch whether everything should be deleted and just the idle time
-     *                                        expiry should be retained as Epoch
+     * @param isDeleteUnPwd   should we delete user name and password
+     * @param isDeleteCookies should we delete cookies
      */
     void deleteAuthContext(boolean isDeleteUnPwd,
                            boolean isDeleteCookies, boolean isDeleteToken,
-                           boolean isLogoutCall, boolean justRetainIdleTimeExpiryAsEpoch) {
+                           boolean isLogoutCall) {
 
         String TAG = OMAuthenticationContext.TAG + "_deleteAuthContext";
 
@@ -710,8 +706,6 @@ public class OMAuthenticationContext {
                 mASM.setAuthenticationContext(null);
             }
 
-            OMCredentialStore css = mASM.getMSS().getCredentialStoreService();
-            String credentialKey = getStorageKey() != null ? getStorageKey() : mASM.getAppCredentialKey();
             AuthenticationService authService = null;
             do {
                 authService = mASM.getStateTransition().getLogoutState(
@@ -723,12 +717,75 @@ public class OMAuthenticationContext {
                 }
             }
             while (authService != null);
+
+            deletePersistedAuthContext(isDeleteUnPwd, isDeleteToken, isLogoutCall);
+
             if (isDeleteUnPwd && isDeleteCookies) {
                 //no op
                 //TODO To check with Jyotsna why this is required. Ideally auth services can be unloaded irrespctive of these flags.
             } else {
                 mASM.unloadAuthServices();
             }
+        }
+    }
+
+    private void deletePersistedAuthContext(boolean isDeleteUnPwd, boolean isDeleteToken,
+                                            boolean isLogoutCall) {
+        // this checks whether the app configuration allows auth context persistence or not?
+        boolean authContextPersistenceAllowed = mASM.getMSS().getMobileSecurityConfig()
+                .isAuthContextPersistenceAllowed();
+        OMCredentialStore css = mASM.getMSS().getCredentialStoreService();
+        String credentialKey = getStorageKey() != null ? getStorageKey() : mASM.getAppCredentialKey();
+        if (isDeleteUnPwd && isDeleteToken) {
+            // this wont put any impact however we can avoid an unnecessary
+            // call to shared preference.
+            if (authContextPersistenceAllowed) {
+                // which means calling class has to remove the complete
+                // information from the store.
+                css.deleteAuthContext(credentialKey);
+
+                OMLog.debug(TAG,
+                        "After forget device all the details are removed for the key "
+                                + credentialKey
+                                + " from the credential store");
+            } else
+                OMLog.debug(TAG, "Skipped removing details for the key "
+                        + credentialKey + " from the credential store");
+        } else {
+
+            boolean isRemoveFromStore = false;
+
+            if ((isDeleteToken && getAuthenticatedMode() == AuthenticationMode.OFFLINE)
+                    || (isDeleteToken && isLogoutCall)) {
+                /*If it is logout use-case or offline authentication
+                * session being invalid, authContext should be completely
+                * removed.*/
+                isRemoveFromStore = true;
+            }
+            if (authContextPersistenceAllowed) {
+                /* Tokens would have been removed in logout() of respective AuthenticationServices.
+                * So, even though true is passed for isAllowTokens in the below toString method,
+                * tokens will not be present in the string representation.
+                * */
+                String detailsToStore = toString(true);
+
+                if (detailsToStore != null && !isRemoveFromStore) {
+                    css.addAuthContext(credentialKey, detailsToStore);
+                    OMLog.debug(TAG,
+                            "After logout the authentication context for the key "
+                                    + credentialKey
+                                    + " in the credential store is : "
+                                    + detailsToStore);
+                } else {
+                    css.deleteAuthContext(credentialKey);
+                    OMLog.debug(TAG,
+                            "After logout the authentication context for the key "
+                                    + credentialKey
+                                    + " is removed from the  credential store");
+                }
+            } else
+                OMLog.debug(TAG,
+                        "Skipped addition or deletion of auth context to the store as this is a Secure Mode");
         }
     }
 
@@ -773,12 +830,24 @@ public class OMAuthenticationContext {
             jsonArray = jsonObject.optJSONArray(OWSM_MA_COOKIES);
             this.owsmMACookies = convertJSONArrayToMap(jsonArray);
 
+            jsonArray = jsonObject.optJSONArray(OAUTH_TOKEN);
+            this.oAuthTokenList = convertJSONArrayToList(jsonArray);
+
             mStatus = Status.SUCCESS;
             this.authenticatedMode = AuthenticationMode.valueOf(jsonObject
                     .optString(AUTHEN_MODE, AuthenticationMode.ONLINE.toString()));
+            this.authenticationProvider = AuthenticationProvider
+                    .valueOf(jsonObject.optString(AUTHEN_PROVIDER,
+                            AuthenticationProvider.OFFLINE.name()));
+            String authenticationMechanism = jsonObject
+                    .optString(OMSecurityConstants.Param.AUTHENTICATION_MECHANISM);
+            if (!TextUtils.isEmpty(authenticationMechanism)) {
+                this.authenticationMechanism = AuthenticationMechanism
+                        .valueOf(authenticationMechanism);
+            }
             logoutTimeout = jsonObject.optInt(LOGOUT_TIMEOUT_VALUE);
         } catch (JSONException e) {
-            OMLog.error(TAG + "_populateFields", e.getLocalizedMessage());
+            OMLog.error(TAG + "_populateFields", e.getMessage(), e);
         }
     }
 
@@ -844,16 +913,14 @@ public class OMAuthenticationContext {
                 OMLog.debug(TAG, "Logout(true): Cleared username,password and form data");
             }
             // removing the credentials for the given url
-            deleteAuthContext(true, true, true, true,
-                    justRetainIdleTimeExpiryAsEpoch);
+            deleteAuthContext(true, true, true, true);
             // remove the user preferences as well
             if (mASM.getMSS().getMobileSecurityConfig().isAnyRCFeatureEnabled()) {
                 mASM.getRCUtility().removeAll();
             }
 
         } else {
-            deleteAuthContext(false, true, true, true,
-                    justRetainIdleTimeExpiryAsEpoch);
+            deleteAuthContext(false, true, true, true);
             if (mASM.getMSS().getMobileSecurityConfig().isAnyRCFeatureEnabled()) {
                 mASM.getRCUtility().inValidateRememberedCredentials();
             }
@@ -891,6 +958,7 @@ public class OMAuthenticationContext {
         this.sessionExpInSecs = 0;
         this.idleTimeExpInSecs = 0;
         this.tokens = null;
+        this.mCookies = null;
 
         String userNameFromMap = (String) getInputParams().get(USERNAME_KEY);
         if (userNameFromMap != null) {
@@ -940,6 +1008,7 @@ public class OMAuthenticationContext {
 
     /**
      * Returns all access tokens obtained as part of OAuth.
+     *
      * @return
      */
     public List<OAuthToken> getOAuthTokenList() {
@@ -947,6 +1016,17 @@ public class OMAuthenticationContext {
             oAuthTokenList = new ArrayList<>();
         }
         return oAuthTokenList;
+    }
+
+    boolean hasRefreshToken() {
+        boolean hasRefreshToken = false;
+        for (OAuthToken oAuthToken : getOAuthTokenList()) {
+            if (oAuthToken.hasRefreshToken()) {
+                hasRefreshToken = true;
+                break;
+            }
+        }
+        return hasRefreshToken;
     }
 
 
@@ -976,7 +1056,7 @@ public class OMAuthenticationContext {
      * @return {@link List} of Access tokens matching the criteria .
      */
     public List<OMToken> getTokens(Set<String> scopes) {
-        List<OMToken> matchedTokens = new ArrayList<OMToken>();
+        List<OMToken> matchedTokens = new ArrayList<>();
         /*
          * In case of FedAuth, we get OAuth access token from Token Relay
          * service.
@@ -1044,7 +1124,7 @@ public class OMAuthenticationContext {
      * @return map of requested credential information.
      */
     public Map<String, Object> getCredentialInformation(String[] keys) {
-        Map<String, Object> credentialInfo = new HashMap<String, Object>();
+        Map<String, Object> credentialInfo = new HashMap<>();
         for (String key : keys) {
             if (key.equalsIgnoreCase(CREDENTIALS)) {
                 String password = getUserPassword();
@@ -1087,7 +1167,7 @@ public class OMAuthenticationContext {
             Map<String, String> cookieValues = (Map<String, String>) entry
                     .getValue();
             String tokenName = cookieValues.get(TOKEN_NAME);
-            String url = cookieValues.get(URL);
+            String url = cookieValues.get(OMSecurityConstants.URL);
             String tokenValue = cookieValues.get(TOKEN_VALUE);
             String expiryDateStr = cookieValues.get(EXPIRY_DATE);
 
@@ -1103,7 +1183,7 @@ public class OMAuthenticationContext {
             OMLog.debug(TAG,
                     "Cookie obtained from OWSM MA: " + cookie.toString());
 
-            Map<String, OMToken> tokens = new HashMap<String, OMToken>();
+            Map<String, OMToken> tokens = new HashMap<>();
             tokens.put(cookieNameWithHostAppended, cookie);
             mASM.storeCookieString(tokens, false);
         }
@@ -1148,28 +1228,10 @@ public class OMAuthenticationContext {
             throws JSONException {
         JSONArray jsonArray = new JSONArray();
         for (Map.Entry<String, OMToken> entry : tokens.entrySet()) {
-            OMToken token = entry.getValue();
-
-            JSONObject tokenJson = new JSONObject();
-            tokenJson.put(URL, token.getUrl());
-            tokenJson.put(TOKEN_NAME, token.getName());
-            tokenJson.put(TOKEN_VALUE, token.getValue());
-
-            if (token.getExpiryTime() != null) {
-                tokenJson.put(EXPIRY_SECS, token.getExpiryTime().getTime());
-            }
-            if (token.getDomain() != null) {
-                tokenJson.put(DOMAIN, token.getDomain());
-            }
-            if (token.getPath() != null) {
-                tokenJson.put(PATH, token.getPath());
-            }
-            tokenJson.put(HTTP_ONLY, token.isHttpOnly());
-            tokenJson.put(SECURE, token.isSecure());
-
             JSONObject jsonToken = new JSONObject();
-            jsonToken.put(entry.getKey(), tokenJson);
-
+            if (entry.getValue() != null) {
+                jsonToken.put(entry.getKey(), entry.getValue().toJSONObject());
+            }
             jsonArray.put(jsonToken);
         }
         return jsonArray;
@@ -1178,7 +1240,7 @@ public class OMAuthenticationContext {
     private Map<String, OMToken> convertJSONArrayToMap(JSONArray jsonArray)
             throws JSONException {
         if (jsonArray != null) {
-            Map<String, OMToken> tokens = new HashMap<String, OMToken>();
+            Map<String, OMToken> tokens = new HashMap<>();
             for (int i = 0; i < jsonArray.length(); i++) {
                 JSONObject tokenObj = jsonArray.getJSONObject(i);
 
@@ -1186,31 +1248,43 @@ public class OMAuthenticationContext {
                 Iterator itr = tokenObj.keys();
                 String key = (String) itr.next();
 
-                JSONObject value = tokenObj.getJSONObject(key);
-
-                String url = value.optString(URL);
-                String tokenName = value.optString(TOKEN_NAME, "");
-                String tokenValue = value.optString(TOKEN_VALUE, "");
-                long expiryStr = value.optLong(EXPIRY_SECS, -1);
-
-                Date expiry = null;
-                if (expiryStr != -1) {
-                    expiry = new Date(expiryStr);
+                OMToken token = null;
+                JSONObject tokenJSONObject = tokenObj.getJSONObject(key);
+                if (OpenIDToken.OPENID_CONNECT_TOKEN.equals(key)) {
+                    try {
+                        token = new OpenIDToken(tokenJSONObject);
+                    } catch (ParseException e) {
+                        OMLog.error(TAG, e.getMessage(), e);
+                    }
+                } else {
+                    token = new OMToken(tokenJSONObject);
                 }
-
-                String domain = value.optString(DOMAIN, null);
-                String path = value.optString(PATH, null);
-                boolean httpOnly = value.optBoolean(HTTP_ONLY);
-                boolean secure = value.optBoolean(SECURE);
-
-                OMToken token = new OMToken(url, tokenName, tokenValue, domain,
-                        path, expiry, httpOnly, secure);
-                tokens.put(key, token);
+                if (token != null) {
+                    tokens.put(key, token);
+                }
             }
-
             return tokens;
         }
         return null;
+    }
+
+    private List<OAuthToken> convertJSONArrayToList(JSONArray jsonArray) throws JSONException {
+        List<OAuthToken> tokenList = new ArrayList<>();
+        if (jsonArray != null) {
+            for (int i = 0; i < jsonArray.length(); i++) {
+                JSONObject token = jsonArray.getJSONObject(i);
+                if (token.has(OpenIDToken.OPENID_CONNECT_TOKEN)) {
+                    try {
+                        tokenList.add(new OpenIDToken(token));
+                    } catch (ParseException e) {
+                        OMLog.trace(TAG, e.getMessage(), e);
+                    }
+                } else {
+                    tokenList.add(new OAuthToken(token));
+                }
+            }
+        }
+        return tokenList;
     }
 
     /**
@@ -1226,7 +1300,7 @@ public class OMAuthenticationContext {
      */
     public Map<String, Object> getRequestParams(String url,
                                                 boolean includeHeaders) {
-        Map<String, Object> params = new HashMap<String, Object>();
+        Map<String, Object> params = new HashMap<>();
         String cookieString = OMCookieManager.getInstance().getCookie(url);
         if (!TextUtils.isEmpty(cookieString)) {
             params.put(COOKIES, cookieString);
@@ -1269,7 +1343,7 @@ public class OMAuthenticationContext {
     // returns nothing.
     private Map<String, Object> getTokensMapForCredInfo(String requestedToken)
             throws JSONException {
-        Map<String, Object> tokensMap = new HashMap<String, Object>();
+        Map<String, Object> tokensMap = new HashMap<>();
 
         if (OMSecurityConstants.OAUTH_ACCESS_TOKEN
                 .equalsIgnoreCase(requestedToken)) {
@@ -1286,7 +1360,7 @@ public class OMAuthenticationContext {
                 // client_assertion
                 // populate OAuth access tokens.
                 for (OMToken token : getOAuthTokenList()) {
-                    Map<String, String> tokenValues = new HashMap<String, String>();
+                    Map<String, String> tokenValues = new HashMap<>();
                     tokenValues.put(TOKEN_NAME, token.getName());
                     tokenValues.put(TOKEN_VALUE, token.getValue());
                     tokenValues.put(EXPIRES, token.getExpiryTime()
@@ -1311,7 +1385,7 @@ public class OMAuthenticationContext {
      */
     public Map<String, OMToken> getTokens() {
         if (tokens == null) {
-            tokens = new HashMap<String, OMToken>();
+            tokens = new HashMap<>();
         }
 
         return tokens;
@@ -1319,7 +1393,7 @@ public class OMAuthenticationContext {
 
     public Map<String, OMToken> getOWSMMACookies() {
         if (owsmMACookies == null) {
-            owsmMACookies = new HashMap<String, OMToken>();
+            owsmMACookies = new HashMap<>();
         }
 
         return owsmMACookies;
@@ -1353,7 +1427,117 @@ public class OMAuthenticationContext {
      */
     public void deleteCookies() {
         OMLog.trace(TAG, "deleteCookies");
-        OMCookieManager.getInstance().removeSessionCookies(mASM.getApplicationContext(), mCookies);
+        if (mASM != null) {
+            OMCookieManager.getInstance().removeSessionCookies(mASM.getApplicationContext(), mCookies);
+        }
     }
 
+    /**
+     * Provides a string representation of this object.
+     *
+     * @param isAllowTokens whether the tokens are to be included in the string
+     *                      representation
+     * @return string representation of the object
+     */
+    String toString(boolean isAllowTokens) {
+        JSONObject jsonObject = new JSONObject();
+
+        try {
+            jsonObject.put(USERNAME,
+                    !TextUtils.isEmpty(userName) ? userName
+                            : getInputParams().get(USERNAME));
+            String identityDomain = (String) getInputParams().get(
+                    IDENTITY_DOMAIN);
+            jsonObject.put(IDENTITY_DOMAIN,
+                    !TextUtils.isEmpty(identityDomain) ? identityDomain
+                            : this.identityDomain);
+
+            if (getAuthenticatedMode() != null) {
+                jsonObject.put(AUTHEN_MODE, getAuthenticatedMode().name());
+            }
+            if (getAuthenticationProvider() != null) {
+                jsonObject.put(AUTHEN_PROVIDER, getAuthenticationProvider()
+                        .name());
+            }
+            if (authenticationMechanism != null) {
+                jsonObject.put(AUTHENTICATION_MECHANISM,
+                        authenticationMechanism.name());
+            }
+            jsonObject.put(OFFLINE_CREDENTIAL_KEY, getOfflineCredentialKey());
+
+            boolean isExpDetAdd = false;
+
+            if (isAllowTokens && !getTokens().isEmpty()) {
+                JSONArray tokens = convertMapToJSONArray(getTokens());
+                jsonObject.put(TOKENS, tokens);
+
+                isExpDetAdd = true;
+            }
+            if (isAllowTokens && !getOAuthTokenList().isEmpty()) {
+                JSONArray jsonArray = new JSONArray();
+                for (OMToken token : getOAuthTokenList()) {
+                    OAuthToken oAuthToken = (OAuthToken) token;
+                    jsonArray.put(oAuthToken.toJSONObject());
+                }
+                jsonObject.put(OAUTH_TOKEN, jsonArray);
+            }
+            if (getAuthenticatedMode() == AuthenticationMode.OFFLINE) {
+                isExpDetAdd = true;
+            }
+
+            if (isExpDetAdd) {
+                if (sessionExpiry != null) {
+                    jsonObject.put(SESSION_EXPIRY, sessionExpiry.getTime());
+                    jsonObject.put(SESSION_EXPIRY_SECS, sessionExpInSecs);
+                }
+
+                if (idleTimeExpiry != null) {
+                    jsonObject.put(IDLETIME_EXPIRY, idleTimeExpiry.getTime());
+                    jsonObject.put(IDLETIME_EXPIRY_SECS, idleTimeExpInSecs);
+                }
+            }
+
+            if (!getOWSMMACookies().isEmpty()) {
+                JSONArray owsmMACookies = convertMapToJSONArray(getOWSMMACookies());
+                jsonObject.put(OWSM_MA_COOKIES, owsmMACookies);
+            }
+
+            jsonObject.put(LOGOUT_TIMEOUT_VALUE, logoutTimeout);
+
+        } catch (JSONException e) {
+            OMLog.debug(TAG + "_toString", e.getLocalizedMessage(), e);
+        }
+
+        if (jsonObject.length() > 0) {
+            return jsonObject.toString();
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * This method will be used internally to copy the details from the auth
+     * context retrieved from the secure storage. The string representation
+     * {@link #toString(boolean)} is used to store auth context in secure
+     * storage.
+     *
+     * @param authContext
+     */
+    void copyFromAuthContext(OMAuthenticationContext authContext) {
+        this.userName = authContext.getUserName();
+        this.identityDomain = authContext.getIdentityDomain();
+        this.authenticatedMode = authContext.getAuthenticatedMode();
+        this.authenticationProvider = authContext.getAuthenticationProvider();
+        this.authenticationMechanism = authContext.getAuthenticationMechanism();
+        this.offlineCredentialKey = authContext.getOfflineCredentialKey();
+        this.tokens = authContext.getTokens();
+        this.oAuthTokenList = authContext.oAuthTokenList;
+        this.sessionExpiry = authContext.getSessionExpiry();
+        this.sessionExpInSecs = authContext.getSessionExpInSecs();
+        this.idleTimeExpiry = authContext.getIdleTimeExpiry();
+        this.idleTimeExpInSecs = authContext.getIdleTimeExpInSecs();
+        this.owsmMACookies = authContext.getOWSMMACookies();
+        this.logoutTimeout = authContext.getLogoutTimeout();
+        this.mStorageKey = authContext.getStorageKey();
+    }
 }

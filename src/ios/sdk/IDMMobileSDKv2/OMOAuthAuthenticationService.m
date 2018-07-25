@@ -22,6 +22,12 @@
 #import "OMErrorCodes.h"
 #import "OMURLProtocol.h"
 #import "OMAuthenticationContext.h"
+#import "OMAuthenticationManager.h"
+
+@interface OMOAuthAuthenticationService()
+
+@property (nonatomic, strong) NSURLSessionDataTask *backChannelRequestTask;
+@end
 
 @implementation OMOAuthAuthenticationService
 
@@ -102,11 +108,39 @@
 - (void)performAuthentication:(NSMutableDictionary *)authData
                        error:(NSError *__autoreleasing *)error
 {
+    self.requestPauseSemaphore = dispatch_semaphore_create(0);
     self.callerThread = [NSThread currentThread];
     self.authData = authData;
     [self performSelectorInBackground:
      @selector(performAuthenticationInBackground:)
                            withObject:authData];
+}
+
+- (void)cancelAuthentication
+{
+    [self.grantFlow cancelAuthentication];
+
+    
+    if ([self.mss isNSURLProtocolActive])
+    {
+        [NSURLProtocol unregisterClass:[OMURLProtocol class]];
+        [OMURLProtocol setOMAObject:nil];
+    }
+    
+    if (self.backChannelRequestTask && self.backChannelRequestTask.state == NSURLSessionTaskStateRunning)
+    {
+        [self.backChannelRequestTask cancel];
+    }
+    else
+    {
+        NSError *error = [OMObject
+                          createErrorWithCode:OMERR_USER_CANCELED_AUTHENTICATION];
+        
+        [self performSelector:@selector(sendFinishAuthentication:)
+                     onThread:self.callerThread
+                   withObject:error
+                waitUntilDone:YES];
+    }
 }
 
 -(void)performAuthenticationInBackground:(NSMutableDictionary *)authData
@@ -171,50 +205,51 @@
     NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfig
                                                  delegate:nil
                                             delegateQueue:nil];
-    [[session dataTaskWithRequest:urlRequest
-               completionHandler:^(NSData * _Nullable data,
-                                   NSURLResponse * _Nullable response,
-                                   NSError * _Nullable error)
-     {
-         NSMutableDictionary *dict = [NSMutableDictionary dictionary];
-         response?[dict setObject:response forKey:@"URLResponse"]:nil;
-         data?[dict setObject:data forKey:@"Data"]:nil;
-         error?[dict setObject:error forKey:@"Error"]:nil;
-         [self sendBackChannelResponse:dict];
-         if (self.error.code == OMERR_INVALID_USERNAME_PASSWORD)
-         {
-             if (self.retryCount >= self.config.authenticationRetryCount)
-             {
-                 self.error = [OMObject
-                               createErrorWithCode:OMERR_MAX_RETRIES_REACHED];
-                 [self performSelector:@selector(sendFinishAuthentication:)
-                              onThread:self.callerThread
-                            withObject:self.error
-                         waitUntilDone:false];
-             }
-             else
-             {
-                 NSError *error = [OMObject createErrorWithCode:
-                                   OMERR_INVALID_USERNAME_PASSWORD];
-                 [self.authData setObject:error
-                                   forKey:OM_MOBILESECURITY_EXCEPTION];
-                 [self.authData setObject:[NSNumber numberWithInteger:
-                                           self.retryCount]
-                                   forKey:OM_RETRY_COUNT];
-                 [self performSelector:@selector(performAuthentication:error:)
-                              onThread:self.callerThread
-                            withObject:self.authData
-                         waitUntilDone:false];
-             }
-         }
-         else
-         {
-             [self performSelector:@selector(sendFinishAuthentication:)
-                          onThread:self.callerThread
-                        withObject:self.error
-                     waitUntilDone:false];
-         }
-    }]resume];
+    self.backChannelRequestTask = [session dataTaskWithRequest:urlRequest
+                                             completionHandler:^(NSData * _Nullable data,
+                                                                 NSURLResponse * _Nullable response,
+                                                                 NSError * _Nullable error)
+                                   {
+                                       NSMutableDictionary *dict = [NSMutableDictionary dictionary];
+                                       response?[dict setObject:response forKey:@"URLResponse"]:nil;
+                                       data?[dict setObject:data forKey:@"Data"]:nil;
+                                       error?[dict setObject:error forKey:@"Error"]:nil;
+                                       [self sendBackChannelResponse:dict];
+                                       if (self.error.code == OMERR_INVALID_USERNAME_PASSWORD)
+                                       {
+                                           if (self.retryCount >= self.config.authenticationRetryCount)
+                                           {
+                                               self.error = [OMObject
+                                                             createErrorWithCode:OMERR_MAX_RETRIES_REACHED];
+                                               [self performSelector:@selector(sendFinishAuthentication:)
+                                                            onThread:self.callerThread
+                                                          withObject:self.error
+                                                       waitUntilDone:false];
+                                           }
+                                           else
+                                           {
+                                               NSError *error = [OMObject createErrorWithCode:
+                                                                 OMERR_INVALID_USERNAME_PASSWORD];
+                                               [self.authData setObject:error
+                                                                 forKey:OM_MOBILESECURITY_EXCEPTION];
+                                               [self.authData setObject:[NSNumber numberWithInteger:
+                                                                         self.retryCount]
+                                                                 forKey:OM_RETRY_COUNT];
+                                               [self performSelector:@selector(performAuthentication:error:)
+                                                            onThread:self.callerThread
+                                                          withObject:self.authData
+                                                       waitUntilDone:false];
+                                           }
+                                       }
+                                       else
+                                       {
+                                           [self performSelector:@selector(sendFinishAuthentication:)
+                                                        onThread:self.callerThread
+                                                      withObject:self.error
+                                                   waitUntilDone:false];
+                                       }
+                                   }];
+    [self.backChannelRequestTask resume];
     
 }
 
@@ -270,13 +305,15 @@
     {
         self.context = nil;
     }
+
     [self.context setIsLogoutFalseCalled:NO];
+    [OMURLProtocol setOMAObject:nil];
+    [NSURLProtocol unregisterClass:[OMURLProtocol class]];
+
     [self.delegate didFinishCurrentStep:self
                                nextStep:self.nextStep
                            authResponse:nil
                                   error:object];
-    [NSURLProtocol unregisterClass:[OMURLProtocol class]];
-
 }
 
 - (void)sendBackChannelResponse:(NSDictionary *)data
@@ -404,4 +441,8 @@
     return urlQueryDict.count?urlQueryDict:nil;
 }
 
+- (void)dealloc
+{
+    NSLog(@"oauth ");
+}
 @end

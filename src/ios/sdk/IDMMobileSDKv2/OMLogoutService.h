@@ -6,6 +6,9 @@
 
 #import <Foundation/Foundation.h>
 #import "OMMobileSecurityService.h"
+#import "OMAuthenticationManager.h"
+#import "OMAuthenticationService.h"
+#import "OMCredentialStore.h"
 
 @interface OMLogoutService : NSObject
 @property(nonatomic, weak) OMMobileSecurityService *mss;

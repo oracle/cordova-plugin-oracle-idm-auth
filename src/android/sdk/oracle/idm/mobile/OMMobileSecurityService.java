@@ -27,6 +27,7 @@ import oracle.idm.mobile.auth.OMAuthenticationChallenge;
 import oracle.idm.mobile.auth.OMAuthenticationChallengeType;
 import oracle.idm.mobile.auth.OMAuthenticationCompletionHandler;
 import oracle.idm.mobile.auth.OMAuthenticationContext;
+import oracle.idm.mobile.auth.TimeoutManager;
 import oracle.idm.mobile.auth.local.OMAuthData;
 import oracle.idm.mobile.auth.local.OMAuthenticationManagerException;
 import oracle.idm.mobile.auth.local.OMAuthenticator;
@@ -40,6 +41,8 @@ import oracle.idm.mobile.configuration.OAuthAuthorizationGrantType;
 import oracle.idm.mobile.configuration.OMAuthenticationScheme;
 import oracle.idm.mobile.configuration.OMConnectivityMode;
 import oracle.idm.mobile.configuration.OMMobileSecurityConfiguration;
+import oracle.idm.mobile.configuration.OMMobileSecurityConfiguration.BrowserMode;
+import oracle.idm.mobile.configuration.OMMobileSecurityConfiguration.HostnameVerification;
 import oracle.idm.mobile.configuration.OMOAuthMobileSecurityConfiguration;
 import oracle.idm.mobile.connection.CBAExceptionEvent;
 import oracle.idm.mobile.connection.OMConnectionHandler;
@@ -110,10 +113,24 @@ public class OMMobileSecurityService {
     /**
      * This represents the default protocols used by the client socket during a
      * SSL handshake. The value should of type {@link String[]}.
+     * <p>
+     * e.g: map.put(OMMobileSecurityService.OM_PROP_DEFAULT_PROTOCOL_FOR_CLIENT_SOCKET,
+     * new String[]{"TLSv1.1", "TLSv1.2"});
      *
      * @hide
      */
     public static final String OM_PROP_DEFAULT_PROTOCOL_FOR_CLIENT_SOCKET = "DefaultProtocolsForClientSocket";
+    /**
+     * This represents the enabled cipher suites for SSL/TLS connections. The
+     * value should of type {@link String[]}. Some cipher suites are disabled
+     * by default. If you want enable them, provide the same along with the complete
+     * list of cipher suites to be enabled.
+     *
+     * @hide
+     * @see <a href="https://developer.android.com/reference/javax/net/ssl/SSLSocket.html">
+     * SSL Socket</a>
+     */
+    public static final String OM_PROP_ENABLED_CIPHER_SUITES = "EnabledCipherSuites";
     /**
      * This represents the idle timeout value of type {@link Integer}. The unit
      * for this is in seconds.
@@ -196,8 +213,9 @@ public class OMMobileSecurityService {
     public static final String OM_PROP_IDENTITY_DOMAIN_HEADER_NAME = "IdentityDomainHeaderName";
     /**
      * This represents whether external browser or embedded browser should be
-     * used in case of federated authentication. The value should of type
-     * {@link oracle.idm.mobile.configuration.OMMobileSecurityConfiguration.BrowserMode}.
+     * used during authentication (e.g: {@link AuthServerType#OpenIDConnect10},
+     * {@link AuthServerType#OAuth20}, {@link AuthServerType#FederatedAuth}).
+     * The value should be of type {@link BrowserMode}.
      */
     public static final String OM_PROP_BROWSER_MODE = "BrowserMode";
     /**
@@ -251,6 +269,35 @@ public class OMMobileSecurityService {
      * &gt;. Empty string or null is not accepted as one of the values.
      */
     public static final String OM_PROP_CONFIRM_LOGOUT_BUTTON_ID = "ConfirmLogoutButtonId";
+
+    /**
+     * This represents if all session cookies should be removed locally after
+     * logout is done. Logout typically involves loading a logout url which will
+     * clear session on server side as well as clear the corresponding cookies
+     * on client side by virtue of server sending Set-Cookie response headers.
+     * So, normally setting this property is not required. If there is some
+     * issue with logout url clearing the cookies on client side, this property
+     * can be set temporarily for working around the issue. The value should be
+     * of type {@link Boolean}.
+     * <p>
+     * Note: This is not honoured in case authentication (e.g:
+     * {@link AuthServerType#OpenIDConnect10}), {@link AuthServerType#OAuth20} is
+     * done using {@link BrowserMode#EXTERNAL} as cookies are not present in the
+     * app's cookie store.
+     * <p>
+     * If you maintain multiple {@link OMMobileSecurityService} instances for
+     * maintaining multiple sessions with different servers, and if you have
+     * issues with a logout url as mentioned above, then call
+     * {@link OMCookieManager#removeSessionCookies(Context)} in
+     * {@link OMMobileSecurityServiceCallback#onLogoutCompleted(OMMobileSecurityService, OMMobileSecurityException)}
+     * after logging out of all instances. The above code snippet is the
+     * recommended approach for apps which maintain multiple sessions because
+     * with this property, logging out of one session maintained by one
+     * {@link OMMobileSecurityService}, will lead to removal of cookies meant
+     * for other instances as well.
+     */
+    public static final String OM_PROP_REMOVE_ALL_SESSION_COOKIES = "RemoveAllSessionCookies";
+
     // RC
     /**
      * This represents whether auto-login feature is allowed for the current
@@ -580,6 +627,14 @@ public class OMMobileSecurityService {
     public static final String OM_PROP_LOCATION_UPDATE_ENABLED = "LocationUpdateEnabled";
 
     /**
+     * This property accepts {@link HostnameVerification} value and is
+     * applicable for all authentication flows. How hostname verification is to
+     * be done is specified by this property. The default value for this
+     * property is {@link HostnameVerification#ALLOW_ALL}.
+     */
+    public static final String OM_PROP_HOSTNAME_VERIFICATION = "HostnameVerification";
+
+    /**
      * This lists down the authentication types supported by the SDK. This should be given as input against
      * OM_PROP_AUTHSERVER_TYPE in {@link OMMobileSecurityService} map-based constructor.
      *
@@ -595,6 +650,8 @@ public class OMMobileSecurityService {
          * 2. Have runtime check NOT to use CBA [in Fed Auth, OAuth] for versions below Android 5.0.
          * This can be achieved by having a separate SDK configuration [Basic auth /Form based authentication during federation instead of CBA]
          * for versions below Android 5.0.
+         * <p>
+         * Note: {@link BrowserMode#EXTERNAL} is not supported currently.
          */
         FederatedAuth("FederatedAuthentication"),
         /**
@@ -658,7 +715,7 @@ public class OMMobileSecurityService {
      * NOTE: {@link OMDefaultAuthenticator#deleteAuthData()} MUST be called to delete keys after
      * {@link OMAuthenticator#setAuthData(OMAuthData)} is called for new local authentication. This
      * will ensure better security.
-     *
+     * <p>
      * This API can also be called during app startup if the app does not have any local authentication (PIN, etc.)
      * set. This will ensure that additional time taken for storing the credentials securely for the first time
      * is reduced.
@@ -749,6 +806,10 @@ public class OMMobileSecurityService {
                 configurationPropertiesKey), callback);
     }
 
+    /**
+     * This is to be called before calling {@link #authenticate()} in case of OpenID Connect.
+     * This fetches the endpoint details from OpenID Connect Discovery endpoint.
+     */
     public void setup() {
         OMLog.debug(TAG, "setup");
         if (mMobileSecurityConfig.isInitialized()) {
@@ -760,12 +821,8 @@ public class OMMobileSecurityService {
         }
     }
 
-public void authenticate(final OMAuthenticationRequest omAuthRequest)
+    public void authenticate(final OMAuthenticationRequest omAuthRequest)
             throws OMMobileSecurityException {
-        // if the authRequest supplied is null then go with regular flow .
-        if (omAuthRequest == null) {
-            authenticate();
-        }
         removeSessionCookies();
         checkValidityBeforeAuthentication();
         OMAuthenticationScheme scheme = mMobileSecurityConfig.getAuthenticationScheme();
@@ -789,67 +846,6 @@ public void authenticate(final OMAuthenticationRequest omAuthRequest)
                     setOAuthScopes(oauthConfig.getOAuthScopes()).
                     setCollectIdentityDomain(mMobileSecurityConfig.isCollectIdentityDomain()).
                     setLogoutTimeout(mMobileSecurityConfig.getLogoutTimeOutValue());
-        }
-        String identityDomainNameFromRequest = omAuthRequest
-                .getIdentityDomain();
-        OMConnectivityMode connectivityMode = omAuthRequest
-                .getConnectivityMode();
-        int logoutTimeOutValue = omAuthRequest.getLogoutTimeout();
-        Set<String> oAuthScopesFromRequest = omAuthRequest.getOAuthScopes();
-        if (identityDomainNameFromRequest != null) {
-            builder.setIdentityDomain(identityDomainNameFromRequest);
-        }
-        if (connectivityMode != null) {
-            builder.setConnMode(connectivityMode);
-        }
-        if (logoutTimeOutValue > 0) {
-            builder.setLogoutTimeout(logoutTimeOutValue);
-        }
-        builder.setForceAuthentication(omAuthRequest
-                .isForceAuthentication());
-        if (omAuthRequest.isForceAuthentication()) {
-            resetConnectionHandler();
-        }
-        if (mMobileSecurityConfig instanceof OMOAuthMobileSecurityConfiguration && oAuthScopesFromRequest != null) {
-            builder.setOAuthScopes(oAuthScopesFromRequest);
-        }
-        authRequest = builder.buildComplete();
-        if (authRequest != null)
-            getASM().startAuthenticationProcess(authRequest);
-    }
-
-    // TODO https://stbeehive.oracle.com/teamcollab/wiki/Oracle+Mobile+Security+Suite:Android+Headless+SDK+task+tracking+wiki 39: Forced Authentication
-    public void authenticate() throws OMMobileSecurityException {
-        removeSessionCookies();
-        checkValidityBeforeAuthentication();
-        OMAuthenticationScheme scheme = mMobileSecurityConfig.getAuthenticationScheme();
-        OMAuthenticationRequest.Builder builder = new OMAuthenticationRequest.Builder();
-        builder.setAuthScheme(scheme).
-                setLogoutTimeout(mMobileSecurityConfig.getLogoutTimeOutValue());
-        OMAuthenticationRequest authRequest = null;
-        if (scheme == OMAuthenticationScheme.BASIC) {
-            authRequest = builder.setBasicAuthEndpoint(mMobileSecurityConfig.getAuthenticationURL()).
-                    setCollectIdentityDomain(mMobileSecurityConfig.isCollectIdentityDomain()).
-                    buildComplete();
-        } else if (scheme == OMAuthenticationScheme.OAUTH20) {
-
-            OAuthConnectionsUtil oauthConnectionUtil = new OAuthConnectionsUtil(
-                    getApplicationContext(),
-                    (OMOAuthMobileSecurityConfiguration) mMobileSecurityConfig,
-                    null);
-            getASM().setOAuthConnUtil(oauthConnectionUtil);
-            OMOAuthMobileSecurityConfiguration oauthConfig = (OMOAuthMobileSecurityConfiguration) mMobileSecurityConfig;
-            authRequest = builder.setAuthScheme(scheme).setOAuthTokenEndpoint(oauthConfig.getOAuthTokenEndpoint()).
-                    setOAuthAuthorizationEndpoint(oauthConfig.getOAuthAuthorizationEndpoint()).
-                    setOAuthGrantType(oauthConfig.getOAuthzGrantType()).
-                    setOAuthScopes(oauthConfig.getOAuthScopes()).
-                    setCollectIdentityDomain(mMobileSecurityConfig.isCollectIdentityDomain()).
-                    setLogoutTimeout(mMobileSecurityConfig.getLogoutTimeOutValue()).
-                    buildComplete();
-        } else if (scheme == OMAuthenticationScheme.FEDERATED) {
-            authRequest = builder.buildComplete();
-        } else if (scheme == OMAuthenticationScheme.CBA) {
-            authRequest = builder.buildComplete();
         } else if (scheme == OMAuthenticationScheme.OPENIDCONNECT10) {
             if (!isSetupDone) {
                 throw new OMMobileSecurityException(OMErrorCode.SETUP_NOT_INVOKED);
@@ -859,10 +855,39 @@ public void authenticate(final OMAuthenticationRequest omAuthRequest)
                     (OMOAuthMobileSecurityConfiguration) mMobileSecurityConfig,
                     null);
             getASM().setOAuthConnUtil(oauthConnectionUtil);
-            authRequest = builder.buildComplete();
         }
+        if (omAuthRequest != null) {
+            String identityDomainNameFromRequest = omAuthRequest
+                    .getIdentityDomain();
+            OMConnectivityMode connectivityMode = omAuthRequest
+                    .getConnectivityMode();
+            int logoutTimeOutValue = omAuthRequest.getLogoutTimeout();
+            Set<String> oAuthScopesFromRequest = omAuthRequest.getOAuthScopes();
+            if (identityDomainNameFromRequest != null) {
+                builder.setIdentityDomain(identityDomainNameFromRequest);
+            }
+            if (connectivityMode != null) {
+                builder.setConnMode(connectivityMode);
+            }
+            if (logoutTimeOutValue > 0) {
+                builder.setLogoutTimeout(logoutTimeOutValue);
+            }
+            builder.setForceAuthentication(omAuthRequest
+                    .isForceAuthentication());
+            if (omAuthRequest.isForceAuthentication()) {
+                resetConnectionHandler();
+            }
+            if (mMobileSecurityConfig instanceof OMOAuthMobileSecurityConfiguration && oAuthScopesFromRequest != null) {
+                builder.setOAuthScopes(oAuthScopesFromRequest);
+            }
+        }
+        authRequest = builder.buildComplete();
         if (authRequest != null)
             getASM().startAuthenticationProcess(authRequest);
+    }
+
+    public void authenticate() throws OMMobileSecurityException {
+        authenticate(null);
     }
 
     private boolean isSetupDone;
@@ -1046,21 +1071,34 @@ public void authenticate(final OMAuthenticationRequest omAuthRequest)
      * next time app is launched, if the session cookies are not removed, the
      * federated authentication flow will fail.
      */
-
-
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private void removeSessionCookies() {
         if (!authenticateCalledForFirstTime) {
             authenticateCalledForFirstTime = true;
-            //TODO Uncomment
-//            if (!getMobileSecurityConfig().isAuthContextPersistenceAllowed())
-//            {
-            OMLog.debug(TAG,
-                    "Authenticate API called for first time after app launch -> Removing session cookies");
-            OMCookieManager.getInstance().removeSessionCookies(getApplicationContext());
-//            }
+            if (!getMobileSecurityConfig().isAuthContextPersistenceAllowed()) {
+                OMLog.debug(TAG,
+                        "Authenticate API called for first time after app launch -> Removing session cookies");
+                OMCookieManager.getInstance().removeSessionCookies(getApplicationContext());
+            }
         }
+    }
 
+    private void removeSessionCookiesOnLogout() {
+        if (mMobileSecurityConfig != null
+                && mMobileSecurityConfig.isRemoveAllSessionCookies()) {
+            boolean removeAllSessionCookies = true;
+            if (mMobileSecurityConfig instanceof OMOAuthMobileSecurityConfiguration
+                    && ((OMOAuthMobileSecurityConfiguration) mMobileSecurityConfig).getOAuthBrowserMode()
+                    == BrowserMode.EXTERNAL) {
+                /* In case authentication was done using External browser, there is
+                 no need to clear cookies used by WebView.
+                  */
+                removeAllSessionCookies = false;
+            }
+            if (removeAllSessionCookies) {
+                OMCookieManager.getInstance().removeSessionCookies(getApplicationContext());
+            }
+        }
     }
 
     public void logout(boolean isForgetDevice) {
@@ -1121,9 +1159,13 @@ public void authenticate(final OMAuthenticationRequest omAuthRequest)
         if (mConnectionHandler == null) {
             boolean handleClientCert = mMobileSecurityConfig.isClientCertificateEnabled();
             mConnectionHandler = new OMConnectionHandler(
-                    getApplicationContext(), connectionTimeout, handleClientCert);
+                    getApplicationContext(), connectionTimeout, handleClientCert, mMobileSecurityConfig);
             if (mMobileSecurityConfig.getDefaultProtocols() != null) {
                 mConnectionHandler.setDefaultSSLProtocols(mMobileSecurityConfig.getDefaultProtocols());
+            }
+            if (mMobileSecurityConfig.getEnabledCipherSuites() != null) {
+                mConnectionHandler.setEnabledCipherSuites(mMobileSecurityConfig
+                        .getEnabledCipherSuites());
             }
         } else {
             if (mConnectionHandler.getConnectionTimeout() != connectionTimeout) {
@@ -1259,22 +1301,17 @@ public void authenticate(final OMAuthenticationRequest omAuthRequest)
         OMLog.debug(TAG, "onLogoutComplete!");
         OMAuthenticationContext authenticationContext = mASM.retrieveAuthenticationContext();
         if (authenticationContext != null) {
-            authenticationContext.getTimeoutManager().stopTimers();
+            TimeoutManager timeoutManager = authenticationContext.getTimeoutManager();
+            if (timeoutManager != null) {
+                timeoutManager.stopTimers();
+            }
             authenticationContext.deleteCookies();
         }
+        removeSessionCookiesOnLogout();
         resetAuthServiceManager();
         resetConnectionHandler();
         setLogoutInProgress(false);
     }
-
-    /**
-     * This method removes all session cookies when authenticate is called for
-     * first time after app launch. This is done, because android sometimes
-     * retains some session cookies even after app restart. E.g: User is logged
-     * in using Federated Authentication, and then the app is force stopped. The
-     * next time app is launched, if the session cookies are not removed, the
-     * federated authentication flow will fail.
-     */
 
     private void checkValidityBeforeAuthentication()
             throws OMMobileSecurityException {

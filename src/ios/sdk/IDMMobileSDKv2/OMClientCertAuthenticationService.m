@@ -8,7 +8,6 @@
 #import "OMDefinitions.h"
 #import "OMClientCertConfiguration.h"
 #import "OMObject.h"
-#import <libkern/OSAtomic.h>
 #import "OMCertService.h"
 #import "OMErrorCodes.h"
 #import "OMURLProtocol.h"
@@ -38,11 +37,11 @@
     NSURLSessionConfiguration *sessionConfig = [NSURLSessionConfiguration
                                                 defaultSessionConfiguration];
     
-    self.session = [NSURLSession sessionWithConfiguration:sessionConfig
+    NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfig
                                                  delegate:self
                                             delegateQueue:nil];
     
-    [[self.session dataTaskWithURL:self.configuration.loginURL
+   self.sessionDataTask = [session dataTaskWithURL:self.configuration.loginURL
                  completionHandler:^(NSData * _Nullable data,
                                      NSURLResponse * _Nullable response,
                                      NSError * _Nullable error)
@@ -75,12 +74,13 @@
                        onThread:self.callerThread
                      withObject:authError
                   waitUntilDone:false];
-      }] resume];
+      }];
+    [self.sessionDataTask resume];
 }
 
 - (void)cancelAuthentication
 {
-    [self.session invalidateAndCancel];
+    [self.sessionDataTask cancel];
 }
 
 -(void)sendFinishAuthentication:(id)object
@@ -93,7 +93,7 @@
     {
         [self resetMaxRetryCount];
     }
-
+    
     [self.delegate didFinishCurrentStep:self
                                nextStep:OM_NEXT_AUTH_STEP_NONE
                            authResponse:nil
@@ -163,11 +163,4 @@ completionHandler:(void (^)(NSURLRequest * _Nullable))completionHandler
     [self.context.visitedHosts addObject:request.URL];
     completionHandler(request);
 }
-
-- (void)URLSession:(NSURLSession *)session didBecomeInvalidWithError:
-    (NSError *)error;
-{
-    NSLog(@" didBecomeInvalidWithError ");
-}
-
 @end

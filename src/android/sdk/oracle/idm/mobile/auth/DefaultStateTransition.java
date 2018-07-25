@@ -70,6 +70,9 @@ class DefaultStateTransition implements AuthStateTransition {
                         AuthenticationService.Type.OAUTH20_RO_SERVICE);
             }
         }
+
+        mInitialState.put(OMAuthenticationScheme.REFRESH_TOKEN,
+                AuthenticationService.Type.REFRESH_TOKEN_SERVICE);
     }
 
 
@@ -131,7 +134,8 @@ class DefaultStateTransition implements AuthStateTransition {
         }
 
         AuthenticationService.Type initialAuthServiceName;
-        if (mASM.getMSS().getMobileSecurityConfig().getAuthenticationScheme() == OMAuthenticationScheme.OAUTH20) {
+        if (authScheme != OMAuthenticationScheme.REFRESH_TOKEN &&
+                mASM.getMSS().getMobileSecurityConfig().getAuthenticationScheme() == OMAuthenticationScheme.OAUTH20) {
             initialAuthServiceName = mASM.getOAuthServiceType();
             if (initialAuthServiceName == null) {
                 throw new OMMobileSecurityException(
@@ -142,8 +146,7 @@ class DefaultStateTransition implements AuthStateTransition {
                 initialAuthServiceName = AuthenticationService.Type.OAUTH_MS_PREAUTHZ;
             }
         } else {
-            initialAuthServiceName = mInitialState
-                    .get(authScheme);
+            initialAuthServiceName = mInitialState.get(authScheme);
         }
 
         return mASM
@@ -157,6 +160,8 @@ class DefaultStateTransition implements AuthStateTransition {
         //TODO revisit when the configuration is added.
         if (mASM.getMSS().getMobileSecurityConfig().isOfflineAuthenticationAllowed()) {
             return getAuthenticationService(OMAuthenticationScheme.OFFLINE);
+        } else if (authRequest.isUseRefreshToken()) {
+            return getAuthenticationService(OMAuthenticationScheme.REFRESH_TOKEN);
         } else {
             AuthenticationService authService = getAuthenticationService(authRequest.getAuthScheme());
             Log.i(OMSecurityConstants.TAG, "[DefaultStateTransition] getInitialState authScheme : " + authRequest.getAuthScheme() + " TYPE : " + authService.getType());

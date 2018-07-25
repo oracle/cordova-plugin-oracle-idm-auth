@@ -4,7 +4,6 @@
  */
 
 
-
 #import <Foundation/Foundation.h>
 
 @class OMKeyStore;

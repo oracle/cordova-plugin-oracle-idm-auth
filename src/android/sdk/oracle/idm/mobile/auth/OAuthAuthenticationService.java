@@ -37,6 +37,7 @@ import oracle.idm.mobile.configuration.OMOAuthMobileSecurityConfiguration;
 import oracle.idm.mobile.connection.OMHTTPRequest;
 import oracle.idm.mobile.connection.OMHTTPResponse;
 import oracle.idm.mobile.logging.OMLog;
+import oracle.idm.mobile.util.LogUtils;
 
 import static oracle.idm.mobile.auth.OMAuthenticationContext.AuthenticationMode;
 
@@ -78,7 +79,7 @@ abstract class OAuthAuthenticationService extends AuthenticationService {
         AuthenticationMode authMode = authContext.getAuthenticatedMode();
 
         if (authMode == AuthenticationMode.OFFLINE) {
-            return isIdleTimeout(authContext);
+            return isWithinIdleTimeout(authContext);
         } else if (authMode == AuthenticationMode.ONLINE) {
             // no tokens, return false.
             if (authContext.getOAuthTokenList().isEmpty()) {
@@ -102,7 +103,7 @@ abstract class OAuthAuthenticationService extends AuthenticationService {
     }
 
     void clearOAuthTokens(OMAuthenticationContext authContext, boolean isLogoutCall) {
-        List<OAuthToken> tokensToDelete = new ArrayList<OAuthToken>();
+        List<OAuthToken> tokensToDelete = new ArrayList<>();
 
         if (mASM.getMSS().getMobileSecurityConfig()
                 .isOfflineAuthenticationAllowed()
@@ -159,7 +160,7 @@ abstract class OAuthAuthenticationService extends AuthenticationService {
      */
     protected WeakHashMap<String, Object> getEmptyParamHashMap() {
         if (mParamMap == null) {
-            mParamMap = new WeakHashMap<String, Object>();
+            mParamMap = new WeakHashMap<>();
         }
         mParamMap.clear();
         return mParamMap;
@@ -224,7 +225,7 @@ abstract class OAuthAuthenticationService extends AuthenticationService {
                               OMOAuthMobileSecurityConfiguration oAuthConfig,
                               String identityDomain) throws OMMobileSecurityException {
 
-        HashMap<String, String> headers = new HashMap<String, String>();
+        HashMap<String, String> headers = new HashMap<>();
 
         // this internally will send the client auth header if the client is
         // confidential or the app explicitly specified this using
@@ -352,7 +353,7 @@ abstract class OAuthAuthenticationService extends AuthenticationService {
             scopeSetForToken = mASM.getOAuthConnectionsUtil().getDefaultOAuthScope();
         } else {
             // add all the scopes passed in the config to this token object.
-            scopeSetForToken = new HashSet<String>();
+            scopeSetForToken = new HashSet<>();
             scopeSetForToken.addAll(scopesFromConfig);
         }
         accessToken.setName(OMSecurityConstants.OAUTH_ACCESS_TOKEN);
@@ -372,16 +373,19 @@ abstract class OAuthAuthenticationService extends AuthenticationService {
     protected void onAuthSuccess(OMAuthenticationContext authContext,
                                  OAuthToken accessToken, OMAuthenticationContext.AuthenticationProvider provider) throws OMMobileSecurityException {
         OMLog.debug(TAG, "onAuthSuccess!");
-        ArrayList<OAuthToken> newTokenList = new ArrayList<OAuthToken>();
-        newTokenList.add(accessToken);
-        // adding any auxiliary tokens generated during the auth process to
-        // the token list.
-        for (Map.Entry<String, OMToken> token : authContext.getTokens().entrySet()) {
+        ArrayList<OAuthToken> newOAuthTokenList = new ArrayList<>();
+        newOAuthTokenList.add(accessToken);
+        /* Adding any auxiliary tokens generated during the auth process to
+         the OAuth token list, e.g: OpenIDToken (instanceof OAuthToken) is present
+         in authContext.getTokens(). */
+        for (Map.Entry<String, OMToken> tokenEntry : authContext.getTokens().entrySet()) {
 
-            if (token.getValue() instanceof OAuthToken) {
-                newTokenList.add((OAuthToken) token.getValue());
-                OMLog.debug(TAG, "Added auxiliary token : " + token.getKey()
-                        + " to the token list!");
+            if (tokenEntry.getValue() instanceof OAuthToken) {
+                if (!tokenEntry.getValue().isTokenExpired()) {
+                    newOAuthTokenList.add((OAuthToken) tokenEntry.getValue());
+                    OMLog.debug(TAG, "Added auxiliary token : " + tokenEntry.getKey()
+                            + " to the token list!");
+                }
             }
         }
 
@@ -396,21 +400,21 @@ abstract class OAuthAuthenticationService extends AuthenticationService {
 
             for (OAuthToken token : prevTokenList) {
                 if (token != null
-                        && OMSecurityConstants.OAUTH_ACCESS_TOKEN.equals(token
-                        .getName())) {
-                    newTokenList.add(token);
+                        && OMSecurityConstants.OAUTH_ACCESS_TOKEN.equals(token.getName())
+                        && !token.isTokenExpired()) {
+                    newOAuthTokenList.add(token);
                     OMLog.debug(TAG,
                             "Added access token from prev context to the token list!");
                 }
             }
         }
         authContext.setAuthenticationProvider(provider);
-        authContext.setOAuthTokenList(newTokenList);
+        authContext.setOAuthTokenList(newOAuthTokenList);
         authContext.setStatus(OMAuthenticationContext.Status.SUCCESS);
         OMLog.debug(TAG, "Done!");
     }
 
-    private boolean isIdleTimeout(OMAuthenticationContext authContext) {
+    private boolean isWithinIdleTimeout(OMAuthenticationContext authContext) {
         Date idleTimeExpiry = authContext.getIdleTimeExpiry();
         Date currentTime = Calendar.getInstance().getTime();
 
@@ -421,17 +425,11 @@ abstract class OAuthAuthenticationService extends AuthenticationService {
          */
         if (idleTimeExpiry == null || authContext.getIdleTimeExpInSecs() == 0) {
             return true;
-        } else if (idleTimeExpiry != null
-                && (currentTime.after(idleTimeExpiry) || currentTime
-                .equals(idleTimeExpiry))) {
+        } else if (currentTime.after(idleTimeExpiry) || currentTime.equals(idleTimeExpiry)) {
             OMLog.debug(TAG + "_isValid", "Idle time is expired.");
             return false;
         } else {
-            authContext.resetIdleTime();
-            OMLog.debug(TAG + "_isValid",
-                    "Idle time is reset to : "
-                            + authContext.getIdleTimeExpiry());
-            return true;
+            return authContext.getIdleTimeExpInSecs() <= 0 || authContext.resetIdleTime();
         }
     }
 
@@ -458,19 +456,19 @@ abstract class OAuthAuthenticationService extends AuthenticationService {
 
         OMAuthenticationContext.AuthenticationProvider provider = authContext.getAuthenticationProvider();
         if (provider == OMAuthenticationContext.AuthenticationProvider.OPENIDCONNECT10 || provider == OMAuthenticationContext.AuthenticationProvider.OAUTH20) {
-            boolean result = false;
-            boolean triedRefreshing = false, isExpired = false;
-            int initialSize = authContext.getOAuthTokenList().size();
+            boolean isValidResult = false;
+            boolean triedRefreshing = false;
         /*
          * all the access tokens matching the passed scopes
          */
-            List<OAuthToken> accessTokens = new ArrayList<>();
+            List<OAuthToken> accessTokensWithPassedScopes = new ArrayList<>();
 
         /*
          * defensive copy of tokens from the authentication context to work
-         * with.
+         * with. Initially, access tokens with matching scopes will be removed from this list.
+         * Later, it will be added back after refresh is done.
          */
-            List<OAuthToken> oauthTokens = new ArrayList<>(
+            List<OAuthToken> allAccessTokens = new ArrayList<>(
                     authContext.getOAuthTokenList());
             AuthenticationMode authMode = authContext.getAuthenticatedMode();
             OMLog.debug(TAG, "authenticated mode: " + authMode);
@@ -479,7 +477,7 @@ abstract class OAuthAuthenticationService extends AuthenticationService {
                 return false;
             }
             // common for both Remote and Offline.
-            Iterator<OAuthToken> itr = oauthTokens.iterator();
+            Iterator<OAuthToken> itr = allAccessTokens.iterator();
             while (itr.hasNext()) {
                 OAuthToken token = itr.next();
                 if (isAccessToken(token)) {
@@ -487,20 +485,20 @@ abstract class OAuthAuthenticationService extends AuthenticationService {
                     if (requiredScopes != null && requiredScopes.size() > 0) {
                         if (token.getScopes().size() > 0) {
                             if (token.getScopes().containsAll(requiredScopes)) {
-                                accessTokens.add(token);
+                                accessTokensWithPassedScopes.add(token);
                                 // removing these tokens from context for now
                                 itr.remove();
                             }
                         }
                     } else {
                         // just add all the tokens if no scopes are passed.
-                        accessTokens.add(token);
+                        accessTokensWithPassedScopes.add(token);
                         // remove this token from the context.
                         itr.remove();
                     }
                 }
             }
-            if (accessTokens.isEmpty()) {
+            if (accessTokensWithPassedScopes.isEmpty()) {
                 OMLog.debug(TAG, "No Valid access tokens, so return false");
                 // no access tokens.
                 return false;
@@ -508,9 +506,9 @@ abstract class OAuthAuthenticationService extends AuthenticationService {
             // now sort this list based on the scopes so.We basically pick the first
             // token from the matching tokens list (based on the scopes) which is
             // expired
-            if (accessTokens.size() > 1)
-                Collections.sort(accessTokens, new OAuthTokenComparator());
-            Iterator<OAuthToken> tokenitr = accessTokens.iterator();
+            if (accessTokensWithPassedScopes.size() > 1)
+                Collections.sort(accessTokensWithPassedScopes, new OAuthTokenComparator());
+            Iterator<OAuthToken> tokenitr = accessTokensWithPassedScopes.iterator();
             OAuthToken refreshedToken = null;
             while (tokenitr.hasNext()) {
                 OAuthToken oAuthToken = tokenitr.next();
@@ -521,9 +519,9 @@ abstract class OAuthAuthenticationService extends AuthenticationService {
                     if (!TextUtils.isEmpty(oAuthToken.getRefreshTokenValue())) {
                         if (refreshExpiredToken) {
                             String refreshTokenResponse;
-                            String oldRefreshTokenValue = oAuthToken
-                                    .getRefreshTokenValue();
-                            WeakHashMap<String, Object> params = new WeakHashMap<String, Object>();
+                            String oldRefreshTokenValue = oAuthToken.getRefreshTokenValue();
+                            String oldIDToken = oAuthToken.getIdToken();
+                            WeakHashMap<String, Object> params = new WeakHashMap<>();
                             params.put(
                                     OMSecurityConstants.Param.OAUTH_REFRESH_TOKEN_VALUE,
                                     oldRefreshTokenValue);
@@ -541,15 +539,20 @@ abstract class OAuthAuthenticationService extends AuthenticationService {
                                     if (refreshedToken != null) {
                                         refreshedToken.setScopes(oAuthToken
                                                 .getScopes());
-                                        // if new token has no refresh value , then use the old refresh token value.
-                                        if (refreshedToken.getRefreshTokenValue() == null) {
+                                        /* If new token has no refresh value , then use the old refresh token value.
+                                        Similarly, do the same for IDToken.
+                                         */
+                                        if (TextUtils.isEmpty(refreshedToken.getRefreshTokenValue())) {
                                             refreshedToken
                                                     .setRefreshTokenValue(oldRefreshTokenValue);
+                                        }
+                                        if (TextUtils.isEmpty(refreshedToken.getIdToken())) {
+                                            refreshedToken.setIdToken(oldIDToken);
                                         }
                                         // removing if we have refreshed this token
                                         // .
                                         tokenitr.remove();
-                                        result = true;
+                                        isValidResult = true;
                                         break;
                                     }
                                 } else {
@@ -563,11 +566,12 @@ abstract class OAuthAuthenticationService extends AuthenticationService {
                                 throw new OMMobileSecurityException(OMErrorCode.INTERNAL_ERROR); //TODO
                             }
                         } else {
-                            result = false;
+                            isValidResult = false;
                             break;
                         }
                     } else {
                         OMLog.debug(TAG, "No refresh token available for the expired access token!");
+                        tokenitr.remove();
                         // check for other matching the criteria
                         continue;
                     }
@@ -576,36 +580,45 @@ abstract class OAuthAuthenticationService extends AuthenticationService {
 
                     // the token is not expired so isValid should return true.
                     // no further checking required.
-                    result = true;
+                    isValidResult = true;
                     break;
                 }
             }
             if (triedRefreshing && refreshedToken != null) {
                 OMLog.debug(TAG, "Refreshed the expired access token!");
-                accessTokens.add(refreshedToken);
+                accessTokensWithPassedScopes.add(refreshedToken);
                 if (authContext.getAuthenticatedMode() == AuthenticationMode.OFFLINE) {
                     OMLog.debug(TAG, "Changed the authenticate mode from LOCAL to REMOTE, since the expired access token was refreshed.");
                     // MCS offline OAuth Requirement.
                     authContext.setAuthenticatedMode(AuthenticationMode.ONLINE);
                 }
-            } else {
-                if (isExpired) {
-                    OMLog.debug(TAG, "No access token refreshed!");
-                    result = false;
+            }
+            allAccessTokens.addAll(accessTokensWithPassedScopes);
+            authContext.setOAuthTokenList(allAccessTokens);
+
+            OMLog.debug(TAG, "isValidResult = " + isValidResult);
+            /* Store the authContext persistently which is updated with expired access tokens
+            (which do not have refresh token) being removed and / or  new token(s) being added.*/
+            if (mASM.getMSS().getMobileSecurityConfig()
+                    .isAuthContextPersistenceAllowed()) {
+                String key = authContext.getStorageKey() != null ?
+                        authContext.getStorageKey() : mASM.getAppCredentialKey();
+                String authContextString = authContext.toString(true);
+                mASM.getMSS()
+                        .getCredentialStoreService()
+                        .addAuthContext(key, authContextString);
+                OMLog.trace(TAG, "Stored the authContext persistently which is updated with expired access tokens" +
+                        "(which do not have refresh token) being removed and / or  new token(s) being added.");
+                if (authContextString != null && OMSecurityConstants.DEBUG) {
+                    try {
+                        LogUtils.log("AuthContext persisted: "
+                                + new JSONObject(authContextString).toString(3));
+                    } catch (JSONException e) {
+                        OMLog.error(TAG, e.getMessage(), e);
+                    }
                 }
             }
-            oauthTokens.addAll(accessTokens);
-            authContext.setOAuthTokenList(oauthTokens);
-            int finalSize = authContext.getOAuthTokenList().size();
-            if (initialSize != finalSize) {
-                // not likely
-                OMLog.error(TAG, "This is Odd - token difference in the iterators:"
-                        + (initialSize - finalSize)
-                        + ". This seems to be a code issue.");
-            }
-
-            OMLog.debug(TAG, "" + result);
-            return result;
+            return isValidResult;
         } else {
             OMLog.debug(TAG, "Not an openID or OAuth config returning true!");
             return true;

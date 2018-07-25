@@ -8,8 +8,6 @@ package oracle.idm.mobile.auth;
 
 import android.text.TextUtils;
 
-import org.json.JSONObject;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -59,8 +57,7 @@ public class OMAuthenticationChallenge {
         sb.append(mChallengeType.name());
         if (mChallengeFields != null && !mChallengeFields.isEmpty()) {
             sb.append(",");
-            JSONObject jsonObject = new JSONObject(mChallengeFields);
-            sb.append(jsonObject.toString());
+            sb.append(mChallengeFields);
         }
         return sb.toString();
     }
@@ -84,7 +81,7 @@ public class OMAuthenticationChallenge {
      */
     public  Map<String, Object> getChallengeFields() {
         if (mChallengeFields == null) {
-            mChallengeFields = new HashMap<String, Object>();
+            mChallengeFields = new HashMap<>();
         }
         return mChallengeFields;
     }

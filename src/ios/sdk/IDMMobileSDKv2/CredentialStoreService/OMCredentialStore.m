@@ -527,4 +527,63 @@ NSString *defaultHeadlessAuthenticator = @"authenticator_default_headless";
     }
     return deletedCreds;
 }
+
+- (NSError *)saveAuthenticationContext:(OMAuthenticationContext*)context
+                                forKey:(NSString*)key
+{
+    if (key == nil || [key length] == 0)
+        return [OMObject createErrorWithCode:OMERR_KEY_IS_NIL];
+    
+    NSError *error = nil;
+    
+    if ([self.localAuthenticator isAuthenticated])
+    {
+        [self.localAuthenticator.secureStorage saveDataForId:key data:context
+                                                       error:&error];
+    }
+    else
+    {
+        OMDebugLog(@"save AuthenticationContext failed");
+        error = [OMObject createErrorWithCode:OMERR_LOCAL_AUTH_NOT_AUTHENTICATED];
+    }
+    return error;
+
+}
+
+- (OMAuthenticationContext *)retriveAuthenticationContext:(NSString*)key
+{
+    if (key == nil || [key length] == 0)
+        return nil;
+    
+    NSError *error = nil;
+    OMAuthenticationContext *context = nil;
+    
+    if ([self.localAuthenticator isAuthenticated])
+    {
+        context = [self.localAuthenticator.secureStorage dataForId:key error:&error];
+    }
+    else
+    {
+        OMDebugLog(@"getCredential credential failed");
+        
+    }
+    
+    return context;
+
+}
+- (NSError *)deleteAuthenticationContext:(NSString*)key;
+{
+    if (key == nil || [key length] == 0)
+        return [OMObject createErrorWithCode:OMERR_KEY_IS_NIL];
+    
+    NSError *error = nil;
+    
+    if ([self.localAuthenticator isAuthenticated])
+    {
+        [self.localAuthenticator.secureStorage deleteDataForId:key error:&error];
+    }
+    return error;
+
+}
+
 @end

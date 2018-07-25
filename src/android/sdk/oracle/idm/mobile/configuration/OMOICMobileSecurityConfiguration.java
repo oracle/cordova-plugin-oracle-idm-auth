@@ -45,6 +45,11 @@ public class OMOICMobileSecurityConfiguration extends OMOAuthMobileSecurityConfi
     private static final String REVOCATION_ENDPOINT = "revocation_endpoint";
     private static final String INTROSPECT_ENDPOINT = "introspect_endpoint";
     private static final String INTROSPECTION_ENDPOINT = "introspection_endpoint";
+    /**
+     * This is mandatory only when OP supports Session Management and Discovery.
+     * <p>
+     * Ref: http://openid.net/specs/openid-connect-session-1_0-17.html
+     */
     private static final String END_SESSION_ENDPOINT = "end_session_endpoint";
     private static final String REGISTRATION_ENDPOINT = "registration_endpoint";
     private static final String JWKS_URI = "jwks_uri";
@@ -138,59 +143,64 @@ public class OMOICMobileSecurityConfiguration extends OMOAuthMobileSecurityConfi
     private void populateDetails(JSONObject json) throws JSONException, OMMobileSecurityException, MalformedURLException {
         OMLog.debug(TAG, "populateDetails");
         JSONObject openIDConfigJSON = json.optJSONObject(OPEN_ID_CONFIGURATION);
-        if (openIDConfigJSON != null) {
-            mIssuer = openIDConfigJSON.getString(ISSUER);
-            mOAuthAuthorizationEndpoint = new URL(openIDConfigJSON.getString(AUTHORIZATION_ENDPOINT));
-            authenticationUrl = mOAuthAuthorizationEndpoint;
-            String tokenEndpoint = openIDConfigJSON.optString(TOKEN_ENDPOINT);
-            if (!TextUtils.isEmpty(tokenEndpoint)) {
-                mOAuthTokenEndpoint = new URL(tokenEndpoint);
-            }
-            String userInfoEndpoint = openIDConfigJSON.optString(USER_INFO_ENDPOINT);
-            if (!TextUtils.isEmpty(userInfoEndpoint)) {
-                mUserInfoEndpoint = new URL(userInfoEndpoint);
-            }
-            String revocationEndpoint = openIDConfigJSON.optString(REVOCATION_ENDPOINT);
-            if (!TextUtils.isEmpty(revocationEndpoint)) {
-                mRevocationEndpoint = new URL(revocationEndpoint);
-            }
-            /*
-             * The name of the key for INTROSPECT_ENDPOINT was changed in IDCS
-             * server from "introspect_endpoint" to "introspection_endpoint".
-             * This was found in pool0 env with 17.4.6 version.
-             */
-            String introspectEndpoint = openIDConfigJSON.optString(INTROSPECTION_ENDPOINT);
-            if (TextUtils.isEmpty(introspectEndpoint)) {
-                introspectEndpoint = openIDConfigJSON.optString(INTROSPECT_ENDPOINT);
-            }
-            if (!TextUtils.isEmpty(introspectEndpoint)) {
-                mIntrospectEndpoint = new URL(introspectEndpoint);
-            }
 
-            mEndSessionEndpoint = new URL(openIDConfigJSON.getString(END_SESSION_ENDPOINT));
+        if (openIDConfigJSON == null) {
+            openIDConfigJSON = json;
+        }
+        mIssuer = openIDConfigJSON.getString(ISSUER);
+        mOAuthAuthorizationEndpoint = new URL(openIDConfigJSON.getString(AUTHORIZATION_ENDPOINT));
+        authenticationUrl = mOAuthAuthorizationEndpoint;
+        String tokenEndpoint = openIDConfigJSON.optString(TOKEN_ENDPOINT);
+        if (!TextUtils.isEmpty(tokenEndpoint)) {
+            mOAuthTokenEndpoint = new URL(tokenEndpoint);
+        }
+        String userInfoEndpoint = openIDConfigJSON.optString(USER_INFO_ENDPOINT);
+        if (!TextUtils.isEmpty(userInfoEndpoint)) {
+            mUserInfoEndpoint = new URL(userInfoEndpoint);
+        }
+        String revocationEndpoint = openIDConfigJSON.optString(REVOCATION_ENDPOINT);
+        if (!TextUtils.isEmpty(revocationEndpoint)) {
+            mRevocationEndpoint = new URL(revocationEndpoint);
+        }
+        /*
+        * The name of the key for INTROSPECT_ENDPOINT was changed in IDCS
+        * server from "introspect_endpoint" to "introspection_endpoint".
+        * This was found in pool0 env with 17.4.6 version.
+        */
+        String introspectEndpoint = openIDConfigJSON.optString(INTROSPECTION_ENDPOINT);
+        if (TextUtils.isEmpty(introspectEndpoint)) {
+            introspectEndpoint = openIDConfigJSON.optString(INTROSPECT_ENDPOINT);
+        }
+        if (!TextUtils.isEmpty(introspectEndpoint)) {
+            mIntrospectEndpoint = new URL(introspectEndpoint);
+        }
+
+        String endSessionEndpoint = openIDConfigJSON.optString(END_SESSION_ENDPOINT);
+        if (!TextUtils.isEmpty(endSessionEndpoint)) {
+            mEndSessionEndpoint = new URL(endSessionEndpoint);
             logoutUrl = mEndSessionEndpoint;
-            mSigningCertEndpoint = new URL(openIDConfigJSON.getString(JWKS_URI));
-            JSONArray scopesJSONArray = openIDConfigJSON.optJSONArray(SCOPES_SUPPORTED);
-            mSupportedScopes = jsonArrayToSet(scopesJSONArray);
-            JSONArray responseTypesJSONArray = openIDConfigJSON.getJSONArray(RESPONSE_TYPES_SUPPORTED);
-            mSupportedResponseTypes = jsonArrayToSet(responseTypesJSONArray);
-            JSONArray subjectTypeJSONArray = openIDConfigJSON.optJSONArray(SUBJECT_TYPES_SUPPORTED);
-            mSupportedSubjectTypes = jsonArrayToSet(subjectTypeJSONArray);
-            JSONArray idTokenSigningJSONArray = openIDConfigJSON.getJSONArray(ID_TOKEN_SIGNING_ALG_SUPPORTED);
-            mSupportedSingingAlgs = jsonArrayToSet(idTokenSigningJSONArray);
-            JSONArray claimsJSONArray = openIDConfigJSON.optJSONArray(CLAIMS_SUPPORTED);
-            mSupportedClaims = jsonArrayToSet(claimsJSONArray);
-            JSONArray grantsJSONArray = openIDConfigJSON.optJSONArray(GRANT_TYPES_SUPPORTED);
-            mSupportedGranTypes = jsonArrayToSet(grantsJSONArray);
-            isClaimsParamSupported = openIDConfigJSON.optBoolean(CLAIMS_PARAMETER_SUPPORTED);
-            isHttpLogoutSupported = openIDConfigJSON.optBoolean(HTTP_LOGOUT_SUPPORTED);
-            isLogoutSessionSupported = openIDConfigJSON.optBoolean(LOGOUT_SESSION_SUPPORTED);
-            isRequestParamSupported = openIDConfigJSON.optBoolean(REQUEST_PARAMETER_SUPPORTED);
-            isRequestUriParamSupported = openIDConfigJSON.optBoolean(REQUEST_URI_PARAMETER_SUPPORTED);
-            mClientRegistrationEndpoint = openIDConfigJSON.optString(REGISTRATION_ENDPOINT);
-            isInitialized = true;
-        } else
-            throw new OMMobileSecurityException(OMErrorCode.OPENID_CONFIGURATION_FAILED, "PAYLOAD_DATA_NOT_CORRECT");
+        }
+
+        mSigningCertEndpoint = new URL(openIDConfigJSON.getString(JWKS_URI));
+        JSONArray scopesJSONArray = openIDConfigJSON.optJSONArray(SCOPES_SUPPORTED);
+        mSupportedScopes = jsonArrayToSet(scopesJSONArray);
+        JSONArray responseTypesJSONArray = openIDConfigJSON.getJSONArray(RESPONSE_TYPES_SUPPORTED);
+        mSupportedResponseTypes = jsonArrayToSet(responseTypesJSONArray);
+        JSONArray subjectTypeJSONArray = openIDConfigJSON.optJSONArray(SUBJECT_TYPES_SUPPORTED);
+        mSupportedSubjectTypes = jsonArrayToSet(subjectTypeJSONArray);
+        JSONArray idTokenSigningJSONArray = openIDConfigJSON.getJSONArray(ID_TOKEN_SIGNING_ALG_SUPPORTED);
+        mSupportedSingingAlgs = jsonArrayToSet(idTokenSigningJSONArray);
+        JSONArray claimsJSONArray = openIDConfigJSON.optJSONArray(CLAIMS_SUPPORTED);
+        mSupportedClaims = jsonArrayToSet(claimsJSONArray);
+        JSONArray grantsJSONArray = openIDConfigJSON.optJSONArray(GRANT_TYPES_SUPPORTED);
+        mSupportedGranTypes = jsonArrayToSet(grantsJSONArray);
+        isClaimsParamSupported = openIDConfigJSON.optBoolean(CLAIMS_PARAMETER_SUPPORTED);
+        isHttpLogoutSupported = openIDConfigJSON.optBoolean(HTTP_LOGOUT_SUPPORTED);
+        isLogoutSessionSupported = openIDConfigJSON.optBoolean(LOGOUT_SESSION_SUPPORTED);
+        isRequestParamSupported = openIDConfigJSON.optBoolean(REQUEST_PARAMETER_SUPPORTED);
+        isRequestUriParamSupported = openIDConfigJSON.optBoolean(REQUEST_URI_PARAMETER_SUPPORTED);
+        mClientRegistrationEndpoint = openIDConfigJSON.optString(REGISTRATION_ENDPOINT);
+        isInitialized = true;
 
     }
 
@@ -213,7 +223,7 @@ public class OMOICMobileSecurityConfiguration extends OMOAuthMobileSecurityConfi
                 String discoveryURL = mConfigURL.toString();
                 OMLog.debug(TAG, "Downloading openID well known configuration from URL: " + discoveryURL);
                 OMHTTPResponse response = handler.httpGet(new URL(discoveryURL), null);
-                if (response != null && (response.getResponseCode() / 100 == 2)) {
+                if (response != null && response.isSuccess()) {
                     populateDetails(new JSONObject(response.getResponseStringOnSuccess()));
                 } else {
                     throw new OMMobileSecurityException(OMErrorCode.OPENID_FETCH_CONFIGURATION_FAILED);

@@ -10,7 +10,6 @@ import android.annotation.TargetApi;
 import android.graphics.Bitmap;
 import android.os.Build;
 import android.os.Message;
-import android.view.InputEvent;
 import android.view.KeyEvent;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -126,8 +125,9 @@ public class BaseWebViewClient extends WebViewClient {
     @SuppressWarnings("deprecation")
     @Override
     public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
-        OMLog.trace(TAG + "_logout", "onReceivedError : description = "
-                + description + " errorCode = " + errorCode
+        OMLog.trace(TAG, "onReceivedError deprecated: "
+                + " errorCode = " + errorCode
+                + " description = " + description
                 + " failingUrl = " + failingUrl);
         if (origAppWebViewClient != null) {
             origAppWebViewClient.onReceivedError(view, errorCode, description, failingUrl);
@@ -140,7 +140,10 @@ public class BaseWebViewClient extends WebViewClient {
     @TargetApi(Build.VERSION_CODES.M)
     @Override
     public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
-        OMLog.trace(TAG, "onReceivedError: code: " + error.getErrorCode() + " description: " + error.getDescription());
+        OMLog.trace(TAG, "onReceivedError: "
+                + " code: " + error.getErrorCode()
+                + " description: " + error.getDescription()
+                + " failingUrl = " + request.getUrl());
         if (origAppWebViewClient != null) {
             origAppWebViewClient.onReceivedError(view, request, error);
         } else {
@@ -151,7 +154,9 @@ public class BaseWebViewClient extends WebViewClient {
     @TargetApi(Build.VERSION_CODES.M)
     @Override
     public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse errorResponse) {
-        OMLog.trace(TAG, "onReceivedHttpError: Status Code: " + errorResponse.getStatusCode());
+        OMLog.trace(TAG, "onReceivedHttpError: "
+                + " Status Code: " + errorResponse.getStatusCode()
+                + " url: " + request.getUrl());
         if (origAppWebViewClient != null) {
             origAppWebViewClient.onReceivedHttpError(view, request, errorResponse);
         } else {
@@ -197,17 +202,6 @@ public class BaseWebViewClient extends WebViewClient {
             origAppWebViewClient.onUnhandledKeyEvent(view, event);
         } else {
             super.onUnhandledKeyEvent(view, event);
-        }
-    }
-
-    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    @Override
-    public void onUnhandledInputEvent(WebView view, InputEvent event) {
-        OMLog.trace(TAG, "onUnhandledInputEvent");
-        if (origAppWebViewClient != null) {
-            origAppWebViewClient.onUnhandledInputEvent(view, event);
-        } else {
-            super.onUnhandledInputEvent(view, event);
         }
     }
 

@@ -110,9 +110,7 @@
                                               initWithURL:
                                               weakSelf.frontChannelRequestURL];
                     weakSelf.handler.webView = webView;
-                    weakSelf.handler.previousDelegate = webView.delegate;
-                    webView.delegate = weakSelf.handler;
-                    [webView loadRequest:request];
+                    [weakSelf.handler loadRequest:request];
                 }
                 else
                 {
@@ -146,6 +144,11 @@
                                         authResponse:nil
                                                error:nil];
     
+}
+
+- (void)cancelAuthentication
+{
+    [self.handler stopRequest];
 }
 
 @end

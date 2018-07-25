@@ -35,7 +35,7 @@
 @property (nonatomic) BOOL requestParameterSupported;
 @property (nonatomic) BOOL requestURIParameterSupported;
 @property (nonatomic) BOOL requireRequestURIReg;
--(void)parseConfigData:(NSData *)jsonData;
+-(void)parseConfigData:(NSDictionary *)jsonData;
 
 - (NSURL*)discoveryUrl;
 @end

@@ -8,11 +8,18 @@
 #import "OMHTTPBasicConfiguration.h"
 #import "OMAuthenticationContext.h"
 #import "OMCredentialStore.h"
+#import "OMAuthenticationManager.h"
+
+@interface OMHTTPBasicLogoutService ()<UIWebViewDelegate>
+@property (nonatomic, assign) BOOL clearPersistentCookies;
+@end
 
 @implementation OMHTTPBasicLogoutService
+
 -(void)performLogout:(BOOL)clearRegistrationHandles
 {
     self.callerThread = [NSThread currentThread];
+    self.clearPersistentCookies = clearRegistrationHandles;
     OMHTTPBasicConfiguration *config = (OMHTTPBasicConfiguration *)
                                                 self.mss.configuration;
     OMAuthenticationContext *context = [self.mss.cacheDict
@@ -57,6 +64,15 @@
 
 -(void)sendFinishLogout:(NSError *)error
 {
+    if (self.clearPersistentCookies)
+    {
+        self.mss.authManager.curentAuthService.context = nil;
+    }
+    if (self.mss.configuration.sessionActiveOnRestart)
+    {
+        [[OMCredentialStore sharedCredentialStore]
+         deleteAuthenticationContext:self.mss.authKey];
+    }
 
     [self.mss.delegate mobileSecurityService:self.mss
                              didFinishLogout:error];

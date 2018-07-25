@@ -37,22 +37,24 @@
 - (void)stopRequest
 {
     [self.clientWebView stopLoading];
-    self.clientWebView.delegate = nil;
+    self.clientWebView.delegate = self.clientWebViewDelegate;
 
 }
 
 - (BOOL)webView:(UIWebView *)webView shouldStartLoadWithRequest:(NSURLRequest *)request
     navigationType:(UIWebViewNavigationType)navigationType;
 {
+    BOOL navigationAllowed = YES;
+    
     if ([self.callBackDelegate respondsToSelector:@selector(webView:shouldStartLoadWithRequest:navigationType:)]) {
-        [self.callBackDelegate webView:webView shouldStartLoadWithRequest:request navigationType:navigationType];
+       navigationAllowed = [self.callBackDelegate webView:webView shouldStartLoadWithRequest:request navigationType:navigationType];
     }
 
     if ([self.clientWebViewDelegate respondsToSelector:@selector(webView:shouldStartLoadWithRequest:navigationType:)]) {
-        [self.clientWebViewDelegate webView:webView shouldStartLoadWithRequest:request navigationType:navigationType];
+      navigationAllowed =  [self.clientWebViewDelegate webView:webView shouldStartLoadWithRequest:request navigationType:navigationType];
     }
 
-    return YES;
+    return navigationAllowed;
 }
 
 - (void)webViewDidStartLoad:(UIWebView *)webView

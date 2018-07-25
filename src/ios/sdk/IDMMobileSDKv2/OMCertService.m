@@ -343,8 +343,11 @@
                                   [NSDictionary
                                    dictionaryWithObjectsAndKeys:
                                    (__bridge id) identity, kSecValueRef,
+                                   (id) kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+                                   kSecAttrAccessible,
                                    nil],
                                   NULL);
+        
         if (err == errSecSuccess || err == errSecDuplicateItem)
         {
             return true;

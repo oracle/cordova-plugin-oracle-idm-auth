@@ -9,7 +9,6 @@
 @class OMFedAuthConfiguration;
 
 @interface OMFedAuthAuthenticationService : OMAuthenticationService
-@property(nonatomic) volatile int32_t finished;
 @property(nonatomic, weak) OMFedAuthConfiguration *configuration;
 @property(nonatomic, assign) BOOL authChallengeReceived;
 

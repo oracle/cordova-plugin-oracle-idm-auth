@@ -19,6 +19,21 @@
                   persistInUserDefaults: (BOOL)persist
                                 withKey: (NSString *)key
 {
+    return [self parseConfigurationURL:configURL
+                 persistInUserDefaults:persist
+                               withKey:key
+                            andFilters:nil];
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Parses configuration URL, applies user defined filters and stores
+//configuration in NSUserDefaults as NSDictionary using given key or default key
+///////////////////////////////////////////////////////////////////////////////
++ (NSDictionary *)parseConfigurationURL: (NSURL *)configURL
+                  persistInUserDefaults: (BOOL)persist
+                                withKey: (NSString *)key
+                             andFilters:(NSSet *) filters
+{
     NSString            *queryParams = [configURL query];
     NSMutableDictionary *dictionary  = [[NSMutableDictionary alloc] init];
     NSArray *configArray = [queryParams componentsSeparatedByString:@"&"];
@@ -34,7 +49,7 @@
         } //if block
     } //for loop
     
-    
+    [self applyFilters:filters onDictionary:dictionary];
     
     if ([dictionary count] == 0)
     {
@@ -59,7 +74,7 @@
             if([[exception name]
                 isEqualToString:NSInvalidArchiveOperationException])
             {
-                NSLog(@"Exception in archiving Config Dictionary: %@",
+                OMDebugLog(@"Exception in archiving Config Dictionary: %@",
                            exception.reason);
             }
         }
@@ -73,6 +88,94 @@
     
     return dictionary;
 }
+
++ (NSDictionary *)parseConfigurationURLWithURLComponents: (NSURL *)configURL
+                                   persistInUserDefaults: (BOOL)persist
+                                                 withKey: (NSString *)key
+                                              andFilters:(NSSet *) filters
+{
+    NSMutableDictionary *dictionary  = [[NSMutableDictionary alloc] init];
+    
+    if ([NSURLQueryItem class])
+    {
+        
+        if (configURL)
+        {
+            NSURLComponents *components = [NSURLComponents
+                                           componentsWithURL:configURL
+                                           resolvingAgainstBaseURL:NO];
+            
+            for (NSURLQueryItem *item in components.queryItems)
+            {
+                NSString *key = item.name;
+                NSString *value = item.value;
+                
+                if (key != nil && value != nil)
+                {
+                    [self fillProperty:key value:value toDictionary:dictionary];
+                }
+                
+            }
+        }
+        
+        [self applyFilters:filters onDictionary:dictionary];
+        
+        
+        if ([dictionary count] == 0)
+        {
+            dictionary = nil;
+        }
+        else if (persist)
+        {
+            //Store in NSUserDefaults and save it
+            NSUserDefaults      *userDefaults = [NSUserDefaults
+                                                 standardUserDefaults];
+            NSData *configData = nil;
+            /* Not all objects can be stored in NSUSerDefaults. Hence to store
+             unsupported objects(NSSet in this case) we need to archive it as NSData
+             and then store it*/
+            @try
+            {
+                configData = [NSKeyedArchiver
+                              archivedDataWithRootObject:dictionary];
+            }
+            @catch (NSException *exception)
+            {
+                if([[exception name]
+                    isEqualToString:NSInvalidArchiveOperationException])
+                {
+                    OMDebugLog(@"Exception in archiving Config Dictionary: %@",
+                               exception.reason);
+                }
+            }
+            if (key)
+                [userDefaults setObject:configData forKey:key];
+            else
+                [userDefaults setObject:configData
+                                 forKey:OM_PROP_NSUSERDEFAULTS_KEY];
+            [userDefaults synchronize];
+        }
+        
+    }
+    
+    return dictionary;
+}
+
++(void)applyFilters:(NSSet *)filters
+       onDictionary:(NSMutableDictionary *)dictionary
+{
+    if (![filters count])
+    {
+        return;
+    }
+    NSDictionary *tempDict = [NSDictionary dictionaryWithDictionary:dictionary];
+    [dictionary removeAllObjects];
+    for (NSString *filter in filters)
+    {
+        [dictionary setValue:[tempDict objectForKey:filter] forKey:filter];
+    }
+}
+
 
 + (void)property:(NSString *)name value:(NSString *)value
     toDictionary:(NSMutableDictionary *)dictionary
@@ -95,8 +198,77 @@
         NSSet *oauthScopes = [NSSet setWithArray:tokens];
         [dictionary setObject:oauthScopes forKey:OM_PROP_OAUTH_SCOPE];
     }
+    else if(NSOrderedSame ==
+            [name caseInsensitiveCompare:OM_PROP_USERNAME_PARAM_NAME])
+    {
+        NSArray *tokens = [value componentsSeparatedByString:@","];
+        NSSet *paramName = [NSSet setWithArray:tokens];
+        [dictionary setObject:paramName forKey:OM_PROP_USERNAME_PARAM_NAME];
+    }
+    else if(NSOrderedSame ==
+            [name caseInsensitiveCompare:OM_PROP_CUSTOM_AUTH_HEADERS] ||
+            NSOrderedSame ==
+            [name caseInsensitiveCompare:OM_PROP_CUSTOM_HEADERS_FOR_MOBILE_AGENT])
+    {
+        NSDictionary *valueDict = [self dictionaryFromConfigString:value];
+        if([valueDict count] > 0)
+            [dictionary setObject:valueDict forKey:name];
+    }
+    else
+    {
+        [dictionary setObject:value forKey:name];
+    }
+}
+
++ (void)fillProperty:(NSString *)name value:(NSString *)value
+        toDictionary:(NSMutableDictionary *)dictionary
+{
+    if (NSOrderedSame ==
+        [name caseInsensitiveCompare:OM_PROP_REQUIRED_TOKENS])
+    {
+        NSArray *tokens = [value componentsSeparatedByString:@","];
+        [dictionary setObject:tokens forKey:OM_PROP_REQUIRED_TOKENS];
+    }
+    else if(NSOrderedSame ==
+            [name caseInsensitiveCompare:OM_PROP_OAUTH_SCOPE])
+    {
+        NSArray *tokens = [value componentsSeparatedByString:@","];
+        NSSet *oauthScopes = [NSSet setWithArray:tokens];
+        [dictionary setObject:oauthScopes forKey:OM_PROP_OAUTH_SCOPE];
+    }
+    else if(NSOrderedSame ==
+            [name caseInsensitiveCompare:OM_PROP_USERNAME_PARAM_NAME])
+    {
+        NSArray *tokens = [value componentsSeparatedByString:@","];
+        NSSet *paramName = [NSSet setWithArray:tokens];
+        [dictionary setObject:paramName forKey:OM_PROP_USERNAME_PARAM_NAME];
+    }
+    else if(NSOrderedSame ==
+            [name caseInsensitiveCompare:OM_PROP_CUSTOM_AUTH_HEADERS] ||
+            NSOrderedSame ==
+            [name caseInsensitiveCompare:OM_PROP_CUSTOM_HEADERS_FOR_MOBILE_AGENT])
+    {
+        NSDictionary *valueDict = [self dictionaryFromConfigString:value];
+        if([valueDict count] > 0)
+            [dictionary setObject:valueDict forKey:name];
+    }
     else
         [dictionary setObject:value forKey:name];
+}
+
++ (NSDictionary *)dictionaryFromConfigString:(NSString *)configString
+{
+    NSMutableDictionary *dict = [NSMutableDictionary dictionary];
+    NSArray *tokens = [configString componentsSeparatedByString:@","];
+    for(NSString *entry in tokens)
+    {
+        NSArray *dictTokens = [entry componentsSeparatedByString:@":"];
+        if([dictTokens count] == 2)
+            [dict setObject:dictTokens[1] forKey:dictTokens[0]];
+    }
+    if([dict count] > 0)
+        return [NSDictionary dictionaryWithDictionary:dict];
+    return nil;
 }
 
 + (BOOL)urlDecodeValueForParameter:(NSString *)name
@@ -222,7 +394,7 @@
                              valueForKey:OM_PROP_MAX_LOGIN_ATTEMPTS];
 
         id presentClientIdentityOnDemand = [properties valueForKey:
-                                            OM_PROP_PRESENT_CLIENT_IDENTITY_ON_DEMAND];
+                                     OM_PROP_PRESENT_CLIENT_IDENTITY_ON_DEMAND];
         id cryptoScheme = [properties valueForKey:OM_PROP_CRYPTO_SCHEME];
         
         id sendCustomHeadersLogout = [properties valueForKey:
@@ -233,7 +405,11 @@
         
         id localAuthInstanceId = [properties valueForKey:
                                     OM_PROP_LOCAL_AUTHENTICATOR_INSTANCE_ID];
+        id authKey = [properties valueForKey:
+                                  OM_PROP_AUTH_KEY];
 
+        id mobileAgentCustomHeaders = [properties
+                           valueForKey:OM_PROP_CUSTOM_HEADERS_FOR_MOBILE_AGENT];
         
         if([self isValidString:appName])
         {
@@ -245,6 +421,11 @@
 
         }
 
+        if ([self isValidString:authKey])
+        {
+            _authKey = authKey;
+        }
+        
         if (sessionTimeout)
         {
             if([OMMobileSecurityConfiguration
@@ -368,10 +549,46 @@
                                     boolValue:sendCustomHeadersLogout];
         _sendAuthHeaderLogout = [OMMobileSecurityConfiguration
                                  boolValue:sendAuthHeaderLogout];
-        if ([customHeaders isKindOfClass:[NSDictionary class]])
+        NSArray *disallowedHeaders = [NSArray arrayWithObjects:@"Authorization",
+                                      @"Cookie",@"Content-Length",@"Host", nil];
+        NSUInteger maxHeaders = 10;
+        if (customHeaders!=nil && ![customHeaders
+                                    isKindOfClass:[NSDictionary class]])
         {
-            _customHeaders = customHeaders;
+            errorCode = OMERR_INVALID_CUSTOM_HEADERS;
         }
+        else
+        {
+            if (customHeaders)
+            {
+                _customHeaders = customHeaders;
+            }
+        }
+        if ([customHeaders count] > maxHeaders)
+        {
+            errorCode = OMERR_INVALID_CUSTOM_HEADERS;
+        }
+        for (NSString *customHeaderName in customHeaders)
+        {
+            for (NSString *disallowedHeaderName in disallowedHeaders)
+            {
+                if ([customHeaderName caseInsensitiveCompare:
+                     disallowedHeaderName] == NSOrderedSame)
+                {
+                    errorCode = OMERR_INVALID_CUSTOM_HEADERS;
+                }
+            }
+        }
+        if(mobileAgentCustomHeaders &&
+           [mobileAgentCustomHeaders isKindOfClass:[NSDictionary class]])
+        {
+            _mobileAgentCustomHeaders = mobileAgentCustomHeaders;
+        }
+        id sessionActiveOnRestart = [properties valueForKey:
+                                            OM_PROP_SESSION_ACTIVE_ON_RESTART];
+        _sessionActiveOnRestart = [OMMobileSecurityConfiguration
+                                 boolValue:sessionActiveOnRestart];
+
         if (errorCode !=-1)
         {
             self = nil;

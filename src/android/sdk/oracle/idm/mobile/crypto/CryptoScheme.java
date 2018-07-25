@@ -5,7 +5,9 @@
 
 
 package oracle.idm.mobile.crypto;
- 
+
+import oracle.idm.mobile.logging.OMLog;
+
 /**
  * CryptoScheme enum represents the supported hashing algorithms that are used
  * for hashing the credentials to store in the credential store.
@@ -14,23 +16,27 @@ package oracle.idm.mobile.crypto;
 public enum CryptoScheme {
     // as per https://gps.oracle.com/ossa/farm/standards/doku.php?id=ats:start
     PLAINTEXT("PlainText"),
-    SHA1("SHA1"),
+    SHA1("SHA-1"),
     SHA256("SHA-256"), SHA384("SHA-384"), SHA512("SHA-512"),
     SSHA256("SaltedSHA-256"), SSHA384("SaltedSHA-384"), SSHA512(
             "SaltedSHA-512"),
     AES("AES"),
     PBKDF2HmacSHA1("PBKDF2WithHmacSHA1");
- 
+
+    private static final String TAG = CryptoScheme.class.getSimpleName();
     private String value;
- 
+
     CryptoScheme(String value) {
         this.value = value;
     }
- 
+
     public String getValue() {
         return this.value;
     }
- 
+
+    /**
+     * Returns CryptoScheme by checking both name and value of the enum
+     */
     public static CryptoScheme getCryptoScheme(String value) {
         if (value == null)
             return null;
@@ -41,9 +47,14 @@ public enum CryptoScheme {
                 return scheme;
             }
         }
-        return null;
+        try {
+            return CryptoScheme.valueOf(value.toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            OMLog.error(TAG, ex.toString());
+            return null;
+        }
     }
- 
+
     public static boolean isHashAlgorithm(CryptoScheme scheme) {
         if (scheme == CryptoScheme.AES || scheme == CryptoScheme.PLAINTEXT) {
             return false;

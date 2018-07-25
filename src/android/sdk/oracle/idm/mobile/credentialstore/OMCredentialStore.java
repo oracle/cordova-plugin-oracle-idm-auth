@@ -12,7 +12,10 @@ import android.preference.PreferenceManager;
 import android.text.TextUtils;
 
 import java.io.Serializable;
+import java.net.URL;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import oracle.idm.mobile.OMErrorCode;
 import oracle.idm.mobile.auth.local.OMAuthenticationManager;
@@ -24,6 +27,11 @@ import oracle.idm.mobile.crypto.OMSecureStorageException;
 import oracle.idm.mobile.crypto.OMSecureStorageService;
 import oracle.idm.mobile.logging.OMLog;
 import oracle.idm.mobile.util.DefaultAuthenticationUtils;
+
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_APPNAME;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_AUTH_KEY;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_LOGIN_URL;
+import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_OAUTH_TOKEN_ENDPOINT;
 
 /**
  * OMCredentialStore is storage class which stores all the data that needs
@@ -52,6 +60,14 @@ public class OMCredentialStore
      * This is appended with the key passed to store/retrieve/delete the retry count in offline authentication.
      */
     private static final String RETRY_COUNT_SUFFIX = "_retryCount";
+
+    /**
+     * The set of dataIds are maintained which are created using this class, and
+     * are currently present in Secure Storage. If deletion is done, the corresponding
+     * dataId is removed from this set.
+     */
+    private static final String SECURE_STORAGE_DATA_IDS = "SecureStorageDataIds";
+
     private Context context;
     private String mAuthenticatorName;
     private String mAuthenticatorInstanceId;
@@ -302,11 +318,87 @@ public class OMCredentialStore
         if (key != null)
         {
             key = key + OM_CREDENTIAL;
-            OMSecureStorageService sss = getSecureStorageService();
-            if (sss != null) {
-                sss.delete(key);
+            deleteFromSecureStorage(key);
+        }
+    }
+
+    /**
+     * Deletes offline credentials persisted during authentication.
+     * @param configProperties should contain SDK configuration properties.
+     * @return number of credentials deleted.
+     */
+    public int deleteCredentialForProperties(Map<String, Object> configProperties) {
+        if (configProperties == null || configProperties.isEmpty()) {
+            throw new IllegalArgumentException("configProperties cannot be null or empty");
+        }
+
+        String authenticationUrl = getAuthenticationUrl(configProperties);
+        String offlineCredDataIdSuffix = getOfflineCredDataIdSuffix(configProperties);
+
+        Set<String> dataIdsToDelete = new HashSet<>();
+        Set<String> dataIds = getPreference().getStringSet(SECURE_STORAGE_DATA_IDS, null);
+        if (dataIds == null) {
+            return 0;
+        }
+        for (String dataId : dataIds) {
+            if (dataId.startsWith(authenticationUrl) && dataId.endsWith(offlineCredDataIdSuffix)) {
+                dataIdsToDelete.add(dataId);
             }
         }
+
+        return deleteFromSecureStorage(dataIdsToDelete);
+    }
+
+    private String getAuthenticationUrl(Map<String, Object> configProperties) {
+        Object loginUrlObj = configProperties.get(OM_PROP_LOGIN_URL);
+        String authenticationUrl = null;
+        if (loginUrlObj instanceof URL) {
+            authenticationUrl = loginUrlObj.toString();
+        } else if (loginUrlObj instanceof String) {
+            authenticationUrl = (String) loginUrlObj;
+        }
+
+        Object tokenEndpointObj = configProperties.get(OM_PROP_OAUTH_TOKEN_ENDPOINT);
+        if (tokenEndpointObj instanceof URL) {
+            authenticationUrl = tokenEndpointObj.toString();
+        } else if (tokenEndpointObj instanceof String) {
+            authenticationUrl = (String) tokenEndpointObj;
+        }
+
+        if (authenticationUrl == null) {
+            throw new IllegalArgumentException("Invalid value in configProperties: " +
+                    "either OM_PROP_LOGIN_URL or OM_PROP_OAUTH_TOKEN_ENDPOINT is required");
+        }
+
+        return authenticationUrl;
+    }
+
+    private String getOfflineCredDataIdSuffix(Map<String, Object> configProperties) {
+        String offlineCredDataIdSuffix = null;
+        Object authKeyObj = configProperties.get(OM_PROP_AUTH_KEY);
+        String authKey = null;
+        if (authKeyObj instanceof String) {
+            authKey = (String) authKeyObj;
+        }
+        if (!TextUtils.isEmpty(authKey)) {
+            offlineCredDataIdSuffix = authKey;
+        } else {
+            Object appNameObj = configProperties.get(OM_PROP_APPNAME);
+            String appName = null;
+            if (appNameObj instanceof String) {
+                appName = (String) appNameObj;
+            }
+            if (!TextUtils.isEmpty(appName)) {
+                offlineCredDataIdSuffix = appName;
+            }
+        }
+
+        if (offlineCredDataIdSuffix == null) {
+            throw new IllegalArgumentException("OM_PROP_APPNAME is mandatory.");
+        }
+
+        offlineCredDataIdSuffix = offlineCredDataIdSuffix + OM_CREDENTIAL;
+        return offlineCredDataIdSuffix;
     }
 
     /**
@@ -348,7 +440,7 @@ public class OMCredentialStore
             key = key + OM_CREDENTIAL;
             if (credential != null) {
                 credential.updateValue(propertyName, propertyValue);
-                store(key, credential.convertToJSONString());
+                storeInSecureStorage(key, credential.convertToJSONString());
             }
         }
     }
@@ -377,7 +469,7 @@ public class OMCredentialStore
             OMCredential credential = new OMCredential(userName, password,
                     tenantName, properties);
 
-            store(key, credential.convertToJSONString());
+            storeInSecureStorage(key, credential.convertToJSONString());
         }
     }
 
@@ -394,7 +486,7 @@ public class OMCredentialStore
         if (key != null && credential != null)
         {
             key = key + OM_CREDENTIAL;
-            store(key, credential.convertToJSONString());
+            storeInSecureStorage(key, credential.convertToJSONString());
         }
     }
 
@@ -403,7 +495,7 @@ public class OMCredentialStore
      * storage. This will avoid name space collisions with the app/auth key used
      * by the app during initialization or call to authenticate. This will avoid
      * the users of the SDK to directly get the authentication context from the
-     * {@link SharedPreferences} or the {@link OMCredentialStore}
+     * the {@link OMCredentialStore}.
      *
      * @param key
      * @param value
@@ -413,7 +505,7 @@ public class OMCredentialStore
         if (!TextUtils.isEmpty(key))
         {
             key = key + AUTH_CONTEXT_SUFFIX;
-            putString(key, value);
+            storeInSecureStorage(key, value);
         }
     }
 
@@ -427,12 +519,21 @@ public class OMCredentialStore
      */
     public String getAuthContext(String key)
     {
-        if (!TextUtils.isEmpty(key))
+        OMSecureStorageService sss = getSecureStorageService();
+        String authContext = null;
+        if (sss != null && !TextUtils.isEmpty(key))
         {
             key = key + AUTH_CONTEXT_SUFFIX;
-            return getString(key);
+            try {
+                Serializable data = sss.get(key);
+                if (data instanceof String) {
+                    authContext = (String) data;
+                }
+            } catch (OMSecureStorageException e) {
+                OMLog.error(TAG, e.getErrorDescription(), e);
+            }
         }
-        return null;
+        return authContext;
     }
 
     /**
@@ -441,12 +542,12 @@ public class OMCredentialStore
      *
      * @param key
      */
-    void deleteAuthContext(String key)
+    public void deleteAuthContext(String key)
     {
         if (!TextUtils.isEmpty(key))
         {
             key = key + AUTH_CONTEXT_SUFFIX;
-            remove(key);
+            deleteFromSecureStorage(key);
         }
     }
 
@@ -511,9 +612,8 @@ public class OMCredentialStore
      * @return {@link SharedPreferences}
      */
     private SharedPreferences getPreference() {
-        SharedPreferences preference = PreferenceManager
+        return PreferenceManager
                 .getDefaultSharedPreferences(context);
-        return preference;
     }
 
     public void addRetryCount(String key, int retryCount) {
@@ -582,16 +682,85 @@ public class OMCredentialStore
         return mSecureStorageService;
     }
 
-    private void store(String dataId, Serializable data) {
+    private void storeInSecureStorage(String dataId, Serializable data) {
         OMSecureStorageService sss = getSecureStorageService();
         if (sss != null) {
             try {
                 sss.store(dataId, data);
+                updateSecureStorageDataIds(dataId);
             } catch (OMSecureStorageException e) {
                 // Unrecoverable exceptions. Hence, not propagating.
                 OMLog.error(TAG, e.getMessage(), e);
             }
         }
+    }
+
+    private boolean deleteFromSecureStorage(String dataId) {
+        boolean deleteStatus = false;
+        OMSecureStorageService sss = getSecureStorageService();
+        if (sss != null) {
+            deleteStatus = sss.delete(dataId);
+            deleteSecureStorageDataId(dataId);
+        }
+        return deleteStatus;
+    }
+
+    private int deleteFromSecureStorage(Set<String> dataIds) {
+        OMSecureStorageService sss = getSecureStorageService();
+        int deleteCount = 0;
+        if (sss != null && dataIds != null) {
+            for (String dataId : dataIds) {
+                if (sss.delete(dataId)) {
+                    deleteCount++;
+                }
+            }
+            deleteSecureStorageDataIds(dataIds);
+        }
+        return deleteCount;
+    }
+
+    /**
+     * Refer {@link #SECURE_STORAGE_DATA_IDS}
+     */
+    private void updateSecureStorageDataIds(String dataId) {
+        Set<String> secureStorageDataIds = getPreference().getStringSet(SECURE_STORAGE_DATA_IDS, null);
+        if (secureStorageDataIds == null) {
+            secureStorageDataIds = new HashSet<>();
+        } else {
+            secureStorageDataIds = new HashSet<>(secureStorageDataIds);
+        }
+        secureStorageDataIds.add(dataId);
+        getPreference().edit().putStringSet(SECURE_STORAGE_DATA_IDS, secureStorageDataIds).apply();
+    }
+
+    /**
+     * Refer {@link #SECURE_STORAGE_DATA_IDS}
+     */
+    private void deleteSecureStorageDataId(String dataId) {
+        Set<String> secureStorageDataIds = getPreference().getStringSet(SECURE_STORAGE_DATA_IDS, null);
+        if (secureStorageDataIds == null) {
+            OMLog.error(TAG, "Tried to delete dataId when list of dataIds is null");
+            return;
+        } else {
+            secureStorageDataIds = new HashSet<>(secureStorageDataIds);
+        }
+        secureStorageDataIds.remove(dataId);
+        getPreference().edit().putStringSet(SECURE_STORAGE_DATA_IDS, secureStorageDataIds).apply();
+    }
+
+    /**
+     * Refer {@link #SECURE_STORAGE_DATA_IDS}
+     */
+    private void deleteSecureStorageDataIds(Set<String> dataIds) {
+        Set<String> secureStorageDataIds = getPreference().getStringSet(SECURE_STORAGE_DATA_IDS, null);
+        if (secureStorageDataIds == null) {
+            OMLog.error(TAG, "Tried to delete dataIds when list of dataIds is null");
+            return;
+        } else {
+            secureStorageDataIds = new HashSet<>(secureStorageDataIds);
+        }
+        secureStorageDataIds.removeAll(dataIds);
+        getPreference().edit().putStringSet(SECURE_STORAGE_DATA_IDS, secureStorageDataIds).apply();
     }
 
 }

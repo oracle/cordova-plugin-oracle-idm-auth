@@ -147,15 +147,14 @@
 
 - (void)cancelAuthentication
 {
-    if (self.configuration.enableWKWebView)
+    [self stopRequest];
+    
+    if ([self.mss isNSURLProtocolActive])
     {
-        [self.wkWebViewClient stopRequest];
+        [NSURLProtocol unregisterClass:[OMURLProtocol class]];
+        [OMURLProtocol setOMAObject:nil];
     }
-    else
-    {
-        [self.webViewClient stopRequest];
-    }
-    //no webview error
+    
     NSError *error = [OMObject
                       createErrorWithCode:OMERR_USER_CANCELED_AUTHENTICATION];
     
@@ -166,9 +165,22 @@
 
 }
 
+- (void)stopRequest
+{
+    if (self.configuration.enableWKWebView)
+    {
+        [self.wkWebViewClient stopRequest];
+    }
+    else
+    {
+        [self.webViewClient stopRequest];
+    }
+
+}
+
 - (void)completedAuthentication
 {
-    [self.webViewClient stopRequest];
+    [self stopRequest];
     [self.authData setObject:self.context.visitedHosts forKey:OM_VISITED_HOST_URLS];
     
     NSError *error = [self.authData objectForKey:OM_ERROR];
@@ -209,11 +221,14 @@
     }
     
     [self.context startTimers];
+    
+    [OMURLProtocol setOMAObject:nil];
+    [NSURLProtocol unregisterClass:[OMURLProtocol class]];
+
     [self.delegate didFinishCurrentStep:self
                                nextStep:OM_NEXT_AUTH_STEP_NONE
                            authResponse:nil
                                   error:object];
-    [NSURLProtocol unregisterClass:[OMURLProtocol class]];
 
 }
 
@@ -472,12 +487,12 @@
 - (void)processNavgation:(NSString*)httpType httpData:(NSData*)bodyData
                        url:(NSURL*)url
 {
-    BOOL usernameFound = FALSE;
-    BOOL passwordFound = FALSE;
+    __block BOOL usernameFound = FALSE;
+    __block BOOL passwordFound = FALSE;
     NSArray *usernameTokens = [NSArray arrayWithObjects:@"username",
                                @"uname", @"email", @"uid", @"userid", nil];
     // add app provided tokens
-    NSSet *usernameParamName = self.configuration.requiredTokens;
+    NSSet *usernameParamName = self.configuration.fedAuthUsernameParamName;
     if ([usernameParamName count])
     {
         NSSet *moreUsernameTokens =
@@ -552,9 +567,40 @@
                 break;
         }
     }
+    else if (self.configuration.enableWKWebView &&
+             NSOrderedSame == [httpType caseInsensitiveCompare:@"POST"])
+    {
+        
+        for (NSString *token in usernameTokens)
+        {
+            NSString*js = [NSString
+                           stringWithFormat:@"document.getElementById('%@').value",
+                           token];
+            
+            [self.wkWebViewClient.clientWebView evaluateJavaScript:js
+                      completionHandler:^(id _Nullable result,
+                                          NSError * _Nullable error)
+             {
+                 if ([result isKindOfClass:[NSString class]] && [result length] > 0)
+                 {
+                     [self.authData setObject:result
+                                       forKey:OM_USERNAME];
+                     usernameFound = YES;
+                 }
+                 
+             }];
+            
+            if (usernameFound)
+            {
+                break;
+            }
+            
+        }
 
-    
+    }
 }
+    
+
 
 #pragma mark -
 #pragma mark Private methods -
@@ -622,6 +668,13 @@
     if (self.configuration.parseTokenRelayResponse)
     {
         [self parseTokenRelayResponse:&error];
+    }
+    
+    NSString *username = [self.authData objectForKey:OM_USERNAME];
+    
+    if (username)
+    {
+        self.context.userName = username;
     }
     
 }
@@ -706,11 +759,7 @@
         }
         
         NSString *authKey = [self.mss authKey];
-        
-        localContext.userName = [self.authData valueForKey:OM_USERNAME];
         [self.mss.cacheDict setValue:localContext forKey:authKey];
-        
-        
         localContext.authMode = OMRemote;
     }
 

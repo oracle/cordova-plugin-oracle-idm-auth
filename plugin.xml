@@ -6,8 +6,8 @@
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
         xmlns:android="http://schemas.android.com/apk/res/android"
         id="cordova-plugin-oracle-idm-auth"
-        version="1.0.4">
-  <name>Cordova Oracle IDM Authentication Plugin</name>
+        version="1.1.0">
+  <name>cordova-plugin-oracle-idm-auth</name>
   <description>Provides authentication and authorization functionality using the Oracle IDM SDK, supporting standard protocols like Basic Auth, OAUTH, OpenID Connect and WebSSO</description>
   <keywords>cordova,idm,authentication,auth</keywords>
   <js-module src="www/IdmAuthFlows.js" name="IdmAuthFlows">
@@ -19,7 +19,9 @@
     <framework src="org.slf4j:slf4j-api:1.7.25"/>
     <framework src="com.nimbusds:nimbus-jose-jwt:4.26@jar"/>
     <framework src="net.minidev:json-smart:2.3"/>
-    <framework src="src/android/IdmAuthFlows.gradle" custom="true" type="gradleReference" />
+    <framework src="com.squareup.okhttp3:okhttp:3.8.0"/>
+
+    <framework src="src/android/build.gradle" custom="true" type="gradleReference" />
     <config-file target="res/xml/config.xml" parent="/*">
       <feature name="IdmAuthFlows">
         <param name="android-package" value="oracle.idm.auth.plugin.IdmAuthenticationPlugin"/>
@@ -30,6 +32,7 @@
       <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
       <uses-permission android:name="android.permission.INTERNET"/>
       <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+      <uses-permission android:name="android.permission.USE_FINGERPRINT"/>
     </config-file>
     <config-file target="AndroidManifest.xml" parent="/manifest/application">
       <activity android:name="oracle.idm.auth.plugin.WebViewActivity"/>
@@ -40,15 +43,40 @@
     <source-file src="src/android/src/oracle/idm/auth/plugin/IdmAuthenticationFactory.java" target-dir="src/oracle/idm/auth/plugin"/>
     <source-file src="src/android/src/oracle/idm/auth/plugin/IdmAuthentication.java" target-dir="src/oracle/idm/auth/plugin"/>
     <source-file src="src/android/src/oracle/idm/auth/plugin/WebViewActivity.java" target-dir="src/oracle/idm/auth/plugin"/>
+    <source-file src="src/android/src/oracle/idm/auth/plugin/local/FingerprintAuthenticationDialogFragment.java" target-dir="src/oracle/idm/auth/plugin/local"/>
+    <source-file src="src/android/src/oracle/idm/auth/plugin/local/FingerprintUiHelper.java" target-dir="src/oracle/idm/auth/plugin/local"/>
+    <source-file src="src/android/src/oracle/idm/auth/plugin/local/FingerprintPromptLocalizedStrings.java" target-dir="src/oracle/idm/auth/plugin/local"/>
+    <source-file src="src/android/src/oracle/idm/auth/plugin/local/LocalAuthentication.java" target-dir="src/oracle/idm/auth/plugin/local"/>
+    <source-file src="src/android/src/oracle/idm/auth/plugin/util/ResourceHelper.java" target-dir="src/oracle/idm/auth/plugin/util"/>
+    <source-file src="src/android/src/oracle/idm/auth/plugin/util/PluginErrorCodes.java" target-dir="src/oracle/idm/auth/plugin/util"/>
     <resource-file src="src/android/res/layout/activity_web_view.xml" target="res/layout/activity_web_view.xml"/>
+    <resource-file src="src/android/res/layout/fingerprint_dialog_content.xml" target="res/layout/fingerprint_dialog_content.xml"/>
+    <resource-file src="src/android/res/layout/fingerprint_dialog_container.xml" target="res/layout/fingerprint_dialog_container.xml"/>
+    <resource-file src="src/android/res/values/colors.xml" target="res/values/colors.xml"/>
+    <resource-file src="src/android/res/values/cordova-plugin-oracle-idm-auth_strings.xml" target="res/values/cordova-plugin-oracle-idm-auth_strings.xml"/>
+    <resource-file src="src/android/res/drawable/ic_fingerprint_error.xml" target="res/drawable/ic_fingerprint_error.xml"/>
+    <resource-file src="src/android/res/drawable/ic_fingerprint_success.xml" target="res/drawable/ic_fingerprint_success.xml"/>
+    <resource-file src="src/android/res/drawable-xhdpi/ic_fp_40px.png" target="res/drawable-xhdpi/ic_fp_40px.png"/>
+    <resource-file src="src/android/res/drawable-xxhdpi/ic_fp_40px.png" target="res/drawable-xxhdpi/ic_fp_40px.png"/>
+    <resource-file src="src/android/res/drawable-hdpi/ic_fp_40px.png" target="res/drawable-hdpi/ic_fp_40px.png"/>
+    <resource-file src="src/android/res/drawable-mdpi/ic_fp_40px.png" target="res/drawable-mdpi/ic_fp_40px.png"/>
+    <resource-file src="src/android/res/drawable-xxxhdpi/ic_fp_40px.png" target="res/drawable-xxxhdpi/ic_fp_40px.png"/>
     <resource-file src="src/android/lib-proguard-rules.pro" target="lib-proguard-rules.pro"/>
 
     <!-- IDM SDK Sources -->
+    <source-file src="src/android/sdk/oracle/idm/mobile/BaseCheckedException.java" target-dir="src/oracle/idm/mobile/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/OMAuthenticationRequest.java" target-dir="src/oracle/idm/mobile/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/OMErrorCode.java" target-dir="src/oracle/idm/mobile/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/OMExceptionEvent.java" target-dir="src/oracle/idm/mobile/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/OMMobileSecurityException.java" target-dir="src/oracle/idm/mobile/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/OMMobileSecurityService.java" target-dir="src/oracle/idm/mobile/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/OMSecurityConstants.java" target-dir="src/oracle/idm/mobile/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/BuildConfig.java" target-dir="src/oracle/idm/mobile/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/ASMInputController.java" target-dir="src/oracle/idm/mobile/auth/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/AuthenticationService.java" target-dir="src/oracle/idm/mobile/auth/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/AuthenticationServiceManager.java" target-dir="src/oracle/idm/mobile/auth/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/AuthServiceInputCallback.java" target-dir="src/oracle/idm/mobile/auth/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/AuthStateTransition.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/AuthenticationService.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/AuthenticationServiceManager.java" target-dir="src/oracle/idm/mobile/auth/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/BasicAuthCompletionHandler.java" target-dir="src/oracle/idm/mobile/auth/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/BasicAuthenticationService.java" target-dir="src/oracle/idm/mobile/auth/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/CBAAuthenticationService.java" target-dir="src/oracle/idm/mobile/auth/"/>
@@ -59,6 +87,33 @@
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/IDCSClientRegistrationService.java" target-dir="src/oracle/idm/mobile/auth/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/IDCSClientRegistrationToken.java" target-dir="src/oracle/idm/mobile/auth/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/IdentityContext.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OAuthAuthenticationService.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OAuthAuthorizationCodeCompletionHandler.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OAuthAuthorizationCodeService.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OAuthClientCredentialService.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OAuthConnectionsUtil.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OAuthMSDYCRService.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OAuthMSPreAuthZCodeService.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OAuthMSPreAuthzCodeAuthCompletionHandler.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OAuthMSToken.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OAuthMSTwoLeggedDYCRService.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OAuthResourceOwnerCompletionHandler.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OAuthResourceOwnerService.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OAuthToken.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OMAuthenticationChallenge.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OMAuthenticationChallengeType.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OMAuthenticationCompletionHandler.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OMAuthenticationContext.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OMCookie.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OMToken.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OfflineAuthCompletionHandler.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OfflineAuthenticationService.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OneWaySSLCompletionHandler.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OpenIDConnect10AuthenticationService.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/RCUtility.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/RefreshTokenAuthenticationService.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/TimeoutManager.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/TwoWaySSLCompletionHandler.java" target-dir="src/oracle/idm/mobile/auth/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/local/AndroidKeyStoreKeyProvider.java" target-dir="src/oracle/idm/mobile/auth/local/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/local/DefaultKeyProvider.java" target-dir="src/oracle/idm/mobile/auth/local/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/local/KeyProvider.java" target-dir="src/oracle/idm/mobile/auth/local/"/>
@@ -74,35 +129,9 @@
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/logout/FedAuthLogoutCompletionHandler.java" target-dir="src/oracle/idm/mobile/auth/logout/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/logout/OAuthAuthorizationCodeLogoutHandler.java" target-dir="src/oracle/idm/mobile/auth/logout/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/logout/OMLogoutCompletionHandler.java" target-dir="src/oracle/idm/mobile/auth/logout/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OAuthAuthenticationService.java" target-dir="src/oracle/idm/mobile/auth/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OAuthAuthorizationCodeCompletionHandler.java" target-dir="src/oracle/idm/mobile/auth/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OAuthAuthorizationCodeService.java" target-dir="src/oracle/idm/mobile/auth/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OAuthClientCredentialService.java" target-dir="src/oracle/idm/mobile/auth/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OAuthConnectionsUtil.java" target-dir="src/oracle/idm/mobile/auth/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OAuthMSDYCRService.java" target-dir="src/oracle/idm/mobile/auth/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OAuthMSPreAuthzCodeAuthCompletionHandler.java" target-dir="src/oracle/idm/mobile/auth/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OAuthMSPreAuthZCodeService.java" target-dir="src/oracle/idm/mobile/auth/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OAuthMSToken.java" target-dir="src/oracle/idm/mobile/auth/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OAuthMSTwoLeggedDYCRService.java" target-dir="src/oracle/idm/mobile/auth/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OAuthResourceOwnerCompletionHandler.java" target-dir="src/oracle/idm/mobile/auth/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OAuthResourceOwnerService.java" target-dir="src/oracle/idm/mobile/auth/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OAuthToken.java" target-dir="src/oracle/idm/mobile/auth/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OfflineAuthCompletionHandler.java" target-dir="src/oracle/idm/mobile/auth/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OfflineAuthenticationService.java" target-dir="src/oracle/idm/mobile/auth/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OMAuthenticationChallenge.java" target-dir="src/oracle/idm/mobile/auth/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OMAuthenticationChallengeType.java" target-dir="src/oracle/idm/mobile/auth/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OMAuthenticationCompletionHandler.java" target-dir="src/oracle/idm/mobile/auth/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OMAuthenticationContext.java" target-dir="src/oracle/idm/mobile/auth/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OMCookie.java" target-dir="src/oracle/idm/mobile/auth/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OMToken.java" target-dir="src/oracle/idm/mobile/auth/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OneWaySSLCompletionHandler.java" target-dir="src/oracle/idm/mobile/auth/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/openID/OpenIDToken.java" target-dir="src/oracle/idm/mobile/auth/openID/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/openID/OpenIDTokenService.java" target-dir="src/oracle/idm/mobile/auth/openID/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/openID/OpenIDUserInfo.java" target-dir="src/oracle/idm/mobile/auth/openID/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/OpenIDConnect10AuthenticationService.java" target-dir="src/oracle/idm/mobile/auth/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/RCUtility.java" target-dir="src/oracle/idm/mobile/auth/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/TimeoutManager.java" target-dir="src/oracle/idm/mobile/auth/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/auth/TwoWaySSLCompletionHandler.java" target-dir="src/oracle/idm/mobile/auth/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/webview/BaseWebViewClient.java" target-dir="src/oracle/idm/mobile/auth/webview/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/webview/FederatedWebViewHandler.java" target-dir="src/oracle/idm/mobile/auth/webview/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/webview/LoginWebViewHandler.java" target-dir="src/oracle/idm/mobile/auth/webview/"/>
@@ -110,8 +139,6 @@
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/webview/OAuthWebViewConfigurationHandler.java" target-dir="src/oracle/idm/mobile/auth/webview/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/webview/WebViewAuthServiceInputCallbackImpl.java" target-dir="src/oracle/idm/mobile/auth/webview/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/webview/WebViewConfigurationHandler.java" target-dir="src/oracle/idm/mobile/auth/webview/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/BaseCheckedException.java" target-dir="src/oracle/idm/mobile/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/BuildConfig.java" target-dir="src/oracle/idm/mobile/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/callback/OMAuthenticationContextCallback.java" target-dir="src/oracle/idm/mobile/callback/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/callback/OMHTTPRequestCallback.java" target-dir="src/oracle/idm/mobile/callback/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/callback/OMMobileSecurityServiceCallback.java" target-dir="src/oracle/idm/mobile/callback/"/>
@@ -125,8 +152,8 @@
     <source-file src="src/android/sdk/oracle/idm/mobile/configuration/OMCBAMobileSecurityConfiguration.java" target-dir="src/oracle/idm/mobile/configuration/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/configuration/OMConnectivityMode.java" target-dir="src/oracle/idm/mobile/configuration/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/configuration/OMFederatedMobileSecurityConfiguration.java" target-dir="src/oracle/idm/mobile/configuration/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/configuration/OMMobileSecurityConfiguration.java" target-dir="src/oracle/idm/mobile/configuration/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/configuration/OMMSOAuthMobileSecurityConfiguration.java" target-dir="src/oracle/idm/mobile/configuration/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/configuration/OMMobileSecurityConfiguration.java" target-dir="src/oracle/idm/mobile/configuration/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/configuration/OMOAuthMobileSecurityConfiguration.java" target-dir="src/oracle/idm/mobile/configuration/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/configuration/OMOICMobileSecurityConfiguration.java" target-dir="src/oracle/idm/mobile/configuration/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/connection/CBAExceptionEvent.java" target-dir="src/oracle/idm/mobile/connection/"/>
@@ -158,17 +185,13 @@
     <source-file src="src/android/sdk/oracle/idm/mobile/crypto/OMSecureStorageService.java" target-dir="src/oracle/idm/mobile/crypto/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/crypto/SecureSerializationSupport.java" target-dir="src/oracle/idm/mobile/crypto/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/logging/OMLog.java" target-dir="src/oracle/idm/mobile/logging/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/logging/OMLogger.java" target-dir="src/oracle/idm/mobile/logging/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/logging/OMLogManager.java" target-dir="src/oracle/idm/mobile/logging/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/OMAuthenticationRequest.java" target-dir="src/oracle/idm/mobile/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/OMErrorCode.java" target-dir="src/oracle/idm/mobile/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/OMExceptionEvent.java" target-dir="src/oracle/idm/mobile/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/OMMobileSecurityException.java" target-dir="src/oracle/idm/mobile/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/OMMobileSecurityService.java" target-dir="src/oracle/idm/mobile/"/>
-    <source-file src="src/android/sdk/oracle/idm/mobile/OMSecurityConstants.java" target-dir="src/oracle/idm/mobile/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/logging/OMLogger.java" target-dir="src/oracle/idm/mobile/logging/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/util/CustomLinkedHashSet.java" target-dir="src/oracle/idm/mobile/util/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/util/DefaultAuthenticationUtils.java" target-dir="src/oracle/idm/mobile/util/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/util/DeviceUtil.java" target-dir="src/oracle/idm/mobile/util/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/util/GenericsUtils.java" target-dir="src/oracle/idm/mobile/util/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/util/LogUtils.java" target-dir="src/oracle/idm/mobile/util/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/util/OMVersion.java" target-dir="src/oracle/idm/mobile/util/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/util/StringUtils.java" target-dir="src/oracle/idm/mobile/util/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/util/URLUtils.java" target-dir="src/oracle/idm/mobile/util/"/>
@@ -176,29 +199,28 @@
 
   <!-- ios -->
   <platform name="ios">
+
     <config-file target="config.xml" parent="/*">
       <feature name="IdmAuthFlows">
         <param name="ios-package" value="IdmAuthenticationPlugin"/>
       </feature>
     </config-file>
-
-    <!-- Plugin sources -->
-    <header-file src="src/ios/src/AuthViewController.h"/>
-    <header-file src="src/ios/src/IdmAuthentication.h"/>
-    <header-file src="src/ios/src/IdmAuthenticationPlugin.h"/>
-    <source-file src="src/ios/src/AuthViewController.m"/>
-    <source-file src="src/ios/src/IdmAuthentication.m"/>
     <source-file src="src/ios/src/IdmAuthenticationPlugin.m"/>
+    <header-file src="src/ios/src/IdmAuthenticationPlugin.h"/>
+    <source-file src="src/ios/src/IdmAuthentication.m"/>
+    <header-file src="src/ios/src/IdmAuthentication.h"/>
+    <source-file src="src/ios/src/AuthViewController.m"/>
+    <header-file src="src/ios/src/LocalAuthenticator.h"/>
+    <source-file src="src/ios/src/LocalAuthenticator.m"/>
+    <header-file src="src/ios/src/AuthViewController.h"/>
     <resource-file src="src/ios/src/AuthWebView.storyboard"/>
 
-    <!-- IDM SDK files -->
+    <!-- IDM SDK Sources -->
     <header-file src="src/ios/sdk/IDMMobileSDKv2Library/IDMMobileSDKv2Library.h"/>
-    <source-file src="src/ios/sdk/IDMMobileSDKv2Library/IDMMobileSDKv2Library.m"/>
-
     <header-file src="src/ios/sdk/IDMMobileSDKv2/BaseClass/OMDefinitions.h"/>
     <header-file src="src/ios/sdk/IDMMobileSDKv2/BaseClass/OMErrorCodes.h"/>
-    <header-file src="src/ios/sdk/IDMMobileSDKv2/Common/NSData+OMBase32.h"/>
     <header-file src="src/ios/sdk/IDMMobileSDKv2/Common/NSData+OMBase64.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/Common/NSData+OMBase32.h"/>
     <header-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMASN1Node.h"/>
     <header-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMClientCertChallangeHandler.h"/>
     <header-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMCryptoService.h"/>
@@ -215,6 +237,7 @@
     <header-file src="src/ios/sdk/IDMMobileSDKv2/CredentialStoreService/OMCredential.h"/>
     <header-file src="src/ios/sdk/IDMMobileSDKv2/CredentialStoreService/OMCredentialStore.h"/>
     <header-file src="src/ios/sdk/IDMMobileSDKv2/CredentialStoreService/OMKeyChain.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/IDMMobileSDKv2.h"/>
     <header-file src="src/ios/sdk/IDMMobileSDKv2/JailBroken/OMJailBrokenDetector.h"/>
     <header-file src="src/ios/sdk/IDMMobileSDKv2/KeyManager/OMKeyManager.h"/>
     <header-file src="src/ios/sdk/IDMMobileSDKv2/KeyManager/OMKeyStore.h"/>
@@ -278,6 +301,7 @@
     <header-file src="src/ios/sdk/IDMMobileSDKv2/SecureStorage/OMSecureStorage.h"/>
     <header-file src="src/ios/sdk/IDMMobileSDKv2/SecureStorage/OMUtilities.h"/>
 
+    <source-file src="src/ios/sdk/IDMMobileSDKv2Library/IDMMobileSDKv2Library.m"/>
     <source-file src="src/ios/sdk/IDMMobileSDKv2/Common/NSData+OMBase32.m"/>
     <source-file src="src/ios/sdk/IDMMobileSDKv2/Common/NSData+OMBase64.m"/>
     <source-file src="src/ios/sdk/IDMMobileSDKv2/Common/OMASN1Node.m"/>
@@ -357,4 +381,5 @@
     <source-file src="src/ios/sdk/IDMMobileSDKv2/SecureStorage/OMSecureStorage.m"/>
     <source-file src="src/ios/sdk/IDMMobileSDKv2/SecureStorage/OMUtilities.m"/>
   </platform>
+
 </plugin>

@@ -4,6 +4,7 @@
  */
 #import "IdmAuthenticationPlugin.h"
 #import "IdmAuthentication.h"
+#import "LocalAuthenticator.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -16,7 +17,9 @@ NS_ASSUME_NONNULL_BEGIN
 #define NO_CHALLENGE_FIELDS @"P1006"
 #define AUTH_FLOW_KEY_EXPECTED @"P1007"
 #define NULL_OR_EMPTY_AUTH_FLOW_KEY @"P1008"
+#define NO_AUTH_CONTEXT_ERROR_CODE @"P1010"
 #define INVALID_AUTH_FLOW_KEY @"P1009"
+#define SETUP_ERROR @"10015" // Reuse existing code from IDM SDK
 
 #ifdef DEBUG
 #   define IdmLog(...) NSLog(__VA_ARGS__)
@@ -30,7 +33,7 @@ NSMutableDictionary<NSString *, IdmAuthentication *>  *AUTH_CACHE;
   dispatch_queue_t dispatchQueue;
 }
 
-@property (nonatomic, weak) IdmAuthentication* currentAuthFlow;
+@property (nonatomic, strong) IdmAuthentication* currentAuthFlow;
 @property (nonatomic, strong, nullable) void (^setupCompletionCallback)(IdmAuthentication*, NSError*);
 
 @end
@@ -112,6 +115,13 @@ NSMutableDictionary<NSString *, IdmAuthentication *>  *AUTH_CACHE;
       return;
     }
 
+    if (authFlow == nil) {
+      IdmLog(@"Setup error, null OMMSS instance returned.");
+      CDVPluginResult *result = [IdmAuthenticationPlugin errorCodeToPluginResult:SETUP_ERROR];
+      [delegate sendPluginResult:result callbackId:command.callbackId];
+      return;
+    }
+
     NSString *uuid = [NSUUID UUID].UUIDString;
     AUTH_CACHE[uuid] = authFlow;
 
@@ -119,9 +129,9 @@ NSMutableDictionary<NSString *, IdmAuthentication *>  *AUTH_CACHE;
     [delegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:@{@"AuthFlowKey" : uuid}] callbackId:command.callbackId];
   };
 
-  [[IdmAuthentication alloc] initWithProperties:dictionary
-                             baseViewController:self.viewController
-                                       callback:self.setupCompletionCallback];
+  self.currentAuthFlow = [[IdmAuthentication alloc] initWithProperties:dictionary
+                                                    baseViewController:self.viewController
+                                                              callback:self.setupCompletionCallback];
 }
 
 /**
@@ -133,9 +143,23 @@ NSMutableDictionary<NSString *, IdmAuthentication *>  *AUTH_CACHE;
 
   if (idmAuthentication) {
     [idmAuthentication startLogin:self.commandDelegate withCallbackId:command.callbackId];
-    IdmLog(@"Plugin startLogin finished.");
   }
+  IdmLog(@"Plugin startLogin finished.");
 }
+
+/**
+ * Handles cancellation of login on OMMSS instance.
+ */
+- (void) cancelLogin:(CDVInvokedUrlCommand *) command {
+  IdmLog(@"Plugin cancelLogin");
+  IdmAuthentication* idmAuthentication = [self validateArgsAndGetAuth:command];
+
+  if (idmAuthentication) {
+    [idmAuthentication cancelLogin:self.commandDelegate withCallbackId:command.callbackId];
+  }
+  IdmLog(@"Plugin cancelLogin finished.");
+}
+
 
 /**
  * Handles the login finish on OMMSS instance.
@@ -164,8 +188,10 @@ NSMutableDictionary<NSString *, IdmAuthentication *>  *AUTH_CACHE;
   IdmLog(@"Plugin logout");
   IdmAuthentication* idmAuthentication = [self validateArgsAndGetAuth:command];
   if (idmAuthentication) {
+    BOOL forget = [command.arguments[1] boolValue];
     [idmAuthentication logout:self.commandDelegate
-               withCallbackId:command.callbackId];
+               withCallbackId:command.callbackId
+               withForgetOption:forget];
     IdmLog(@"Plugin logout finished");
   }
 }
@@ -245,13 +271,37 @@ NSMutableDictionary<NSString *, IdmAuthentication *>  *AUTH_CACHE;
   }
 }
 
+// Local auth related methods
+- (void) enabledLocalAuthsPrimaryFirst:(CDVInvokedUrlCommand *) command {
+  [[LocalAuthenticator sharedInstance] enabledLocalAuthsPrimaryFirst:command delegate:self.commandDelegate];
+}
+
+- (void) enableLocalAuth:(CDVInvokedUrlCommand *) command {
+  [[LocalAuthenticator sharedInstance] enable:command delegate:self.commandDelegate];
+}
+- (void) disableLocalAuth:(CDVInvokedUrlCommand *) command {
+  [[LocalAuthenticator sharedInstance] disable:command delegate:self.commandDelegate];
+}
+- (void) authenticatePin:(CDVInvokedUrlCommand *) command {
+  [[LocalAuthenticator sharedInstance] authenticatePin:command
+                                              delegate:self.commandDelegate];
+}
+
+- (void) authenticateFingerPrint:(CDVInvokedUrlCommand *) command {
+  [[LocalAuthenticator sharedInstance] authenticateFingerPrint:command
+                                                      delegate:self.commandDelegate];
+}
+- (void) changePin:(CDVInvokedUrlCommand *) command {
+  [[LocalAuthenticator sharedInstance] changePin:command
+                                        delegate:self.commandDelegate];
+}
+
 /**
  * Validates the arguments passed from javascript layer.
  */
 - (IdmAuthentication*) validateArgsAndGetAuth:(CDVInvokedUrlCommand *) command {
   CDVPluginResult *result;
   NSString* errorMessage;
-  IdmLog(@"Plugin validateArgsAndGetAuth: %@", command.arguments);
 
   if (!command.arguments || !(command.arguments.count > 0) ) {
     errorMessage = AUTH_FLOW_KEY_EXPECTED;
@@ -267,7 +317,9 @@ NSMutableDictionary<NSString *, IdmAuthentication *>  *AUTH_CACHE;
       errorMessage = INVALID_AUTH_FLOW_KEY;
     } else {
       self.currentAuthFlow = AUTH_CACHE[authFlowKey];
-      return self.currentAuthFlow;
+      if (self.currentAuthFlow)
+        return self.currentAuthFlow;
+      errorMessage = NO_AUTH_CONTEXT_ERROR_CODE;
     }
   }
 

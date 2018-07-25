@@ -165,7 +165,8 @@ public class OMAuthenticationManager {
         }
 
         if (isEnabled(authenticatorName)) {
-            // TODO: show we throw here?
+            // Unregister can be done only if authenticator is disabled.
+            throw new OMAuthenticationManagerException(OMErrorCode.DISABLE_AUTHENTICATOR_INSTANCE);
         }
 
         AuthenticatorInstanceKey aik = new AuthenticatorInstanceKey(authenticatorName);
@@ -426,6 +427,7 @@ public class OMAuthenticationManager {
                     "Unknown authenticator " + aik);
         }
         ai.setEnabled(false);
+        authenticatorInstances.remove(aik);
         serializeAuthenticationManagerState(context, registeredAuthenticators);
     }
 

@@ -97,9 +97,9 @@
             [OMKeyChain setItem:salt forKey:[self saltKey] accessGroup:nil];
             
             
-            NSString *passPhare = [authData authDataStr];
+            NSString *passphrase = [authData authDataStr];
             
-            _kek = [OMCryptoService generatePBKDF2EncryptionKeywithPassphrase:passPhare
+            _kek = [OMCryptoService generatePBKDF2EncryptionKeywithPassphrase:passphrase
                                                 salt:salt
                                                 hashAlgorithm:OMAlgorithmSSHA256
                                                 iteration:PBKDF2_ITERATION_COUNT
@@ -131,8 +131,9 @@
             [OMKeyChain setItem:_kek forKey:[self kekKey] accessGroup:nil
             dataAccessibleLevel:kSecAttrAccessibleWhenUnlockedThisDeviceOnly];
             
-            self.secureStorage = [[OMSecureStorage alloc] initWithKeyStore:self.keyStore
-                                                                     keyId:nil error:error];
+            self.secureStorage = [[OMSecureStorage alloc]
+                                  initWithKeyStore:self.keyStore
+                                keyId:nil error:error];
             NSData *touchValidationData = [OMCryptoService  randomDataOfLength:
                                            PIN_VALIDATION_DATA_LENGTH];
             
@@ -144,6 +145,10 @@
             [[OMLocalAuthenticationManager sharedManager]
              addAuthKeyToList:[self touchValidationKey]];
             self.isAuthenticated = YES;
+            [self.secureStorage saveDataForId:[self pinLengthKey]
+                                data:[NSNumber numberWithInteger:[passphrase length]]
+                                error:error];
+
         }
         else
         {
@@ -221,17 +226,17 @@
     {
         self.kek = [OMKeyChain itemForKey:[self kekKey] accessGroup:nil];
         
-        OMKeyStore *keystore = [[OMKeyManager sharedManager] keyStore:self.instanceId
-                                                                  kek:self.kek error:nil];
+        OMKeyStore *keystore = [[OMKeyManager sharedManager]
+                                keyStore:self.instanceId
+                                kek:self.kek error:nil];
         if(!self.secureStorage)
         {
-            self.secureStorage = [[OMSecureStorage alloc] initWithKeyStore:keystore
-                                                                     keyId:nil error:error];
+            self.secureStorage = [[OMSecureStorage alloc]
+                                  initWithKeyStore:keystore
+                                  keyId:nil error:error];
         }
-
         
     }
-
 
     return self.isAuthenticated;
 }
@@ -266,11 +271,18 @@
             _kek = newKek;
             [OMKeyChain setItem:_kek forKey:[self kekKey] accessGroup:nil
             dataAccessibleLevel:kSecAttrAccessibleWhenUnlockedThisDeviceOnly];
-            
+            [self.secureStorage saveDataForId:[self pinLengthKey]
+                                data:[NSNumber numberWithInteger:[newPin length]]
+                                error:error];
             
         }
     }
-    
+    else
+    {
+        errorCode = OMERR_INPUT_TEXT_CANNOT_BE_EMPTY;
+        
+    }
+
     if (errorCode && error)
     {
         *error = [OMObject createErrorWithCode:errorCode];
@@ -282,6 +294,7 @@
 {
     if (self.isAuthenticated)
     {
+        [self.secureStorage deleteDataForId:[self pinLengthKey] error:error];
         [[OMKeyManager sharedManager] deleteKeyStore:self.instanceId
                                                  kek:self.kek error:error];
         [OMKeyChain deleteItemForKey:[self touchValidationKey] accessGroup:nil];
@@ -361,7 +374,21 @@
 
 - (OMKeyStore*)keyStore;
 {
-    return [[OMKeyManager sharedManager] keyStore:self.instanceId kek:self.kek error:nil];
+    return [[OMKeyManager sharedManager] keyStore:self.instanceId
+                                              kek:self.kek error:nil];
+}
+
+- (NSInteger)authDataLength
+{
+    NSError *error = nil;
+    
+    NSNumber *pinLength = [self.secureStorage dataForId:[self pinLengthKey]
+                                                  error:&error];
+    return   (pinLength != nil) ? [pinLength integerValue] : -1 ;
+}
+- (NSString*)pinLengthKey
+{
+    return [NSString stringWithFormat:@"%@%@",self.instanceId,OM_PIN_LENGTH_KEY];
 }
 
 @end

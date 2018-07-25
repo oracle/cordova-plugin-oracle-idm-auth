@@ -9,13 +9,11 @@
 #import "OMAuthenticationService.h"
 #import "OMDefinitions.h"
 #import "OMObject.h"
-#import <libkern/OSAtomic.h>
 #import "OMErrorCodes.h"
 
 @interface OMClientCertChallangeHandler()
 
 @property (nonatomic, weak) OMAuthenticationService *currentService;
-@property(nonatomic) volatile int32_t finished;
 @property (nonatomic, strong) NSArray *certInfoList;
 @property (nonatomic, strong) NSArray *clientIdentitiesList;
 
@@ -43,7 +41,9 @@
     self.currentService.challenge.challengeType = OMChallengeServerTrust;
     
     __block __weak OMAuthenticationService *weakself = self.currentService;
-    
+    __block dispatch_semaphore_t blockSemaphore = self.currentService.
+                                                    requestPauseSemaphore;
+
     self.currentService.challenge.authChallengeHandler = ^(NSDictionary *dict,
                                             OMChallengeResponse response)
     {
@@ -62,7 +62,7 @@
                                                     OMERR_USER_CANCELED_AUTHENTICATION]];
 
         }
-        OSAtomicCompareAndSwap32(0, 1, &_finished);
+        dispatch_semaphore_signal(blockSemaphore);
     };
     
     [self.currentService.delegate didFinishCurrentStep:self
@@ -79,7 +79,9 @@
     self.currentService.challenge.challengeType = OMChallengeClientCert;
     
     __block __weak OMAuthenticationService *weakself = self.currentService;
-    
+    __block dispatch_semaphore_t blockSemaphore = self.currentService.
+    requestPauseSemaphore;
+
     self.currentService.challenge.authChallengeHandler = ^(NSDictionary *dict,
                                                            OMChallengeResponse response)
     {
@@ -97,7 +99,8 @@
                                               error:[OMObject createErrorWithCode:
                                                      OMERR_USER_CANCELED_AUTHENTICATION]];
         }
-        OSAtomicCompareAndSwap32(0, 1, &_finished);
+        dispatch_semaphore_signal(blockSemaphore);
+
     };
     
     [self.currentService.delegate didFinishCurrentStep:self
@@ -113,6 +116,7 @@
 {
     self.currentService = reciver;
 
+    
     if (![OMCertService isClientIdentityInstalled])
     {
         [self.currentService  performSelector:@selector(sendFinishAuthentication:)
@@ -126,6 +130,12 @@
     }
     else
     {
+        if (nil == self.currentService.requestPauseSemaphore)
+        {
+            self.currentService.requestPauseSemaphore =
+            dispatch_semaphore_create(0);
+        }
+
         self.clientIdentitiesList = [OMCertService allClientIdentities];
         NSArray *clientCerts = [OMCertService getCertInfoForIdentities:
                                 self.clientIdentitiesList];
@@ -151,11 +161,7 @@
                    withObject:nil
                 waitUntilDone:false];
         
-        while (false == OSAtomicCompareAndSwap32(1, 0, &_finished))
-        {
-            [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode
-                                     beforeDate:[NSDate distantFuture]];
-        }
+        dispatch_semaphore_wait(self.currentService.requestPauseSemaphore, DISPATCH_TIME_FOREVER);
         
         id cert = [self.currentService.authData valueForKey:OM_SELECTED_CERT];
         
@@ -187,6 +193,12 @@
     self.currentService = reciver;
     OSStatus err;
     BOOL trusted = NO;
+    
+    if (nil == self.currentService.requestPauseSemaphore)
+    {
+      self.currentService.requestPauseSemaphore = dispatch_semaphore_create(0);
+    }
+    
     SecTrustRef trustRef = [[challenge protectionSpace]serverTrust];
     
     SecTrustResultType trustResult = [OMCertService evaluateTrustResultForChallenge:
@@ -217,11 +229,7 @@
                    withObject:nil
                 waitUntilDone:false];
         
-        while (false == OSAtomicCompareAndSwap32(1, 0, &_finished))
-        {
-            [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode
-                                     beforeDate:[NSDate distantFuture]];
-        }
+        dispatch_semaphore_wait(self.currentService.requestPauseSemaphore, DISPATCH_TIME_FOREVER);
         
         if ([[self.currentService.authData objectForKey:OM_TRUST_SERVER_CHALLANGE] boolValue])
         {

@@ -79,5 +79,9 @@ public class OMMobileSecurityException extends Exception {
     public OMErrorCode getError() {
         return mErrorCode;
     }
+
+    public String getAdditionalInfo() {
+        return additionalInfo;
+    }
 }
 

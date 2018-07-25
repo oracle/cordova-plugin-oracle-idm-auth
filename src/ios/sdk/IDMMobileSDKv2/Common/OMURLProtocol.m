@@ -7,7 +7,6 @@
 #import "OMURLProtocol.h"
 #import "OMCertService.h"
 #import "OMDefinitions.h"
-#import "libkern/OSAtomic.h"
 #import "OMCertInfo.h"
 #import "OMObject.h"
 #import "OMAuthenticationService.h"
@@ -87,11 +86,8 @@ static NSString *recursiveRequestFlagProperty = @"OMURLProtocolHandledKey";
             [request.URL.scheme isEqual:@"http"])
         {
             [self sendInsecureRedirectChallenge:nil];
-            while (false == OSAtomicCompareAndSwap32(1, 0, &_finished))
-            {
-                [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode
-                                         beforeDate:[NSDate distantFuture]];
-            }
+            dispatch_semaphore_wait(oms.requestPauseSemaphore,
+                                    DISPATCH_TIME_FOREVER);
         }
         NSMutableURLRequest *newReq = nil;
         newReq = [request mutableCopy];
@@ -183,12 +179,9 @@ didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
         [oms.authData setObject:[NSNull null] forKey:OM_SELECTED_CERT];
         
         [self sendClientCertChallenge:nil];
-
-        while (false == OSAtomicCompareAndSwap32(1, 0, &_finished))
-        {
-            [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode
-                                     beforeDate:[NSDate distantFuture]];
-        }
+        
+        dispatch_semaphore_wait(oms.requestPauseSemaphore,
+                                DISPATCH_TIME_FOREVER);
         
         id cert = [oms.authData valueForKey:OM_SELECTED_CERT];
 
@@ -233,11 +226,8 @@ didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
         
         [self sendChallenge:nil];
 
-        while (false == OSAtomicCompareAndSwap32(1, 0, &_finished))
-        {
-            [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode
-                                     beforeDate:[NSDate distantFuture]];
-        }
+        dispatch_semaphore_wait(oms.requestPauseSemaphore,
+                                DISPATCH_TIME_FOREVER);
         
         NSString * userName = [oms.authData valueForKey:OM_USERNAME];
         NSString * password = [oms.authData valueForKey:OM_PASSWORD];
@@ -271,7 +261,7 @@ didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
 
 -(void)challengeFinished
 {
-    OSAtomicCompareAndSwap32(0, 1, &_finished);
+    dispatch_semaphore_signal(oms.requestPauseSemaphore);
 }
 
 -(void)sendChallenge:(id)object
@@ -284,6 +274,7 @@ didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
     oms.challenge.challengeType = OMChallengeUsernamePassword;
     __block __weak OMAuthenticationService *weakOms = oms;
     __block __weak OMURLProtocol *weakProtocol = self;
+    __block dispatch_semaphore_t blockSemaphore = oms.requestPauseSemaphore;
 
     oms.challenge.authChallengeHandler = ^(NSDictionary *dict,
                                             OMChallengeResponse response)
@@ -338,7 +329,8 @@ didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
                                             OMERR_USER_CANCELED_AUTHENTICATION]];
         }
 
-        OSAtomicCompareAndSwap32(0, 1, &_finished);
+        dispatch_semaphore_signal(blockSemaphore);
+
     };
     
     [oms.delegate didFinishCurrentStep:oms
@@ -355,7 +347,8 @@ didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
     
     __block __weak OMAuthenticationService *weakOms = oms;
     __block __weak OMURLProtocol *weakProtocol = self;
-    
+    __block dispatch_semaphore_t blockSemaphore = oms.requestPauseSemaphore;
+
     oms.challenge.authChallengeHandler = ^(NSDictionary *dict,
                                                 OMChallengeResponse response)
     {
@@ -378,7 +371,8 @@ didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
                                              error:[OMObject createErrorWithCode:
                                                     OMERR_USER_CANCELED_AUTHENTICATION]];
         }
-        OSAtomicCompareAndSwap32(0, 1, &_finished);
+        dispatch_semaphore_signal(blockSemaphore);
+
     };
     
     [oms.delegate didFinishCurrentStep:self
@@ -395,7 +389,8 @@ didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
     
     __block __weak OMAuthenticationService *weakOms = oms;
     __block __weak OMURLProtocol *weakProtocol = self;
-    
+    __block dispatch_semaphore_t blockSemaphore = oms.requestPauseSemaphore;
+
     oms.challenge.authChallengeHandler = ^(NSDictionary *dict,
                                            OMChallengeResponse response)
     {
@@ -418,7 +413,7 @@ didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
                                              error:[OMObject createErrorWithCode:
                                                     OMERR_USER_CANCELED_AUTHENTICATION]];
         }
-        OSAtomicCompareAndSwap32(0, 1, &_finished);
+        dispatch_semaphore_signal(blockSemaphore);
     };
     
     [oms.delegate didFinishCurrentStep:self
@@ -452,11 +447,8 @@ didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
         
         [self sendServerTrustChallenge:nil];
         
-        while (false == OSAtomicCompareAndSwap32(1, 0, &_finished))
-        {
-            [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode
-                                     beforeDate:[NSDate distantFuture]];
-        }
+        dispatch_semaphore_wait(oms.requestPauseSemaphore,
+                                DISPATCH_TIME_FOREVER);
         
         if ([[oms.authData objectForKey:OM_TRUST_SERVER_CHALLANGE] boolValue])
         {
@@ -503,6 +495,17 @@ didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
 + (void)setOMAObject:(OMAuthenticationService *)obj;
 {
     oms = obj;
+    
+    if (nil == oms.requestPauseSemaphore)
+    {
+        oms.requestPauseSemaphore = dispatch_semaphore_create(0);
+    }
+
+}
+
++ (OMAuthenticationService *)currentOMAObject;
+{
+    return oms;
 }
 
 -(void)sendInsecureRedirectChallenge:(id)object
@@ -517,6 +520,8 @@ didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
                       forKey:OM_INVALID_REDIRECT];
     __block __weak OMAuthenticationService *weakOms = oms;
     __block __weak OMURLProtocol *weakProtocol = self;
+    __block dispatch_semaphore_t blockSemaphore = oms.requestPauseSemaphore;
+
     oms.challenge.authChallengeHandler = ^(NSDictionary *dict,
                                            OMChallengeResponse response)
     {
@@ -537,7 +542,7 @@ didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
                                              error:[OMObject createErrorWithCode:
                                                     OMERR_USER_CANCELED_AUTHENTICATION]];
         }
-        OSAtomicCompareAndSwap32(0, 1, &_finished);
+        dispatch_semaphore_signal(blockSemaphore);
     };
     [oms.delegate didFinishCurrentStep:self
                               nextStep:OM_NEXT_AUTH_STEP_CHALLENGE

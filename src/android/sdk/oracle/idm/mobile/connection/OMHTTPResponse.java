@@ -6,6 +6,7 @@
 
 package oracle.idm.mobile.connection;
 
+import java.net.HttpURLConnection;
 import java.util.List;
 import java.util.Map;
 
@@ -20,6 +21,7 @@ import oracle.idm.mobile.auth.OMCookie;
  */
 public class OMHTTPResponse {
     private int mResponseCode;
+    private String mResponseMessage;
     private String mResponseStringOnFailure;
     private String mResponseStringOnSuccess;
     private Map<String, List<String>> mResponseHeaders;
@@ -46,22 +48,40 @@ public class OMHTTPResponse {
         return this;
     }
 
+    OMHTTPResponse setResponseMessage(String responseMessage) {
+        mResponseMessage = responseMessage;
+        return this;
+    }
+
     OMHTTPResponse setResponseHeaders(Map<String, List<String>> headers) {
         mResponseHeaders = headers;
         return this;
     }
 
 
+    /**
+     * Returns the {@link HttpURLConnection#getInputStream()} in String format.
+     */
     public String getResponseStringOnSuccess() {
         return mResponseStringOnSuccess;
     }
 
+    /**
+     * Returns the {@link HttpURLConnection#getErrorStream()} in String format.
+     */
     public String getResponseStringOnFailure() {
         return mResponseStringOnFailure;
     }
 
     public int getResponseCode() {
         return mResponseCode;
+    }
+
+    /**
+     * Returns {@link HttpURLConnection#getResponseMessage()}.
+     */
+    public String getResponseMessage() {
+        return mResponseMessage;
     }
 
     public Map<String, List<String>> getResponseHeaders() {
@@ -76,11 +96,43 @@ public class OMHTTPResponse {
         mCookies = cookies;
     }
 
-    public Map <String,List<String>> getVisitedUrlsCookiesMap() {
+    public Map<String, List<String>> getVisitedUrlsCookiesMap() {
         return mVisitedUrlsCookiesMap;
     }
 
-    void setVisitedUrlsCookiesMap(Map <String,List<String>> visitedUrlsCookiesMap) {
+    void setVisitedUrlsCookiesMap(Map<String, List<String>> visitedUrlsCookiesMap) {
         mVisitedUrlsCookiesMap = visitedUrlsCookiesMap;
+    }
+
+    /**
+     * Creates error message which can be shown to user on failure during
+     * authentication, logout, etc.
+     * Format of error message:
+     * Error Code - Error Response message
+     */
+    public String constructErrorMessage() {
+        int statusCode = getResponseCode();
+        return Integer.toString(statusCode) + " - " + getResponseMessage();
+    }
+
+    /**
+     * Returns true if response code is in 200 series.
+     */
+    public boolean isSuccess() {
+        return mResponseCode / 100 == 2;
+    }
+
+    /**
+     * Returns true if response code is in 400 series.
+     */
+    public boolean isClientError() {
+        return mResponseCode / 100 == 4;
+    }
+
+    /**
+     * Returns true if response code is in 500 series.
+     */
+    public boolean isServerError() {
+        return mResponseCode / 100 == 5;
     }
 }

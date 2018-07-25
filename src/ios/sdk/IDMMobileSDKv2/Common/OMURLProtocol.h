@@ -9,10 +9,10 @@
 @class OMAuthenticationService;
 @interface OMURLProtocol : NSURLProtocol
 {
-    volatile int32_t _finished;
 
 }
 
 
 + (void)setOMAObject:(OMAuthenticationService *)obj;
++ (OMAuthenticationService *)currentOMAObject;
 @end

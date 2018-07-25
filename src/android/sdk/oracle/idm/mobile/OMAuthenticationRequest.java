@@ -34,6 +34,7 @@ public class OMAuthenticationRequest {
     private URL mOAuthAuthorizationEndpoint;
     private OMConnectivityMode mConnMode;
     private OMAuthenticationScheme mAuthScheme;
+    private boolean useRefreshToken;
 
     /**
      * For use with Basic auth
@@ -250,5 +251,13 @@ public class OMAuthenticationRequest {
 
     public boolean isForceAuthentication() {
         return mForceAuthentication;
+    }
+
+    public boolean isUseRefreshToken() {
+        return useRefreshToken;
+    }
+
+    public void setUseRefreshToken(boolean useRefreshToken) {
+        this.useRefreshToken = useRefreshToken;
     }
 }

@@ -111,12 +111,11 @@ public class OMSecureStorageService {
     /**
      * Deletes data for specific dataId in secure storage.
      * @param dataId
+     * @return Status of deletion of the data.
      */
-    public void delete(String dataId) {
+    public boolean delete(String dataId) {
         File file = filePathSupport.getFileForDataId(dataId);
-        if (file != null && file.exists()) {
-            file.delete();
-        }
+        return file != null && file.exists() && file.delete();
     }
 
 }

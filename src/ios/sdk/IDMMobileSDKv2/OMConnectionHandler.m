@@ -5,7 +5,6 @@
 
 
 #import "OMConnectionHandler.h"
-#import <libkern/OSAtomic.h>
 
 @implementation OMConnectionHandler
 
@@ -44,7 +43,6 @@
             [NSJSONSerialization JSONObjectWithData:data options:kNilOptions
                                               error:&errorJson];
             
-            NSLog(@"responseDict=%@",responseDict);
             if (completionHandler)
                 completionHandler(responseDict, response, error);
         }

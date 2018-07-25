@@ -9,7 +9,6 @@
 #import "OMHTTPBasicConfiguration.h"
 #import "OMAuthenticationContext.h"
 #import "OMObject.h"
-#import <libkern/OSAtomic.h>
 #import "OMMobileSecurityService.h"
 #import "OMAuthenticationManager.h"
 #import "OMAuthenticationChallenge.h"
@@ -23,8 +22,9 @@
 @implementation OMHTTPBasicAuthenticationService
 -(void)performAuthentication:(NSMutableDictionary *)authData
                        error:(NSError *__autoreleasing *)error
-{
-    _useOfflineAuthCred = 0;
+{    
+    self.requestPauseSemaphore = dispatch_semaphore_create(0);
+    self.usePreviousCredential = NO;
     self.configuration = (OMHTTPBasicConfiguration *)self.mss.configuration;
     self.callerThread = [NSThread currentThread];
     [self performSelectorInBackground:
@@ -87,11 +87,48 @@
         case OMConnectivityAuto:
             // Fall Through
         default:
-            if (![OMObject isHostReachable:self.configuration.loginURL.host])
+            if ((![OMObject checkConnectivityToHost:self.configuration.loginURL]))
                 offlineAuth = true;
     }
+    
+    if (!offlineAuth)
+    {
+        OMAuthenticationContext *localContext = [self.mss.cacheDict
+                                                 objectForKey:self.mss.authKey];
+        if(localContext)
+        {
+            NSURLResponse *response= nil;
+            NSError *error = nil;
+            
+            NSMutableURLRequest *urlRequest = [[NSMutableURLRequest alloc]
+                                        initWithURL:self.configuration.loginURL];
+            [urlRequest setCachePolicy:
+             NSURLRequestReloadIgnoringLocalAndRemoteCacheData];
+            [urlRequest setAllHTTPHeaderFields:[self requestHeaders]];
+            [urlRequest setHTTPMethod:@"GET"];
+            [urlRequest setTimeoutInterval:20];
+            
+            [OMHTTPBasicAuthenticationService
+                                        sendSynchronousRequest:urlRequest
+                                        returningResponse:&response
+                                        error:&error];
+            
+            /* If cookies are valid do offline auth */
+            if(([(NSHTTPURLResponse*)response statusCode] / 100) == 2)
+            {
+                offlineAuth = true;
+            }
+
+        }
+        
+    }
+
     if (offlineAuth)
     {
+        if (![self.mss.authManager isAuthRequestInProgress])
+        {
+            return NO;
+        }
         OMAuthenticationContext *localContext = [self.mss.cacheDict
                                                  objectForKey:self.mss.authKey];
         if (!localContext)
@@ -133,14 +170,17 @@
                              onThread:self.callerThread
                            withObject:nil
                         waitUntilDone:false];
-                while (false == OSAtomicCompareAndSwap32(1, 0, &_finished))
-                {
-                    [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode
-                                             beforeDate:[NSDate distantFuture]];
-                }
+                dispatch_semaphore_wait(self.requestPauseSemaphore,
+                                        DISPATCH_TIME_FOREVER);
+
             }
             
         }
+        if (![self.mss.authManager isAuthRequestInProgress])
+        {
+            return NO;
+        }
+
         self.userName = [self.authData valueForKey:OM_USERNAME];
         self.password = [self unMaskPassword:[self.authData
                                               valueForKey:OM_PASSWORD]];
@@ -157,8 +197,9 @@
         // for the user then continue with online
         if (!offlineCred)
         {
-            //set the value to 1 i.e. use offline creds for the next online attempt
-            OSAtomicCompareAndSwap32(0, 1, &_useOfflineAuthCred);
+            //clear session cookies before going online
+            self.usePreviousCredential = YES;
+            [localContext clearCookies:false];
             return false;
         }
         // if creds match then populate auth context
@@ -181,12 +222,12 @@
                  self.configuration.authenticationRetryCount])
         {
             self.maxRetryError = YES;
+            [self.context clearCookies:FALSE];
             [self resetMaxRetryCount];
             [[OMCredentialStore sharedCredentialStore]
              deleteCredential:key];
             [self.mss.cacheDict removeObjectForKey:self.mss.authKey];
-            //set the value to 1 i.e. use offline creds for the next online attempt
-            OSAtomicCompareAndSwap32(0, 1, &_useOfflineAuthCred);
+            self.usePreviousCredential = YES;
             return false;
         }
         else
@@ -199,22 +240,30 @@
 
 -(void)performOnlineAuthentication:(NSMutableDictionary *)authData
 {
+    if (![self.mss.authManager isAuthRequestInProgress])
+    {
+        return;
+    }
+
     NSURLSessionConfiguration *sessionConfig = [NSURLSessionConfiguration
                                                 defaultSessionConfiguration];
-    if (self.configuration.provideIdentityDomainToMobileAgent &&
-        self.configuration.identityDomain)
+    
+    if ([self requestHeaders])
     {
-        NSString *headerName = (self.configuration.identityDomainHeaderName != nil)?
-        self.configuration.identityDomainHeaderName:OM_DEFAULT_IDENTITY_DOMAIN_HEADER;
-        
-        [sessionConfig setHTTPAdditionalHeaders:@{headerName:self.configuration.identityDomain}];
+        [sessionConfig setHTTPAdditionalHeaders:[self requestHeaders]];
+
     }
-    self.session = [NSURLSession sessionWithConfiguration:sessionConfig
+    NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfig
                                                           delegate:self
                                                      delegateQueue:nil];
     [self.context.visitedHosts addObject:self.configuration.loginURL];
+
+    OMAuthenticationContext *localContext = [self.mss.cacheDict
+                                             objectForKey:self.mss.authKey];
+
+    [localContext stopTimers];
     
-    [[self.session dataTaskWithURL:self.configuration.loginURL
+   self.sessionDataTask = [session dataTaskWithURL:self.configuration.loginURL
             completionHandler:^(NSData * _Nullable data,
                                 NSURLResponse * _Nullable response,
                                 NSError * _Nullable error)
@@ -252,6 +301,22 @@
             authError = [OMObject createErrorWithCode:
                          OMERR_USER_AUTHENTICATION_FAILED];
         }
+        else if(([(NSHTTPURLResponse*)response statusCode] / 100) != 2)
+        {
+            if (self.configuration.collectIdentityDomain)
+            {
+                authError = [OMObject createErrorWithCode:
+                         OMERR_INVALID_USERNAME_PASSWORD_IDENTITY];
+            }
+            else
+            {
+                authError = [OMObject createErrorWithCode:
+                         OMERR_INVALID_USERNAME_PASSWORD];
+                
+            }
+
+        }
+        
         if (authError)
         {
             self.context = nil;
@@ -281,7 +346,7 @@
                 OMCredential *credential = [[OMCredential alloc]
                                             initWithUserName:self.userName
                                             password:protectedPassword
-                                            tenantName:nil
+                                            tenantName:self.identityDomain
                                             properties:nil];
                 [[OMCredentialStore sharedCredentialStore]
                  saveCredential:credential
@@ -293,7 +358,10 @@
                      onThread:self.callerThread
                    withObject:authError
                 waitUntilDone:false];
-    }] resume];
+    }];
+    [self.sessionDataTask resume];
+    [session finishTasksAndInvalidate];
+    
 }
 
 
@@ -306,6 +374,8 @@ completionHandler:(void (^)(NSURLRequest * _Nullable))completionHandler
         [request.URL.scheme isEqual:@"http"])
     {
         __block __weak OMHTTPBasicAuthenticationService *weakself = self;
+        __block dispatch_semaphore_t blockSemaphore = self.requestPauseSemaphore;
+
         self.challenge = [[OMAuthenticationChallenge alloc] init];
         NSMutableDictionary *challengeDict = [NSMutableDictionary
                                               dictionaryWithDictionary:self.authData];
@@ -323,7 +393,7 @@ completionHandler:(void (^)(NSURLRequest * _Nullable))completionHandler
             }
             else
             {
-                [weakself.session invalidateAndCancel];
+                [weakself.sessionDataTask cancel];
                 //Cancels an asynchronous load of a request. After this method is called,
                 //the connection makes no further delegate method calls.
                 //So release connection to complete stop
@@ -333,7 +403,7 @@ completionHandler:(void (^)(NSURLRequest * _Nullable))completionHandler
                                                  error:[OMObject createErrorWithCode:
                                                         OMERR_USER_CANCELED_AUTHENTICATION]];
             }
-            OSAtomicCompareAndSwap32(0, 1, &_finished);
+            dispatch_semaphore_signal(blockSemaphore);
 
         };
         [self.delegate didFinishCurrentStep:self
@@ -341,11 +411,8 @@ completionHandler:(void (^)(NSURLRequest * _Nullable))completionHandler
                                authResponse:nil
                                       error:nil];
 
-        while (false == OSAtomicCompareAndSwap32(1, 0, &_finished))
-        {
-            [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode
-                                     beforeDate:[NSDate distantFuture]];
-        }
+        dispatch_semaphore_wait(self.requestPauseSemaphore,
+                                DISPATCH_TIME_FOREVER);
     }
     [self.context.visitedHosts addObject:request.URL];
     completionHandler(request);
@@ -357,7 +424,6 @@ completionHandler:(void (^)(NSURLRequest * _Nullable))completionHandler
     {
         self.context = nil;
     }
-    
     [self.context setIsLogoutFalseCalled:NO];
     [self.context startTimers];
     [self.delegate didFinishCurrentStep:self
@@ -377,7 +443,8 @@ completionHandler:(void (^)(NSURLRequest * _Nullable))completionHandler
     self.challenge.authData = challengeDict;
     self.challenge.challengeType = OMChallengeUsernamePassword;
     __block __weak OMHTTPBasicAuthenticationService *weakSelf = self;
-    
+    __block dispatch_semaphore_t blockSemaphore = self.requestPauseSemaphore;
+
     self.challenge.authChallengeHandler = ^(NSDictionary *dict,
                                             OMChallengeResponse response)
     {
@@ -412,11 +479,12 @@ completionHandler:(void (^)(NSURLRequest * _Nullable))completionHandler
                     return;
                 }
                 else if(weakSelf.configuration.collectIdentityDomain &&
-                        tenant == [NSNull null])
+                        ![weakSelf.configuration isValidString:tenant])
                 {
                     NSError *error = [OMObject createErrorWithCode:
                                       OMERR_NO_IDENTITY];
-                    
+                    [weakSelf.authData setValue:[NSNull null] forKey:OM_IDENTITY_DOMAIN];
+
                     [weakSelf.authData setObject:error
                                           forKey:OM_MOBILESECURITY_EXCEPTION];
                     
@@ -443,17 +511,10 @@ completionHandler:(void (^)(NSURLRequest * _Nullable))completionHandler
         }
         else
         {
-            [weakSelf.session invalidateAndCancel];
-            NSError *error = [OMObject createErrorWithCode:
-                              OMERR_USER_CANCELED_AUTHENTICATION];
-            
-            [weakSelf performSelector:@selector(sendFinishAuthentication:)
-                             onThread:weakSelf.callerThread
-                           withObject:error
-                        waitUntilDone:YES];
-
+            [weakSelf cancelAuthentication];
         }
-        OSAtomicCompareAndSwap32(0, 1, &_finished);
+        dispatch_semaphore_signal(blockSemaphore);
+
     };
     
     [self.delegate didFinishCurrentStep:self
@@ -477,8 +538,18 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
             challenge.previousFailureCount <
             self.configuration.authenticationRetryCount)
         {
-            NSError *error = [OMObject createErrorWithCode:
-                              OMERR_INVALID_USERNAME_PASSWORD];
+            NSError *error = nil;
+            
+            if (self.configuration.collectIdentityDomain)
+            {
+                error = [OMObject createErrorWithCode:
+                         OMERR_INVALID_USERNAME_PASSWORD_IDENTITY];
+            }
+            else
+            {
+                error = [OMObject createErrorWithCode:
+                         OMERR_INVALID_USERNAME_PASSWORD];
+            }
             [self.authData setObject:error
                               forKey:OM_MOBILESECURITY_EXCEPTION];
             [self.authData setObject:[NSNumber numberWithInteger:
@@ -491,7 +562,7 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
         {
             self.maxRetryError = YES;
             [self resetMaxRetryCount];
-            [session invalidateAndCancel];
+            [task cancel];
             return;
         }
         if (![self shouldPerformAutoLogin:self.authData])
@@ -511,25 +582,22 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
             {
                 [self.authData setValue:[NSNull null] forKey:OM_IDENTITY_DOMAIN];
             }
-            /*
-             * useOfflineAuthCred is 0 : OSAtomicCompareAndSwap32 returns false
-             * and we should send challenge
-             * useOfflineAuthCred is 1 : OSAtomicCompareAndSwap32 returns true
-             * set the value to 0, we should just use the old credentials
-             */
-            if (!OSAtomicCompareAndSwap32(1, 0, &_useOfflineAuthCred))
+        
+            if (!self.usePreviousCredential)
             {
-                OSAtomicDecrement32(&_useOfflineAuthCred);
                 [self performSelector:@selector(sendChallenge:)
                              onThread:self.callerThread
                            withObject:nil
                         waitUntilDone:false];
-                while (false == OSAtomicCompareAndSwap32(1, 0, &_finished))
-                {
-                    [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode
-                                             beforeDate:[NSDate distantFuture]];
-                }
+                
+                dispatch_semaphore_wait(self.requestPauseSemaphore,
+                                        DISPATCH_TIME_FOREVER);
             }
+            else
+            {
+                self.usePreviousCredential = NO; //Used so reset it
+            }
+
         }
         else
         {
@@ -583,6 +651,81 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
     }
 
     
+}
+
++ (NSData *)sendSynchronousRequest:(NSURLRequest *)request
+                 returningResponse:(__autoreleasing NSURLResponse **)responsePtr
+                             error:(__autoreleasing NSError **)errorPtr {
+    dispatch_semaphore_t    sem;
+    __block NSData *        result;
+    
+    result = nil;
+    
+    sem = dispatch_semaphore_create(0);
+    
+    [[[NSURLSession sharedSession] dataTaskWithRequest:request
+                                     completionHandler:^(NSData *data,
+                                                         NSURLResponse *response,
+                                                         NSError *error)
+    {
+                     if (errorPtr != NULL)
+                     {
+                         *errorPtr = error;
+                     }
+
+                     if (responsePtr != NULL)
+                     {
+                         *responsePtr = response;
+                     }
+        
+                     if (error == nil)
+                     {
+                         result = data;  
+                     }  
+                    dispatch_semaphore_signal(sem);
+    }] resume];
+    
+    dispatch_semaphore_wait(sem, DISPATCH_TIME_FOREVER);  
+    
+    return result;  
+}
+
+- (NSDictionary *)requestHeaders
+{
+    NSMutableDictionary *headerDict = [NSMutableDictionary
+                                       dictionaryWithDictionary:
+                                       self.configuration.customHeaders];
+   
+    if (self.configuration.provideIdentityDomainToMobileAgent &&
+        self.configuration.identityDomain)
+    {
+        NSString *headerName = (self.configuration.identityDomainHeaderName)
+        ? self.configuration.identityDomainHeaderName :
+        OM_DEFAULT_IDENTITY_DOMAIN_HEADER;
+        [headerDict setObject:self.configuration.identityDomain forKey:headerName];
+    }
+    
+    return headerDict;
+}
+
+- (void)cancelAuthentication
+{
+    if (self.sessionDataTask && self.sessionDataTask.state == NSURLSessionTaskStateRunning)
+    {
+        [self.sessionDataTask cancel];
+    }
+    else
+    {
+        NSError *error = [OMObject
+                          createErrorWithCode:OMERR_USER_CANCELED_AUTHENTICATION];
+        
+        [self performSelector:@selector(sendFinishAuthentication:)
+                     onThread:self.callerThread
+                   withObject:error
+                waitUntilDone:YES];
+    }
+    dispatch_semaphore_signal(self.requestPauseSemaphore);
+
 }
 
 @end
