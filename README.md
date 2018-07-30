@@ -1,4 +1,4 @@
-# cordova-plugin-oracle-idm-auth 1.1.0
+# cordova-plugin-oracle-idm-auth 1.1.1
 
 ## About the cordova-plugin-oracle-idm-auth
 The plugin provides authentication and authorization functionality for cordova based mobile applications,
@@ -7,8 +7,9 @@ The plugin abstracts all aspects of authentication and authorization and enforce
 The plugin is designed to handle multiple authentication flows in parallel.
 
 ## Supported platforms
-- Android 5.0 or later with Android System WebView v39.0.0.0.0 minimum.
-- iOS 8.4 and above.
+* Android 5.0 or later with Android System WebView v39.0.0.0.0 minimum.
+  * Compatible with compile and target SDK versions of 27 and min SDK version of 21
+* iOS 8.4 and above.
 
 ### Installation
 Execute this command to install cordova-plugin-oracle-idm-auth into your cordova application.
@@ -115,15 +116,12 @@ var logoutBasicAuth = function() {
 ```
 
 ### Documentation
-- Details of JavaScript API can be found in the [JSDocs](https://oracle.github.io/cordova-plugin-oracle-idm-auth/ "JSDocs")..
-- Error codes are documented in the [error codes](md/error-codes.md).
-- Frequently asked questions are answered in the [FAQ](md/faq.md).
+* Details of JavaScript API can be found in the [JSDocs](https://oracle.github.io/cordova-plugin-oracle-idm-auth/ "JSDocs").
+* Error codes are documented in the [error codes](md/error-codes.md).
+* Frequently asked questions are answered in the [FAQ](md/faq.md).
 
 ### Known Issues
 1. OpenID does not support implicit flow.
-1. Empty username and password login behavior is not consistent on Android and iOS.
-1. Offline login on iOS with connectivity mode AUTO does not work the first time. Work around is to recreate the authentication flow instance and try again.
-1. Invoking proceed handler multiple times without initiating a challenge results in app crash. Work around is to ensure that the proceed handler is invoked only once per challenge.
 1. iOS simulator only issue - Crashes with ```Assertion failure in -[KeychainItemWrapper writeToKeychain]```. This is an apple issue discussed [here](https://stackoverflow.com/questions/39561041/keychainitemwrapper-crash-on-ios10) and [here](https://forums.developer.apple.com/thread/51071). Work around for this issue is to [enable keychain sharing from xcode](https://developer.apple.com/library/content/documentation/IDEs/Conceptual/AppDistributionGuide/AddingCapabilities/AddingCapabilities.html).
 
 ### [Contributing](CONTRIBUTING.md)
