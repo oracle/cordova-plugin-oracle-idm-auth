@@ -49,14 +49,35 @@ App should invoke <a href="LocalAuthenticationFlow.html#getManager">manager</a> 
 <a href="LocalAuthPropertiesBuilder.html#pinChallengeCallback">Pin challenge callback</a> will be invoked at this time.</p>
 <p>For a given <a href="LocalAuthenticationFlow.html">LocalAuthenticationFlow</a> there is always a primary authentication, the one that was enabled by the user last.
 So, if user enabled PIN, then that is the primary authentication.
-If user enabled Fingerprint, then that is the primary authentication, even though PIN is still active, it becomes secondary authentication.
+If user enabled Fingerprint, then that is the primary authentication. Even though PIN is still active, it becomes secondary authentication.
 Local authentication can be triggered by invoking <a href="LocalAuthenticationFlow.html#login">LocalAuthenticationFlow#login</a>. This will trigger the primary authentication.
 When PIN authentication is triggered, <a href="LocalAuthPropertiesBuilder.html#pinChallengeCallback">pin challenge callback</a> will be invoked.
 When Fingerprint authentication is triggered, then the device prompts the user to provide fingerprint.
 User will have an option to fallback on the secondary authentication, which is PIN, as per the device's policies.
-This is a standard mechanism provided by devices to help user to access the app even when he is unable to provide fingerprint.
+This is a standard mechanism provided by devices to help user to access the app even when user is unable to provide fingerprint.
 </p>
-<p>There is no concept of logging out in case of local auth. So <a href="LocalAuthenticationFlow.html#logout">LocalAuthenticationFlow#logout</a> is a noop.</p></div>
+<p>There is no concept of logging out in case of local auth. So <a href="LocalAuthenticationFlow.html#logout">LocalAuthenticationFlow#logout</a> is a noop.</p>
+<p>Often local authentication is used in conjunction with a remote authentication. The objective is to have
+user log in once and not to prompt user for credentials, until needed due to session expiry or server policy.
+In this usecase, user logs in for the first time with the credentials and configures / authorizes
+app to use biometric login. This has to be implemented by the app as a setting or on the login screen.
+Once biometric authentication is allowed / enabled by the user, app should seek biometric whenever user login is needed.
+App should perform remote login transparently in the background. This can be achieved by chaining local
+authentication with remote authentication.
+</p>
+<p> More specifically, to implement this use case, app has to trigger login on <a href="LocalAuthenticationFlow.html">LocalAuthenticationFlow</a>
+first and after that is successful, trigger login on <a href="RemoteAuthenticationFlow.html">RemoteAuthenticationFlow</a>. If the <a href="RemoteAuthenticationFlow.html">RemoteAuthenticationFlow</a>
+is able to do login transparently, without user credentials, we have the desired outcome.
+For this, <a href="RemoteAuthenticationFlow.html">RemoteAuthenticationFlow</a> should support
+<a href="HttpBasicAuthPropertiesBuilder.html#autoLoginAllowed">auto login</a> as <a href="HttpBasicAuthPropertiesBuilder.html">HttpBasicAuthPropertiesBuilder</a> does
+or support refresh tokens as <a href="OAuthPropertiesBuilder.html">OAuthPropertiesBuilder</a> or <a href="OpenIDConnectPropertiesBuilder.html">OpenIDConnectPropertiesBuilder</a> does.
+</p>
+<p> Another common use case with local authentication is to prompt user to provide biometric when app
+is relaunched or comes to foreground from background. This can be done by invoking <a href="LocalAuthenticationFlow.html#login">LocalAuthenticationFlow#login</a>
+in the resume listener / on startup as appropriate.
+<a href="LocalAuthenticationFlow.html#login">LocalAuthenticationFlow#login</a> can be invoked any time after <a href="LocalAuthenticationFlow.html">LocalAuthenticationFlow</a> is initialized
+and any number of times as needed. Each time user will be challenged.
+</p></div>
         
     
 </header>
@@ -226,7 +247,7 @@ This is a standard mechanism provided by devices to help user to access the app 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2103">line 2103</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2124">line 2124</a>
     </li></ul></dd>
     
 
@@ -335,7 +356,7 @@ This is a standard mechanism provided by devices to help user to access the app 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2186">line 2186</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2207">line 2207</a>
     </li></ul></dd>
     
 
@@ -464,7 +485,7 @@ User will have a way to fall back on to PIN based authentication as per device p
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2113">line 2113</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2134">line 2134</a>
     </li></ul></dd>
     
 
@@ -626,7 +647,7 @@ User will have a way to fall back on to PIN based authentication as per device p
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2175">line 2175</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2196">line 2196</a>
     </li></ul></dd>
     
 
@@ -688,13 +709,13 @@ User will have a way to fall back on to PIN based authentication as per device p
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="AuthenticationFlow.html">AuthenticationFlow</a></li><li><a href="FedAuthPropertiesBuilder.html">FedAuthPropertiesBuilder</a></li><li><a href="HttpBasicAuthenticationFlow.html">HttpBasicAuthenticationFlow</a></li><li><a href="HttpBasicAuthPropertiesBuilder.html">HttpBasicAuthPropertiesBuilder</a></li><li><a href="LocalAuthenticationFlow.html">LocalAuthenticationFlow</a></li><li><a href="LocalAuthenticationFlowManager.html">LocalAuthenticationFlowManager</a></li><li><a href="LocalAuthPropertiesBuilder.html">LocalAuthPropertiesBuilder</a></li><li><a href="OAuthPropertiesBuilder.html">OAuthPropertiesBuilder</a></li><li><a href="OpenIDConnectPropertiesBuilder.html">OpenIDConnectPropertiesBuilder</a></li><li><a href="PropertiesBuilder.html">PropertiesBuilder</a></li><li><a href="RemoteAuthenticationFlow.html">RemoteAuthenticationFlow</a></li><li><a href="RemoteAuthPropertiesBuilder.html">RemoteAuthPropertiesBuilder</a></li></ul><h3>Global</h3><ul><li><a href="global.html#AuthChallenge">AuthChallenge</a></li><li><a href="global.html#BrowserMode">BrowserMode</a></li><li><a href="global.html#ConnectivityModes">ConnectivityModes</a></li><li><a href="global.html#Error">Error</a></li><li><a href="global.html#ErrorSource">ErrorSource</a></li><li><a href="global.html#ErrorSources">ErrorSources</a></li><li><a href="global.html#init">init</a></li><li><a href="global.html#newFedAuthPropertiesBuilder">newFedAuthPropertiesBuilder</a></li><li><a href="global.html#newHttpBasicAuthPropertiesBuilder">newHttpBasicAuthPropertiesBuilder</a></li><li><a href="global.html#newOAuthPropertiesBuilder">newOAuthPropertiesBuilder</a></li><li><a href="global.html#newOpenIDConnectPropertiesBuilder">newOpenIDConnectPropertiesBuilder</a></li><li><a href="global.html#OAuthAuthorizationGrantTypes">OAuthAuthorizationGrantTypes</a></li><li><a href="global.html#TimeoutResponse">TimeoutResponse</a></li><li><a href="global.html#TimeoutType">TimeoutType</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="AuthenticationFlow.html">AuthenticationFlow</a></li><li><a href="FedAuthPropertiesBuilder.html">FedAuthPropertiesBuilder</a></li><li><a href="HttpBasicAuthenticationFlow.html">HttpBasicAuthenticationFlow</a></li><li><a href="HttpBasicAuthPropertiesBuilder.html">HttpBasicAuthPropertiesBuilder</a></li><li><a href="LocalAuthenticationFlow.html">LocalAuthenticationFlow</a></li><li><a href="LocalAuthenticationFlowManager.html">LocalAuthenticationFlowManager</a></li><li><a href="LocalAuthenticationHelper.html">LocalAuthenticationHelper</a></li><li><a href="LocalAuthPropertiesBuilder.html">LocalAuthPropertiesBuilder</a></li><li><a href="OAuthPropertiesBuilder.html">OAuthPropertiesBuilder</a></li><li><a href="OpenIDConnectPropertiesBuilder.html">OpenIDConnectPropertiesBuilder</a></li><li><a href="PropertiesBuilder.html">PropertiesBuilder</a></li><li><a href="RemoteAuthenticationFlow.html">RemoteAuthenticationFlow</a></li><li><a href="RemoteAuthPropertiesBuilder.html">RemoteAuthPropertiesBuilder</a></li></ul><h3>Global</h3><ul><li><a href="global.html#AuthChallenge">AuthChallenge</a></li><li><a href="global.html#BrowserMode">BrowserMode</a></li><li><a href="global.html#ConnectivityModes">ConnectivityModes</a></li><li><a href="global.html#Error">Error</a></li><li><a href="global.html#ErrorSource">ErrorSource</a></li><li><a href="global.html#ErrorSources">ErrorSources</a></li><li><a href="global.html#init">init</a></li><li><a href="global.html#newFedAuthPropertiesBuilder">newFedAuthPropertiesBuilder</a></li><li><a href="global.html#newHttpBasicAuthPropertiesBuilder">newHttpBasicAuthPropertiesBuilder</a></li><li><a href="global.html#newOAuthPropertiesBuilder">newOAuthPropertiesBuilder</a></li><li><a href="global.html#newOpenIDConnectPropertiesBuilder">newOpenIDConnectPropertiesBuilder</a></li><li><a href="global.html#OAuthAuthorizationGrantTypes">OAuthAuthorizationGrantTypes</a></li><li><a href="global.html#TimeoutResponse">TimeoutResponse</a></li><li><a href="global.html#TimeoutType">TimeoutType</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Fri Jun 15 2018 11:13:00 GMT+0530 (IST)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Tue Sep 18 2018 18:24:48 GMT+0530 (IST)
 </footer>
 
 <script> prettyPrint(); </script>

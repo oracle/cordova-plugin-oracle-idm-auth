@@ -30,12 +30,13 @@ NS_ASSUME_NONNULL_BEGIN
 - (void) addTimeoutCallback:(CDVInvokedUrlCommand *) command;
 
 // Local Auth related methods
-- (void) getLocalAuthDetails:(CDVInvokedUrlCommand *) command;
+- (void) enabledLocalAuthsPrimaryFirst:(CDVInvokedUrlCommand *) command;
 - (void) enableLocalAuth:(CDVInvokedUrlCommand *) command;
 - (void) disableLocalAuth:(CDVInvokedUrlCommand *) command;
 - (void) authenticatePin:(CDVInvokedUrlCommand *) command;
 - (void) authenticateFingerPrint:(CDVInvokedUrlCommand *) command;
 - (void) changePin:(CDVInvokedUrlCommand *) command;
+- (void) getLocalAuthSupportInfo:(CDVInvokedUrlCommand *) command;
 @end
 
 

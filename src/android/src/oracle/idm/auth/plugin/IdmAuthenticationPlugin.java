@@ -125,6 +125,11 @@ public class IdmAuthenticationPlugin extends CordovaPlugin
       _localAuth.changePin(args, callbackContext);
       return true;
     }
+    else if ("getLocalAuthSupportInfo".equals(action))
+    {
+      _localAuth.getLocalAuthSupportInfo(args, callbackContext);
+      return true;
+    }
 
     invokeCallbackError(callbackContext, "Invalid action: " + action);
     return false;

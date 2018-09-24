@@ -1,4 +1,4 @@
-# cordova-plugin-oracle-idm-auth 1.1.1
+# cordova-plugin-oracle-idm-auth 1.1.2
 
 ## About the cordova-plugin-oracle-idm-auth
 The plugin provides authentication and authorization functionality for cordova based mobile applications,
@@ -122,7 +122,14 @@ var logoutBasicAuth = function() {
 
 ### Known Issues
 1. OpenID does not support implicit flow.
-1. iOS simulator only issue - Crashes with ```Assertion failure in -[KeychainItemWrapper writeToKeychain]```. This is an apple issue discussed [here](https://stackoverflow.com/questions/39561041/keychainitemwrapper-crash-on-ios10) and [here](https://forums.developer.apple.com/thread/51071). Work around for this issue is to [enable keychain sharing from xcode](https://developer.apple.com/library/content/documentation/IDEs/Conceptual/AppDistributionGuide/AddingCapabilities/AddingCapabilities.html).
+1. iOS simulator only issue - Crashes with ```Assertion failure in -[KeychainItemWrapper writeToKeychain]```.
+This is an apple issue discussed [here](https://stackoverflow.com/questions/39561041/keychainitemwrapper-crash-on-ios10)
+and [here](https://forums.developer.apple.com/thread/51071). Work around for this issue is to [enable keychain sharing from xcode]
+(https://developer.apple.com/library/content/documentation/IDEs/Conceptual/AppDistributionGuide/AddingCapabilities/AddingCapabilities.html).
+1. Local authentication supports only PIN and Fingerprint. In case of iOS, this is called TouchID.
+For iOS devices that support FaceID, such as iPhoneX, plugin will not return fingerprint support in LocalAuthenticationFlowManager.getSupportedLocalAuthTypes.
+But if app tries to enable fingerprint, then FaceID will be enabled, since iOS does not distinguish between enabling FaceID and TouchID at API level.
+This kind of usage will be at the app's descretion and issues resulting from FaceID will not be addressed by the plugin.
 
 ### [Contributing](CONTRIBUTING.md)
 This is an open source project maintained by Oracle Corp. Pull Requests are currently not being accepted. See [CONTRIBUTING](CONTRIBUTING.md) for details.

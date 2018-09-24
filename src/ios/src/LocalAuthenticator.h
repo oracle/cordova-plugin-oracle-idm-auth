@@ -17,4 +17,5 @@
 -(void) authenticateFingerPrint:(CDVInvokedUrlCommand*)command delegate:(CDVCommandDelegateImpl*) commandDelegate;
 -(void) authenticatePin:(CDVInvokedUrlCommand*)command delegate:(CDVCommandDelegateImpl*) commandDelegate;
 -(void) changePin:(CDVInvokedUrlCommand*)command delegate:(CDVCommandDelegateImpl*) commandDelegate;
+-(void) getLocalAuthSupportInfo:(CDVInvokedUrlCommand*)command delegate:(CDVCommandDelegateImpl*) commandDelegate;
 @end

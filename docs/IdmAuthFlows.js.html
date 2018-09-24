@@ -2092,14 +2092,35 @@ var IdmAuthFlows = function() {
    * {@link LocalAuthPropertiesBuilder#pinChallengeCallback|Pin challenge callback} will be invoked at this time.&lt;/p>
    * &lt;p>For a given {@link LocalAuthenticationFlow} there is always a primary authentication, the one that was enabled by the user last.
    * So, if user enabled PIN, then that is the primary authentication.
-   * If user enabled Fingerprint, then that is the primary authentication, even though PIN is still active, it becomes secondary authentication.
+   * If user enabled Fingerprint, then that is the primary authentication. Even though PIN is still active, it becomes secondary authentication.
    * Local authentication can be triggered by invoking {@link LocalAuthenticationFlow#login}. This will trigger the primary authentication.
    * When PIN authentication is triggered, {@link LocalAuthPropertiesBuilder#pinChallengeCallback|pin challenge callback} will be invoked.
    * When Fingerprint authentication is triggered, then the device prompts the user to provide fingerprint.
    * User will have an option to fallback on the secondary authentication, which is PIN, as per the device's policies.
-   * This is a standard mechanism provided by devices to help user to access the app even when he is unable to provide fingerprint.
+   * This is a standard mechanism provided by devices to help user to access the app even when user is unable to provide fingerprint.
    * &lt;/p>
    * &lt;p>There is no concept of logging out in case of local auth. So {@link LocalAuthenticationFlow#logout} is a noop.&lt;/p>
+   * &lt;p>Often local authentication is used in conjunction with a remote authentication. The objective is to have
+   * user log in once and not to prompt user for credentials, until needed due to session expiry or server policy.
+   * In this usecase, user logs in for the first time with the credentials and configures / authorizes
+   * app to use biometric login. This has to be implemented by the app as a setting or on the login screen.
+   * Once biometric authentication is allowed / enabled by the user, app should seek biometric whenever user login is needed.
+   * App should perform remote login transparently in the background. This can be achieved by chaining local
+   * authentication with remote authentication.
+   * &lt;/p>
+   * &lt;p> More specifically, to implement this use case, app has to trigger login on {@link LocalAuthenticationFlow}
+   * first and after that is successful, trigger login on {@link RemoteAuthenticationFlow}. If the {@link RemoteAuthenticationFlow}
+   * is able to do login transparently, without user credentials, we have the desired outcome.
+   * For this, {@link RemoteAuthenticationFlow} should support
+   * {@link HttpBasicAuthPropertiesBuilder#autoLoginAllowed|auto login} as {@link HttpBasicAuthPropertiesBuilder} does
+   * or support refresh tokens as {@link OAuthPropertiesBuilder} or {@link OpenIDConnectPropertiesBuilder} does.
+   * &lt;/p>
+   * &lt;p> Another common use case with local authentication is to prompt user to provide biometric when app
+   * is relaunched or comes to foreground from background. This can be done by invoking {@link LocalAuthenticationFlow#login}
+   * in the resume listener / on startup as appropriate.
+   * {@link LocalAuthenticationFlow#login} can be invoked any time after {@link LocalAuthenticationFlow} is initialized
+   * and any number of times as needed. Each time user will be challenged.
+   * &lt;/p>
    * @hideconstructor
    * @extends AuthenticationFlow
    * @param {string} authFlowKey - Unique key for identifying an auth flow.
@@ -2414,6 +2435,61 @@ var IdmAuthFlows = function() {
     };
   };
 
+  /**
+   * @classdesc This class contains helper methods for local authentication related functionality.
+   * @class LocalAuthenticationHelper
+   * @hideconstructor
+   */
+  var LocalAuthenticationHelper =  {
+    /**
+     * Device level availability states for local authentication.
+     * @enum
+     * @readonly
+     * @memberof LocalAuthenticationHelper
+     */
+    Availability: {
+      /**
+       * Local auth type is supported and configured on device.
+       * This type of local auth is ready to be enabled.
+       * @type {string}
+       */
+      Enrolled: 'Enrolled',
+      /**
+       * Local auth type is supported but not configured on device.
+       * User should be prompted to enroll the auth type on device and try again.
+       * @type {string}
+       */
+      NotEnrolled: 'NotEnrolled',
+      /**
+       * Local auth type is supported but is locked out due to many failed attempts.
+       * User should be prompted to unlock the auth type and then try again.
+       * @type {string}
+       */
+      LockedOut: 'LockedOut',
+      /**
+       * Local auth type is not supported by the device.
+       * @type {string}
+       */
+      NotAvailable: 'NotAvailable'
+    },
+
+     /**
+     * The method returns capabilities supported by device.
+     * LocalAuthentications supported by the device can be obtained from this.
+     * @function getLocalAuthSupportInfo
+     * @memberof LocalAuthenticationHelper
+     * @return {Promise.&lt;Object.&lt;LocalAuthPropertiesBuilder.LocalAuthenticatorType, LocalAuthenticationHelper.Availability>>}
+     *   Local authentications supported by the device and their availability.
+     */
+    getLocalAuthSupportInfo: function() {
+      return new Promise(function(resolve, reject) {
+        exec(function(resp) {
+          resolve(resp);
+        }, reject, TAG, 'getLocalAuthSupportInfo');
+      });
+    }
+  };
+
   return {
     /**
      * Deprecated: Use {@link HttpBasicAuthPropertiesBuilder.ConnectivityMode}
@@ -2618,6 +2694,7 @@ var IdmAuthFlows = function() {
     OAuthPropertiesBuilder: OAuthPropertiesBuilder,
     OpenIDConnectPropertiesBuilder: OpenIDConnectPropertiesBuilder,
     LocalAuthPropertiesBuilder: LocalAuthPropertiesBuilder,
+    LocalAuthenticationHelper: LocalAuthenticationHelper,
     /**
      * Starting point for creating an {@link AuthenticationFlow} instance.
      * Example usage:
@@ -2798,13 +2875,13 @@ module.exports = IdmAuthFlows;
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="AuthenticationFlow.html">AuthenticationFlow</a></li><li><a href="FedAuthPropertiesBuilder.html">FedAuthPropertiesBuilder</a></li><li><a href="HttpBasicAuthenticationFlow.html">HttpBasicAuthenticationFlow</a></li><li><a href="HttpBasicAuthPropertiesBuilder.html">HttpBasicAuthPropertiesBuilder</a></li><li><a href="LocalAuthenticationFlow.html">LocalAuthenticationFlow</a></li><li><a href="LocalAuthenticationFlowManager.html">LocalAuthenticationFlowManager</a></li><li><a href="LocalAuthPropertiesBuilder.html">LocalAuthPropertiesBuilder</a></li><li><a href="OAuthPropertiesBuilder.html">OAuthPropertiesBuilder</a></li><li><a href="OpenIDConnectPropertiesBuilder.html">OpenIDConnectPropertiesBuilder</a></li><li><a href="PropertiesBuilder.html">PropertiesBuilder</a></li><li><a href="RemoteAuthenticationFlow.html">RemoteAuthenticationFlow</a></li><li><a href="RemoteAuthPropertiesBuilder.html">RemoteAuthPropertiesBuilder</a></li></ul><h3>Global</h3><ul><li><a href="global.html#AuthChallenge">AuthChallenge</a></li><li><a href="global.html#BrowserMode">BrowserMode</a></li><li><a href="global.html#ConnectivityModes">ConnectivityModes</a></li><li><a href="global.html#Error">Error</a></li><li><a href="global.html#ErrorSource">ErrorSource</a></li><li><a href="global.html#ErrorSources">ErrorSources</a></li><li><a href="global.html#init">init</a></li><li><a href="global.html#newFedAuthPropertiesBuilder">newFedAuthPropertiesBuilder</a></li><li><a href="global.html#newHttpBasicAuthPropertiesBuilder">newHttpBasicAuthPropertiesBuilder</a></li><li><a href="global.html#newOAuthPropertiesBuilder">newOAuthPropertiesBuilder</a></li><li><a href="global.html#newOpenIDConnectPropertiesBuilder">newOpenIDConnectPropertiesBuilder</a></li><li><a href="global.html#OAuthAuthorizationGrantTypes">OAuthAuthorizationGrantTypes</a></li><li><a href="global.html#TimeoutResponse">TimeoutResponse</a></li><li><a href="global.html#TimeoutType">TimeoutType</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="AuthenticationFlow.html">AuthenticationFlow</a></li><li><a href="FedAuthPropertiesBuilder.html">FedAuthPropertiesBuilder</a></li><li><a href="HttpBasicAuthenticationFlow.html">HttpBasicAuthenticationFlow</a></li><li><a href="HttpBasicAuthPropertiesBuilder.html">HttpBasicAuthPropertiesBuilder</a></li><li><a href="LocalAuthenticationFlow.html">LocalAuthenticationFlow</a></li><li><a href="LocalAuthenticationFlowManager.html">LocalAuthenticationFlowManager</a></li><li><a href="LocalAuthenticationHelper.html">LocalAuthenticationHelper</a></li><li><a href="LocalAuthPropertiesBuilder.html">LocalAuthPropertiesBuilder</a></li><li><a href="OAuthPropertiesBuilder.html">OAuthPropertiesBuilder</a></li><li><a href="OpenIDConnectPropertiesBuilder.html">OpenIDConnectPropertiesBuilder</a></li><li><a href="PropertiesBuilder.html">PropertiesBuilder</a></li><li><a href="RemoteAuthenticationFlow.html">RemoteAuthenticationFlow</a></li><li><a href="RemoteAuthPropertiesBuilder.html">RemoteAuthPropertiesBuilder</a></li></ul><h3>Global</h3><ul><li><a href="global.html#AuthChallenge">AuthChallenge</a></li><li><a href="global.html#BrowserMode">BrowserMode</a></li><li><a href="global.html#ConnectivityModes">ConnectivityModes</a></li><li><a href="global.html#Error">Error</a></li><li><a href="global.html#ErrorSource">ErrorSource</a></li><li><a href="global.html#ErrorSources">ErrorSources</a></li><li><a href="global.html#init">init</a></li><li><a href="global.html#newFedAuthPropertiesBuilder">newFedAuthPropertiesBuilder</a></li><li><a href="global.html#newHttpBasicAuthPropertiesBuilder">newHttpBasicAuthPropertiesBuilder</a></li><li><a href="global.html#newOAuthPropertiesBuilder">newOAuthPropertiesBuilder</a></li><li><a href="global.html#newOpenIDConnectPropertiesBuilder">newOpenIDConnectPropertiesBuilder</a></li><li><a href="global.html#OAuthAuthorizationGrantTypes">OAuthAuthorizationGrantTypes</a></li><li><a href="global.html#TimeoutResponse">TimeoutResponse</a></li><li><a href="global.html#TimeoutType">TimeoutType</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Fri Jun 15 2018 11:13:00 GMT+0530 (IST)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Tue Sep 18 2018 18:24:48 GMT+0530 (IST)
 </footer>
 
 <script> prettyPrint(); </script>

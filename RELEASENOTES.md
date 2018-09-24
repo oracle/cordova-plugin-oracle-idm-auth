@@ -1,5 +1,9 @@
 # Release Notes
 
+## 1.1.2 (24 Sep, 2018)
+* Bug fix on cancel behavior for iOS local authentication.
+* Added API to fetch device supported local authentication types.
+
 ## 1.1.1 (30 Jul, 2018)
 * Removed android SDK version dependencies so that apps can freely change the versions. Recommended versions are documented.
 

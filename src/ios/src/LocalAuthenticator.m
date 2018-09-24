@@ -5,13 +5,25 @@
 #import "LocalAuthenticator.h"
 #import "IdmAuthenticationPlugin.h"
 #import "IDMMobileSDKv2Library.h"
+@import LocalAuthentication;
 
 #define LOCAL_AUTH_FINGERPRINT @"cordova.plugins.IdmAuthFlows.Fingerprint"
 #define LOCAL_AUTH_PIN @"cordova.plugins.IdmAuthFlows.PIN"
+#define FALLBACK_RESULT @"fallback"
+#define PROMPT_MESSAGE @"promptMessage"
+#define PIN_FALLBACK_BUTTON_LABEL @"pinFallbackButtonLabel"
 
+// Local auth availability states
+#define ENROLLED @"Enrolled";
+#define NOT_ENROLLED @"NotEnrolled";
+#define LOCKED_OUT @"LockedOut";
+#define NOT_AVAILABLE @"NotAvailable";
+
+// Error codes
 #define LOCAL_AUTHENTICATOR_NOT_FOUND @"70001" // Reuse existing code from IDM SDK
 #define AUTHENTICATION_FAILED @"10408" // Reuse existing code from IDM SDK
 #define FINGERPRINT_CANCELLED @"10029" // Reuse existing code from IDM SDK
+#define AUTHENTICATION_CANCELLED @"10029" // Reuse existing code from IDM SDK
 #define PIN_AUTHENTICATOR_NOT_ENABLED @"P1016"
 #define DISABLE_PIN_FINGERPRINT_ENABLED @"P1017"
 #define ERROR_ENABLING_AUTHENTICATOR @"P1018"
@@ -50,7 +62,6 @@ static OMLocalAuthenticationManager *sharedManager = nil;
 
 -(void) enabledLocalAuthsPrimaryFirst:(CDVInvokedUrlCommand*)command delegate:(CDVCommandDelegateImpl*) commandDelegate {
   NSString* authId = command.arguments[0];
-  [self getEnabled:authId];
   CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
                                                messageAsArray:[self getEnabled:authId]];
   [commandDelegate sendPluginResult:result callbackId:command.callbackId];
@@ -179,10 +190,10 @@ static OMLocalAuthenticationManager *sharedManager = nil;
     self.authenticatedViaPin = NO;
     [touchIdAuthenticator setDelegate:self];
 
-    if (localizedStrings[@"promptMessage"])
-      touchIdAuthenticator.localizedTouchIdUsingReason = localizedStrings[@"promptMessage"];
-    if (localizedStrings[@"pinFallbackButtonLabel"])
-      touchIdAuthenticator.localizedFallbackTitle = localizedStrings[@"pinFallbackButtonLabel"];
+    if (localizedStrings[PROMPT_MESSAGE])
+      touchIdAuthenticator.localizedTouchIdUsingReason = localizedStrings[PROMPT_MESSAGE];
+    if (localizedStrings[PIN_FALLBACK_BUTTON_LABEL])
+      touchIdAuthenticator.localizedFallbackTitle = localizedStrings[PIN_FALLBACK_BUTTON_LABEL];
 
     isAuthenticated = [touchIdAuthenticator authenticate:nil error:&authError];
 
@@ -270,12 +281,55 @@ static OMLocalAuthenticationManager *sharedManager = nil;
   [commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK] callbackId:command.callbackId];
 }
 
+-(void) getLocalAuthSupportInfo:(CDVInvokedUrlCommand*)command
+                       delegate:(CDVCommandDelegateImpl*)commandDelegate {
+  NSMutableDictionary* auths = [[NSMutableDictionary alloc] init];
+  auths[LOCAL_AUTH_PIN] = ENROLLED;
+  auths[LOCAL_AUTH_FINGERPRINT] = [self getTouchIdSupportOnDevice];
+  CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
+                                          messageAsDictionary:auths];
+  [commandDelegate sendPluginResult:result callbackId:command.callbackId];
+}
+
+- (NSString*) getTouchIdSupportOnDevice {
+  if (SYSTEM_VERSION_LESS_THAN(@"8.0"))
+    return NOT_AVAILABLE;
+
+  LAContext *context = [[LAContext alloc] init];
+  NSError* error = nil;
+  BOOL canEval = [context canEvaluatePolicy: LAPolicyDeviceOwnerAuthenticationWithBiometrics error:&error];
+  BOOL isTouchId = (SYSTEM_VERSION_LESS_THAN(@"11.0") || context.biometryType == LABiometryTypeTouchID);
+
+  // If type is not touch, return not available.
+  if (!isTouchId)
+    return NOT_AVAILABLE;
+
+  if (canEval && isTouchId)
+    return ENROLLED;
+
+  // Deduce the reason why touchId is not evaluated using error returned.
+  switch (error.code) {
+    case LAErrorBiometryLockout:
+      return LOCKED_OUT;
+    case LAErrorBiometryNotEnrolled:
+      return NOT_ENROLLED;
+  }
+
+  // If the error code is none of the above, then device simply does not support touchID
+  return NOT_AVAILABLE;
+}
+
 // OMTouchIDFallbackDelgate touch ID fallback to PIN implementation
 - (void)didSelectFallbackAuthentication:(NSError *)fallBackReason
-                      completionHandler:(OMFallbackAuthenticationCompletionBlock)handler;
-{
+                      completionHandler:(OMFallbackAuthenticationCompletionBlock)handler {
   self.fallbackHandler = handler;
-  CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"fallback"];
+  CDVPluginResult* result;
+  if (fallBackReason.code == LAErrorUserCancel) {
+    result = [IdmAuthenticationPlugin errorCodeToPluginResult:AUTHENTICATION_CANCELLED];
+  } else {
+    result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:FALLBACK_RESULT];
+  }
+
   [self.touchAuthDelegate sendPluginResult:result callbackId:self.touchAuthCallbackId];
   self.touchAuthDelegate = nil;
   self.touchAuthCallbackId = nil;
@@ -283,8 +337,7 @@ static OMLocalAuthenticationManager *sharedManager = nil;
 
 // Utility methods
 
-- (void)registerAuthenticatorIfNeeded:(NSString*)authenticatorName error:(NSError**)error;
-{
+- (void)registerAuthenticatorIfNeeded:(NSString*)authenticatorName error:(NSError**)error {
   if ([sharedManager isAuthenticatorRegistered:authenticatorName])
     return;
 

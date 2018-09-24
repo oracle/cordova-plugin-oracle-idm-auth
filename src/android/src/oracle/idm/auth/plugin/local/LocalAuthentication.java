@@ -25,7 +25,9 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * This class handles device based local authentications such as PIN and Fingerprint based.
@@ -193,11 +195,34 @@ public class LocalAuthentication {
     try {
       OMAuthData data = new OMAuthData(pin);
       authenticator.authenticate(data);
+      _clearUnwantedFingerprintAuthenticator(id);
       _sendSuccess(callbackContext);
     } catch (OMAuthenticationManagerException e) {
       IdmAuthenticationPlugin.invokeCallbackError(callbackContext, e.getErrorCode());
     } catch (Exception e) {
       IdmAuthenticationPlugin.invokeCallbackError(callbackContext, PluginErrorCodes.AUTHENTICATION_FAILED);
+    }
+  }
+
+  /**
+   * This method tries to clean up the fingerprint authenticator, after user
+   * has remove his fingerprint enrollment on device.
+   * IDM SDK does not do this as of now. So taking care of this at plugin level.
+   * Once bug 28682444 is fixed, this can be removed.
+   * @param id
+   */
+  private void _clearUnwantedFingerprintAuthenticator(String id) {
+    if (!_clearFingerprintAfterAuthentication)
+      return;
+
+    LocalAuthType type = LocalAuthType.FINGERPRINT;
+    String instanceId = type.getInstanceId(id);
+    try {
+      _sharedManager.disableAuthentication(type.getName(), instanceId);
+      _clearFingerprintAfterAuthentication = false;
+    } catch (OMAuthenticationManagerException e) {
+      //  Nothing to do here, simply log.
+      Log.e(TAG, "Error while disabling fingerprint since device is not enrolled for it now.", e);
     }
   }
 
@@ -228,6 +253,30 @@ public class LocalAuthentication {
       _sendSuccess(callbackContext);
     } catch (BaseCheckedException e) {
       IdmAuthenticationPlugin.invokeCallbackError(callbackContext, e.getErrorCode());
+    }
+  }
+
+  public void getLocalAuthSupportInfo(JSONArray args, CallbackContext callbackContext) {
+    Map<String, String> auths = new HashMap<>();
+    auths.put(LocalAuthType.PIN.getName(), FingerprintAvailability.Enrolled.name());
+    auths.put(LocalAuthType.FINGERPRINT.getName(), getFingerprintSupportOnDevice().name());
+    PluginResult result = new PluginResult(PluginResult.Status.OK, new JSONObject(auths));
+    callbackContext.sendPluginResult(result);
+  }
+
+  private FingerprintAvailability getFingerprintSupportOnDevice() {
+    // Check if we're running on Android 6.0 (M) or higher
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
+      return FingerprintAvailability.NotAvailable;
+
+    FingerprintManager fingerprintManager = (FingerprintManager) this._context.getSystemService(Context.FINGERPRINT_SERVICE);
+    if (fingerprintManager.isHardwareDetected()) {
+      if (fingerprintManager.hasEnrolledFingerprints())
+        return FingerprintAvailability.Enrolled;
+      else
+        return FingerprintAvailability.NotEnrolled;
+    } else {
+      return FingerprintAvailability.NotAvailable;
     }
   }
 
@@ -285,10 +334,16 @@ public class LocalAuthentication {
   private List<String> _getEnabled(String id) {
     OMAuthenticator pinAuthenticator = _getAuthenticator(id, LocalAuthType.PIN);
     OMAuthenticator fingerprintAuthenticator = _getAuthenticator(id, LocalAuthType.FINGERPRINT);
+    FingerprintAvailability availability = getFingerprintSupportOnDevice();
 
     List<String> auths = new ArrayList<>();
-    if (fingerprintAuthenticator != null)
-      auths.add(LocalAuthType.FINGERPRINT.getName());
+    if (fingerprintAuthenticator != null) {
+      if (availability == FingerprintAvailability.Enrolled)
+        auths.add(LocalAuthType.FINGERPRINT.getName());
+      else
+        _clearFingerprintAfterAuthentication = true;
+    }
+
     if (pinAuthenticator != null)
       auths.add(LocalAuthType.PIN.getName());
 
@@ -399,9 +454,13 @@ public class LocalAuthentication {
     }
   }
 
+  // Availability states for local auth
+  private enum FingerprintAvailability { Enrolled, NotEnrolled, NotAvailable };
+
   private final Activity _mainActivity;
   private final Context _context;
   private final OMAuthenticationManager _sharedManager;
+  private boolean _clearFingerprintAfterAuthentication;
 
   // Localized strings for fingerprint prompt
   private static final String PROMPT_MESSAGE = "promptMessage";

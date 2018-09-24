@@ -275,7 +275,6 @@ NSMutableDictionary<NSString *, IdmAuthentication *>  *AUTH_CACHE;
 - (void) enabledLocalAuthsPrimaryFirst:(CDVInvokedUrlCommand *) command {
   [[LocalAuthenticator sharedInstance] enabledLocalAuthsPrimaryFirst:command delegate:self.commandDelegate];
 }
-
 - (void) enableLocalAuth:(CDVInvokedUrlCommand *) command {
   [[LocalAuthenticator sharedInstance] enable:command delegate:self.commandDelegate];
 }
@@ -286,7 +285,6 @@ NSMutableDictionary<NSString *, IdmAuthentication *>  *AUTH_CACHE;
   [[LocalAuthenticator sharedInstance] authenticatePin:command
                                               delegate:self.commandDelegate];
 }
-
 - (void) authenticateFingerPrint:(CDVInvokedUrlCommand *) command {
   [[LocalAuthenticator sharedInstance] authenticateFingerPrint:command
                                                       delegate:self.commandDelegate];
@@ -294,6 +292,10 @@ NSMutableDictionary<NSString *, IdmAuthentication *>  *AUTH_CACHE;
 - (void) changePin:(CDVInvokedUrlCommand *) command {
   [[LocalAuthenticator sharedInstance] changePin:command
                                         delegate:self.commandDelegate];
+}
+- (void) getLocalAuthSupportInfo:(CDVInvokedUrlCommand *) command {
+  [[LocalAuthenticator sharedInstance] getLocalAuthSupportInfo:command
+                                                      delegate:self.commandDelegate];
 }
 
 /**
