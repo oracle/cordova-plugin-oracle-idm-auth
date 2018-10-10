@@ -169,8 +169,6 @@ public class LocalAuthentication {
       FingerprintAuthenticationDialogFragment fragment = new FingerprintAuthenticationDialogFragment();
       fragment.setData(new FingerprintCallback(fingerprintAuthenticator, callbackContext), cryptoObject, strings);
       fragment.show(_mainActivity.getFragmentManager(), "fingerprintDialogFragment");
-    } catch (BaseCheckedException e) {
-      IdmAuthenticationPlugin.invokeCallbackError(callbackContext, e.getErrorCode());
     } catch (Exception e) {
       IdmAuthenticationPlugin.invokeCallbackError(callbackContext, PluginErrorCodes.AUTHENTICATION_FAILED);
     }
@@ -192,16 +190,8 @@ public class LocalAuthentication {
       return;
     }
 
-    try {
-      OMAuthData data = new OMAuthData(pin);
-      authenticator.authenticate(data);
-      _clearUnwantedFingerprintAuthenticator(id);
+    if (authenticatePin(authenticator, new OMAuthData(pin), id, callbackContext, PluginErrorCodes.AUTHENTICATION_FAILED))
       _sendSuccess(callbackContext);
-    } catch (OMAuthenticationManagerException e) {
-      IdmAuthenticationPlugin.invokeCallbackError(callbackContext, e.getErrorCode());
-    } catch (Exception e) {
-      IdmAuthenticationPlugin.invokeCallbackError(callbackContext, PluginErrorCodes.AUTHENTICATION_FAILED);
-    }
   }
 
   /**
@@ -243,8 +233,11 @@ public class LocalAuthentication {
       return;
     }
 
+    OMAuthData currAuthData = new OMAuthData(currPin);
+    if (!authenticatePin(authenticator, currAuthData, id, callbackContext, PluginErrorCodes.INCORRECT_CURRENT_AUTHDATA))
+      return;
+
     try {
-      OMAuthData currAuthData = new OMAuthData(currPin);
       OMAuthData newAuthData = new OMAuthData(newPin);
       authenticator.updateAuthData(currAuthData, newAuthData);
       OMAuthenticator fingerprintAuthenticator = _getAuthenticator(id, LocalAuthType.FINGERPRINT);
@@ -262,6 +255,28 @@ public class LocalAuthentication {
     auths.put(LocalAuthType.FINGERPRINT.getName(), getFingerprintSupportOnDevice().name());
     PluginResult result = new PluginResult(PluginResult.Status.OK, new JSONObject(auths));
     callbackContext.sendPluginResult(result);
+  }
+
+  /**
+   * Authenticates PIN and does failure callback in case of failure.
+   * @param authenticator
+   * @param pin
+   * @param authId
+   * @param callbackContext
+   * @param errorCode
+   * @return true, if authentication was successful. false, if it was not.
+   */
+  private boolean authenticatePin(OMAuthenticator authenticator, OMAuthData pin,
+                                  String authId, CallbackContext callbackContext,
+                                  String errorCode) {
+    try {
+      authenticator.authenticate(pin);
+      _clearUnwantedFingerprintAuthenticator(authId);
+      return true;
+    } catch (Exception e) {
+      IdmAuthenticationPlugin.invokeCallbackError(callbackContext, errorCode);
+      return false;
+    }
   }
 
   private FingerprintAvailability getFingerprintSupportOnDevice() {
@@ -406,7 +421,7 @@ public class LocalAuthentication {
         fingerprintAuthenticator.authenticate(new OMAuthData(cryptoObject));
         callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK));
       } catch (OMAuthenticationManagerException e) {
-        callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, e.getErrorCode()));
+        IdmAuthenticationPlugin.invokeCallbackError(callbackContext, e.getErrorCode());
       }
     }
 
@@ -417,7 +432,7 @@ public class LocalAuthentication {
 
     @Override
     public void onCancelled() {
-      callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, PluginErrorCodes.AUTHENTICATION_CANCELLED));
+      IdmAuthenticationPlugin.invokeCallbackError(callbackContext, PluginErrorCodes.AUTHENTICATION_CANCELLED);
     }
   }
 

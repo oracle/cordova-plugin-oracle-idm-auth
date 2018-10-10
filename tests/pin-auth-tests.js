@@ -438,6 +438,40 @@ exports.defineAutoTests = function() {
       });
     });
 
+    describe('enable, login with wrong PIN, login with correct PIN, disable', function() {
+      var loginErr;
+      beforeEach(function(done) {
+        resetTest();
+        currPin = undefined;
+        newPin = "1234";
+        pinAuthFlow.getManager().enable(localAuthTypes.PIN)
+          .then(function() {
+            currPin = "2222";
+            newPin = undefined;
+            return pinAuthFlow.login();
+          })
+          .catch(function(er) {
+            loginErr = er;
+            currPin = "1234";
+            newPin = undefined;
+            return pinAuthFlow.login();
+          })
+          .then(function() {
+            return pinAuthFlow.getManager().disable(localAuthTypes.PIN);
+          })
+          .then(done)
+          .catch(done);
+      });
+      it('throws correct error code.', function(done) {
+        window.TestUtil.verifyPluginError(loginErr, "10408");
+        expect(challengeReasons.length).toBe(3);
+        expect(challengeReasons[0]).toBe(pinChallengeReason.SetPin);
+        expect(challengeReasons[1]).toBe(pinChallengeReason.Login);
+        expect(challengeReasons[2]).toBe(pinChallengeReason.Login);
+        done();
+      });
+    });
+
     describe('change pin and cancel the challenge', function() {
       var changePinErr;
       beforeEach(function(done) {
@@ -464,6 +498,42 @@ exports.defineAutoTests = function() {
         expect(challengeReasons.length).toBe(2);
         expect(challengeReasons[0]).toBe(pinChallengeReason.SetPin);
         expect(challengeReasons[1]).toBe(pinChallengeReason.ChangePin);
+        done();
+      });
+    });
+
+    describe('enable, login with correct PIN, change passcode with wrong PIN, login with old PIN, disable', function() {
+      var pinChangeErr;
+      isCancelFlow = false;
+      beforeEach(function(done) {
+        resetTest();
+        currPin = undefined;
+        newPin = "1234";
+
+        pinAuthFlow.getManager().enable(localAuthTypes.PIN)
+          .then(function() {
+            currPin = "1234"; // Login with correct PIN.
+            newPin = undefined;
+            return pinAuthFlow.login();
+          })
+          .then(function() {
+            currPin = "1111"; // Wrong current PIN
+            newPin = "2345";
+            return pinAuthFlow.getManager().changePin();
+          })
+          .catch(function(err) {
+            pinChangeErr = err;
+            return pinAuthFlow.getManager().disable(localAuthTypes.PIN);
+          })
+          .then(done)
+          .catch(done);
+      });
+      it('throws correct error code.', function(done) {
+        window.TestUtil.verifyPluginError(pinChangeErr, "70009");
+        expect(challengeReasons.length).toBe(3);
+        expect(challengeReasons[0]).toBe(pinChallengeReason.SetPin);
+        expect(challengeReasons[1]).toBe(pinChallengeReason.Login);
+        expect(challengeReasons[2]).toBe(pinChallengeReason.ChangePin);
         done();
       });
     });

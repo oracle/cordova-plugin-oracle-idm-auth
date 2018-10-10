@@ -16,6 +16,7 @@ public interface PluginErrorCodes {
   String SETUP_ERROR = "10015"; // Reuse existing code from IDM SDK
   String AUTHENTICATION_FAILED = "10408"; // Reuse existing code from IDM SDK
   String AUTHENTICATION_CANCELLED = "10029"; // Reuse existing code from IDM SDK
+  String INCORRECT_CURRENT_AUTHDATA = "70009"; // Reuse code from iOS SDK
 
   // Local auth related
   String LOCAL_AUTHENTICATOR_NOT_FOUND = "70001";

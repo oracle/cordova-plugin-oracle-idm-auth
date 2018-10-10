@@ -1,5 +1,8 @@
 # Release Notes
 
+## 1.1.3 (27 Sep, 2018)
+* Bug fixes in android related to error codes returned and authentication before changing PIN.
+
 ## 1.1.2 (24 Sep, 2018)
 * Bug fix on cancel behavior for iOS local authentication.
 * Added API to fetch device supported local authentication types.

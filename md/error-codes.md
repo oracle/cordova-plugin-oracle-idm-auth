@@ -136,6 +136,7 @@ Error Code | Short description
 50405 | External browser mode is unsupported
 50406 | Parse token relay enabled, but no token was found.
 50407 | Error while parsing token relay response.
+70009 | Authentication error during PIN change.
 P1001 | Invalid redirect encountered while authenticating. Check the auth setup being used by the app.
 P1002 | Untrusted server error encountered while authenticating. Check the auth setup being used by the app.
 P1003 | Unsupported challenge encountered while authenticating.
