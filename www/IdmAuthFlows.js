@@ -2187,7 +2187,6 @@ var IdmAuthFlows = function() {
             }, reject, TAG, 'authenticateFingerPrint', [id, authProps[authPropertyKeys.Translations]]);
           }
         }).catch(function(err) {
-          console.log(err);
           reject(getError(errorCodes.GetEnabledAuthsError));
         });
       });
@@ -2212,9 +2211,11 @@ var IdmAuthFlows = function() {
      */
     this.isAuthenticated = function(options) {
       return new Promise(function(resolve, reject) {
-        self.manager.getEnabled().then(function(enabled){
+        manager.getEnabled().then(function(enabled){
           resolve(enabled[0] === lastAuthenticated);
-        }).catch(reject(getError(errorCodes.GetEnabledAuthsError)));
+        }).catch(function(err) {
+          reject(getError(errorCodes.GetEnabledAuthsError));
+        });
       });
     };
   };

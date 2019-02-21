@@ -1,5 +1,12 @@
 # Release Notes
 
+## 1.1.4 (21 Feb, 2019)
+* Bug fixes for local authentication.
+* Temporary fix for basic auth to fall back to successful login irrespective of status returned by server.
+This is because plugin did not check for 2xx status in 1.0.4 for basic auth. Someone relying on that will fail while upgrading.
+So this is a stop gap arrangement for those.
+Note that with next release, plugin will insist on 2xx status code from server for successful authentication for basic auth.
+
 ## 1.1.3 (27 Sep, 2018)
 * Bug fixes in android related to error codes returned and authentication before changing PIN.
 

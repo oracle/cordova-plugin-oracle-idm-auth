@@ -190,10 +190,12 @@ static OMLocalAuthenticationManager *sharedManager = nil;
     self.authenticatedViaPin = NO;
     [touchIdAuthenticator setDelegate:self];
 
-    if (localizedStrings[PROMPT_MESSAGE])
-      touchIdAuthenticator.localizedTouchIdUsingReason = localizedStrings[PROMPT_MESSAGE];
-    if (localizedStrings[PIN_FALLBACK_BUTTON_LABEL])
-      touchIdAuthenticator.localizedFallbackTitle = localizedStrings[PIN_FALLBACK_BUTTON_LABEL];
+    if (![localizedStrings isEqual:[NSNull null]]) {
+      if (localizedStrings[PROMPT_MESSAGE])
+        touchIdAuthenticator.localizedTouchIdUsingReason = localizedStrings[PROMPT_MESSAGE];
+      if (localizedStrings[PIN_FALLBACK_BUTTON_LABEL])
+        touchIdAuthenticator.localizedFallbackTitle = localizedStrings[PIN_FALLBACK_BUTTON_LABEL];
+    }
 
     isAuthenticated = [touchIdAuthenticator authenticate:nil error:&authError];
 

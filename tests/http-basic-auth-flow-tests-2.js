@@ -5,7 +5,7 @@
 /* jshint esversion: 6 */
 exports.defineAutoTests = function() {
   var idmAuthFlowPlugin = cordova.plugins.IdmAuthFlows;
-  var doneRef, challenges, loginErr, defaultJasmineTimeout, authFlow, userName, password, error;
+  var doneRef, challenges, loginErr, defaultJasmineTimeout, authFlow, userName, password, error, loginSuccess;
 
   var getBuilder = function() {
     return new idmAuthFlowPlugin.HttpBasicAuthPropertiesBuilder()
@@ -28,6 +28,7 @@ exports.defineAutoTests = function() {
 
   var resetTestCase = function() {
     challenges = [];
+    loginSuccess = false;
     userName = undefined;
     password = undefined;
   };
@@ -45,6 +46,9 @@ exports.defineAutoTests = function() {
 
   var login = function(done) {
     authFlow.login()
+      .then(function() {
+        loginSuccess = true;
+      })
       .catch(function(er){
         loginErr = er;
         done();
@@ -139,6 +143,7 @@ exports.defineAutoTests = function() {
       });
 
       it('throws error.', function(done) {
+        expect(loginSuccess).not.toBeTruthy();
         window.TestUtil.verifyPluginError(error, 'P1006');
         done();
       });
@@ -170,6 +175,7 @@ exports.defineAutoTests = function() {
       });
 
       it('ignores max retrys and keeps throwing invalid username error until login is cancelled.', function(done){
+        expect(loginSuccess).not.toBeTruthy();
         expect(challenges.length).toBe(4);
         // @ignore: Fails on iOS, Bug 28000459
         window.TestUtil.verifyPluginError(challenges[1].error, "10036");
@@ -187,6 +193,7 @@ exports.defineAutoTests = function() {
       });
 
       it('failed after max challenges', function(done){
+        expect(loginSuccess).not.toBeTruthy();
         expect(challenges.length).toBe(2);
         // @ignore: Fails on iOS, Bug 28000459
         window.TestUtil.verifyPluginError(challenges[1].error, "10003");

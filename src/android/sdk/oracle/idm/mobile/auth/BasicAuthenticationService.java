@@ -159,7 +159,12 @@ class BasicAuthenticationService extends AuthenticationService implements Challe
         authContext.setAuthenticationProvider(AuthenticationProvider.BASIC);
         boolean hasReqCookies = omCookieManager.hasRequiredCookies(requiredCookies, omCookieManager.getVisitedURLs());
         boolean successResponse = httpResponse.isSuccess();
-        if (successResponse && hasReqCookies) {
+        boolean clientError = httpResponse.isClientError();
+        /* This is a workaround fix for Bug 29275355. 4xx error
+         * except 401 is considered success as mentioned below.
+         * Control does not come here in case of 401 as exception is
+         * thrown by connectionHandler.httpGet above.*/
+        if ((successResponse || clientError)&& hasReqCookies) {
             authContext.setStatus(Status.SUCCESS);
             authContext.setVisitedUrls(omCookieManager.getVisitedURLs());
             authContext.setCookies(parseVisitedURLCookieMap(omCookieManager.getVisitedUrlsCookiesMap()));

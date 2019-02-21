@@ -139,7 +139,7 @@ public class LocalAuthentication {
 
     try {
       if (type == LocalAuthType.PIN)
-        OMMobileSecurityService.getDefaultAuthenticator(_context).copyKeysFrom(authenticator.getKeyStore());
+        authenticator.deleteAuthData();
 
       String instanceId = type.getInstanceId(id);
       _sharedManager.disableAuthentication(type.getName(), instanceId);
