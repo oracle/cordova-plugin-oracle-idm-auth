@@ -30,8 +30,8 @@
     
         <h2><span class="attribs"><span class="type-signature"></span></span>HttpBasicAuthPropertiesBuilder<span class="signature">(appName, loginUrl, logoutUrl)</span><span class="type-signature"></span></h2>
         
-            <div class="class-description">This class is the builder for HTTP Basic Authentication.
-Using this builder to <a href="global.html#init">init</a> an authentication flow will return <a href="HttpBasicAuthenticationFlow.html">HttpBasicAuthenticationFlow</a> in the init promise.
+            <div class="class-description"><p>This class is the builder for HTTP Basic Authentication.
+Using this builder to <a href="global.html#init">init</a> an authentication flow will return <a href="HttpBasicAuthenticationFlow.html">HttpBasicAuthenticationFlow</a> in the init promise.</p>
 <p>In this type of authentication, while logging in, user will be challenged to provide credentials and preferences.
 At this time <a href="HttpBasicAuthPropertiesBuilder.html#challengeCallback">challenge callback</a> provided by app will get invoked.
 App should collect these from the user and pass it back.
@@ -107,7 +107,7 @@ In addition, app can attach <a href="RemoteAuthPropertiesBuilder.html#~timeoutCa
 
             
 
-            <td class="description last">Application name</td>
+            <td class="description last"><p>Application name</p></td>
         </tr>
 
     
@@ -130,7 +130,7 @@ In addition, app can attach <a href="RemoteAuthPropertiesBuilder.html#~timeoutCa
 
             
 
-            <td class="description last">Basic auth login end point.</td>
+            <td class="description last"><p>Basic auth login end point.</p></td>
         </tr>
 
     
@@ -153,7 +153,7 @@ In addition, app can attach <a href="RemoteAuthPropertiesBuilder.html#~timeoutCa
 
             
 
-            <td class="description last">Basic auth logout end point.</td>
+            <td class="description last"><p>Basic auth logout end point.</p></td>
         </tr>
 
     
@@ -259,7 +259,7 @@ In addition, app can attach <a href="RemoteAuthPropertiesBuilder.html#~timeoutCa
 
 
 <div class="description">
-    Enum values for <a href="HttpBasicAuthPropertiesBuilder.html#connectivityMode">HttpBasicAuthPropertiesBuilder#connectivityMode</a>
+    <p>Enum values for <a href="HttpBasicAuthPropertiesBuilder.html#connectivityMode">HttpBasicAuthPropertiesBuilder#connectivityMode</a></p>
 </div>
 
 
@@ -310,7 +310,7 @@ In addition, app can attach <a href="RemoteAuthPropertiesBuilder.html#~timeoutCa
 
             
 
-            <td class="description last">Connectivity mode is online</td>
+            <td class="description last"><p>Connectivity mode is online</p></td>
         </tr>
 
     
@@ -333,7 +333,7 @@ In addition, app can attach <a href="RemoteAuthPropertiesBuilder.html#~timeoutCa
 
             
 
-            <td class="description last">Connectivity mode is offline</td>
+            <td class="description last"><p>Connectivity mode is offline</p></td>
         </tr>
 
     
@@ -356,7 +356,7 @@ In addition, app can attach <a href="RemoteAuthPropertiesBuilder.html#~timeoutCa
 
             
 
-            <td class="description last">Connectivity mode is auto</td>
+            <td class="description last"><p>Connectivity mode is auto</p></td>
         </tr>
 
     
@@ -479,7 +479,7 @@ In addition, app can attach <a href="RemoteAuthPropertiesBuilder.html#~timeoutCa
 
             
 
-            <td class="description last">Application name</td>
+            <td class="description last"><p>Application name</p></td>
         </tr>
 
     
@@ -585,11 +585,11 @@ In addition, app can attach <a href="RemoteAuthPropertiesBuilder.html#~timeoutCa
 
 
 <div class="description">
-    This method is for specifying if user is allowed to configure automatic login preference or not.
+    <p>This method is for specifying if user is allowed to configure automatic login preference or not.
 This allows app to control what the user can do in the login screen. If this is set to 'true'
 value set in <a href="HttpBasicAuthPropertiesBuilder.html#autoLoginDefault">HttpBasicAuthPropertiesBuilder#autoLoginDefault</a> will be returned in the
 <a href="RemoteAuthPropertiesBuilder.html#~AuthChallenge"> challenge</a> for auto login preference.
-This feature enables user to login without challenge, after first successful login, until session times out or user logs out.
+This feature enables user to login without challenge, after first successful login, until session times out or user logs out.</p>
 </div>
 
 
@@ -641,7 +641,7 @@ This feature enables user to login without challenge, after first successful log
 
             
 
-            <td class="description last">if user can be allowed to change the preference for auto login.</td>
+            <td class="description last"><p>if user can be allowed to change the preference for auto login.</p></td>
         </tr>
 
     
@@ -742,8 +742,8 @@ This feature enables user to login without challenge, after first successful log
 
 
 <div class="description">
-    This method sets the default value for automatic login preference.
-This preference is applicable only when {HttpBasicAuthPropertiesBuilder#autoLoginAllowed} is true
+    <p>This method sets the default value for automatic login preference.
+This preference is applicable only when {HttpBasicAuthPropertiesBuilder#autoLoginAllowed} is true</p>
 </div>
 
 
@@ -795,7 +795,7 @@ This preference is applicable only when {HttpBasicAuthPropertiesBuilder#autoLogi
 
             
 
-            <td class="description last">default value for auto login preference.</td>
+            <td class="description last"><p>default value for auto login preference.</p></td>
         </tr>
 
     
@@ -968,7 +968,7 @@ This preference is applicable only when {HttpBasicAuthPropertiesBuilder#autoLogi
 
         
 <div class="param-desc">
-    validate and return properties collected.
+    <p>validate and return properties collected.</p>
 </div>
 
 
@@ -1053,7 +1053,7 @@ This preference is applicable only when {HttpBasicAuthPropertiesBuilder#autoLogi
 
             
 
-            <td class="description last">Callback to handle credential challenge.</td>
+            <td class="description last"><p>Callback to handle credential challenge.</p></td>
         </tr>
 
     
@@ -1154,7 +1154,7 @@ This preference is applicable only when {HttpBasicAuthPropertiesBuilder#autoLogi
 
 
 <div class="description">
-    This is to specify if the user challenge should contain identity domain or not. Defaults to false.
+    <p>This is to specify if the user challenge should contain identity domain or not. Defaults to false.</p>
 </div>
 
 
@@ -1206,7 +1206,7 @@ This preference is applicable only when {HttpBasicAuthPropertiesBuilder#autoLogi
 
             
 
-            <td class="description last">true to collect identity domain when user is challenged.</td>
+            <td class="description last"><p>true to collect identity domain when user is challenged.</p></td>
         </tr>
 
     
@@ -1307,8 +1307,8 @@ This preference is applicable only when {HttpBasicAuthPropertiesBuilder#autoLogi
 
 
 <div class="description">
-    This has effect only when <a href="HttpBasicAuthPropertiesBuilder.html#offlineAuthAllowed">HttpBasicAuthPropertiesBuilder#offlineAuthAllowed</a> is set to 'true'.
-When set to 'false' will result in an Online login always.
+    <p>This has effect only when <a href="HttpBasicAuthPropertiesBuilder.html#offlineAuthAllowed">HttpBasicAuthPropertiesBuilder#offlineAuthAllowed</a> is set to 'true'.
+When set to 'false' will result in an Online login always.</p>
 </div>
 
 
@@ -1360,7 +1360,7 @@ When set to 'false' will result in an Online login always.
 
             
 
-            <td class="description last">connectivity mode to be used</td>
+            <td class="description last"><p>connectivity mode to be used</p></td>
         </tr>
 
     
@@ -1509,7 +1509,7 @@ When set to 'false' will result in an Online login always.
 
             
 
-            <td class="description last">any custom headers. These are returned along with other authentication headers in RemoteAuthenticationFlow#getHeaders()</td>
+            <td class="description last"><p>any custom headers. These are returned along with other authentication headers in RemoteAuthenticationFlow#getHeaders()</p></td>
         </tr>
 
     
@@ -1615,8 +1615,8 @@ When set to 'false' will result in an Online login always.
 
 
 <div class="description">
-    Works only when <a href="HttpBasicAuthPropertiesBuilder.html#passIdentityDomainNameInHeader">HttpBasicAuthPropertiesBuilder#passIdentityDomainNameInHeader</a> is set to true.
-Default value is X-USER-IDENTITY-DOMAIN-NAME.
+    <p>Works only when <a href="HttpBasicAuthPropertiesBuilder.html#passIdentityDomainNameInHeader">HttpBasicAuthPropertiesBuilder#passIdentityDomainNameInHeader</a> is set to true.
+Default value is X-USER-IDENTITY-DOMAIN-NAME.</p>
 </div>
 
 
@@ -1668,7 +1668,7 @@ Default value is X-USER-IDENTITY-DOMAIN-NAME.
 
             
 
-            <td class="description last">header name to be used.</td>
+            <td class="description last"><p>header name to be used.</p></td>
         </tr>
 
     
@@ -1817,9 +1817,9 @@ Default value is X-USER-IDENTITY-DOMAIN-NAME.
 
             
 
-            <td class="description last">seconds after which which idle timeout should kick in when user is idle.
+            <td class="description last"><p>seconds after which which idle timeout should kick in when user is idle.
 After these many seconds <a href="RemoteAuthPropertiesBuilder.html#~timeoutCallback">timeout callback</a> will be invoked.
-Note: 'Idle' is not tied to app usage yet. It is based on IDM isValid API invocation.</td>
+Note: 'Idle' is not tied to app usage yet. It is based on IDM isValid API invocation.</p></td>
         </tr>
 
     
@@ -1973,7 +1973,7 @@ Note: 'Idle' is not tied to app usage yet. It is based on IDM isValid API invoca
 
             
 
-            <td class="description last">Basic auth login end point.</td>
+            <td class="description last"><p>Basic auth login end point.</p></td>
         </tr>
 
     
@@ -2122,7 +2122,7 @@ Note: 'Idle' is not tied to app usage yet. It is based on IDM isValid API invoca
 
             
 
-            <td class="description last">specifiy timeout before which ongoing logout attempt will be aborted.</td>
+            <td class="description last"><p>specifiy timeout before which ongoing logout attempt will be aborted.</p></td>
         </tr>
 
     
@@ -2276,7 +2276,7 @@ Note: 'Idle' is not tied to app usage yet. It is based on IDM isValid API invoca
 
             
 
-            <td class="description last">Basic auth logout end point.</td>
+            <td class="description last"><p>Basic auth logout end point.</p></td>
         </tr>
 
     
@@ -2425,7 +2425,7 @@ Note: 'Idle' is not tied to app usage yet. It is based on IDM isValid API invoca
 
             
 
-            <td class="description last">maximum login attempts</td>
+            <td class="description last"><p>maximum login attempts</p></td>
         </tr>
 
     
@@ -2526,8 +2526,8 @@ Note: 'Idle' is not tied to app usage yet. It is based on IDM isValid API invoca
 
 
 <div class="description">
-    Defaults to true. In general, apps want to retrieve headers for secured resource access.
-Apps can set this to false if they do not want the functionality.
+    <p>Defaults to true. In general, apps want to retrieve headers for secured resource access.
+Apps can set this to false if they do not want the functionality.</p>
 <p>
 Setting this to true results in credentials being stored offline in secured storage.
 App will be authenticated against this, when <a href="HttpBasicAuthPropertiesBuilder.html#.ConnectivityMode">Offline</a> login applies.</p>
@@ -2595,7 +2595,7 @@ If cookies are valid, it will be an OFFLINE login, otherwise it will be ONLINE l
 
             
 
-            <td class="description last">if offline auth is allowed or not. Defaults to 'true'.</td>
+            <td class="description last"><p>if offline auth is allowed or not. Defaults to 'true'.</p></td>
         </tr>
 
     
@@ -2696,11 +2696,11 @@ If cookies are valid, it will be an OFFLINE login, otherwise it will be ONLINE l
 
 
 <div class="description">
-    This is to specify whether identity domain is sent as header value as
+    <p>This is to specify whether identity domain is sent as header value as
 per <a href="HttpBasicAuthPropertiesBuilder.html#identityDomainHeaderName">HttpBasicAuthPropertiesBuilder#identityDomainHeaderName</a>, when set to true,
 or should be prepended with the user name as identity_domain_name.user_name,
 when set to false.
-Default value is false.
+Default value is false.</p>
 </div>
 
 
@@ -2752,7 +2752,7 @@ Default value is false.
 
             
 
-            <td class="description last">true to pass identity domain in header</td>
+            <td class="description last"><p>true to pass identity domain in header</p></td>
         </tr>
 
     
@@ -2901,8 +2901,8 @@ Default value is false.
 
             
 
-            <td class="description last">percentage of idle timeout before which timeout callback should be invoked.
-This can be used to alerted user about the upcoming idle timeout in <a href="RemoteAuthPropertiesBuilder.html#~timeoutCallback">timeout callback</a></td>
+            <td class="description last"><p>percentage of idle timeout before which timeout callback should be invoked.
+This can be used to alerted user about the upcoming idle timeout in <a href="RemoteAuthPropertiesBuilder.html#~timeoutCallback">timeout callback</a></p></td>
         </tr>
 
     
@@ -3008,7 +3008,7 @@ This can be used to alerted user about the upcoming idle timeout in <a href="Rem
 
 
 <div class="description">
-    Convenience method to add key value pairs of auth settings to properties.
+    <p>Convenience method to add key value pairs of auth settings to properties.</p>
 </div>
 
 
@@ -3060,7 +3060,7 @@ This can be used to alerted user about the upcoming idle timeout in <a href="Rem
 
             
 
-            <td class="description last">Authentication property key</td>
+            <td class="description last"><p>Authentication property key</p></td>
         </tr>
 
     
@@ -3083,7 +3083,7 @@ This can be used to alerted user about the upcoming idle timeout in <a href="Rem
 
             
 
-            <td class="description last">Authentication property value</td>
+            <td class="description last"><p>Authentication property value</p></td>
         </tr>
 
     
@@ -3189,8 +3189,8 @@ This can be used to alerted user about the upcoming idle timeout in <a href="Rem
 
 
 <div class="description">
-    This method sets the default value for remember credentials preference.
-This preference is applicable only when {HttpBasicAuthPropertiesBuilder#rememberCredentialsAllowed} is true
+    <p>This method sets the default value for remember credentials preference.
+This preference is applicable only when {HttpBasicAuthPropertiesBuilder#rememberCredentialsAllowed} is true</p>
 </div>
 
 
@@ -3242,7 +3242,7 @@ This preference is applicable only when {HttpBasicAuthPropertiesBuilder#remember
 
             
 
-            <td class="description last">default value for remember credential preference.</td>
+            <td class="description last"><p>default value for remember credential preference.</p></td>
         </tr>
 
     
@@ -3343,10 +3343,10 @@ This preference is applicable only when {HttpBasicAuthPropertiesBuilder#remember
 
 
 <div class="description">
-    This method is for specifying if user is allowed to configure remember credentials preference or not.
+    <p>This method is for specifying if user is allowed to configure remember credentials preference or not.
 This allows app to control what the user can do in the login screen. If this is set to 'true'
 value set in <a href="HttpBasicAuthPropertiesBuilder.html#rememberCredentialDefault">HttpBasicAuthPropertiesBuilder#rememberCredentialDefault</a> will be returned in the
-<a href="RemoteAuthPropertiesBuilder.html#~AuthChallenge"> challenge</a> for remember password preference.
+<a href="RemoteAuthPropertiesBuilder.html#~AuthChallenge"> challenge</a> for remember password preference.</p>
 </div>
 
 
@@ -3398,7 +3398,7 @@ value set in <a href="HttpBasicAuthPropertiesBuilder.html#rememberCredentialDefa
 
             
 
-            <td class="description last">if user can be allowed to change the preference for remembering credential.</td>
+            <td class="description last"><p>if user can be allowed to change the preference for remembering credential.</p></td>
         </tr>
 
     
@@ -3499,10 +3499,10 @@ value set in <a href="HttpBasicAuthPropertiesBuilder.html#rememberCredentialDefa
 
 
 <div class="description">
-    This method is for specifying if user is allowed to configure remember user preference or not.
+    <p>This method is for specifying if user is allowed to configure remember user preference or not.
 This allows app to control what the user can do in the login screen. If this is set to 'true'
 value set in <a href="HttpBasicAuthPropertiesBuilder.html#rememberUsernameDefault">HttpBasicAuthPropertiesBuilder#rememberUsernameDefault</a> will be returned in the
-<a href="RemoteAuthPropertiesBuilder.html#~AuthChallenge"> challenge</a> for remember user preference.
+<a href="RemoteAuthPropertiesBuilder.html#~AuthChallenge"> challenge</a> for remember user preference.</p>
 </div>
 
 
@@ -3554,7 +3554,7 @@ value set in <a href="HttpBasicAuthPropertiesBuilder.html#rememberUsernameDefaul
 
             
 
-            <td class="description last">if user can be allowed to change the preference for remembering user name .</td>
+            <td class="description last"><p>if user can be allowed to change the preference for remembering user name .</p></td>
         </tr>
 
     
@@ -3655,8 +3655,8 @@ value set in <a href="HttpBasicAuthPropertiesBuilder.html#rememberUsernameDefaul
 
 
 <div class="description">
-    This method sets the default value for remember user preference.
-This preference is applicable only when {HttpBasicAuthPropertiesBuilder#rememberUsernameAllowed} is true
+    <p>This method sets the default value for remember user preference.
+This preference is applicable only when {HttpBasicAuthPropertiesBuilder#rememberUsernameAllowed} is true</p>
 </div>
 
 
@@ -3708,7 +3708,7 @@ This preference is applicable only when {HttpBasicAuthPropertiesBuilder#remember
 
             
 
-            <td class="description last">default value for remember username preference.</td>
+            <td class="description last"><p>default value for remember username preference.</p></td>
         </tr>
 
     
@@ -3857,8 +3857,8 @@ This preference is applicable only when {HttpBasicAuthPropertiesBuilder#remember
 
             
 
-            <td class="description last">seconds after which which session timeout should kick in.
-After these many seconds <a href="RemoteAuthPropertiesBuilder.html#~timeoutCallback">timeout callback</a> will be invoked.</td>
+            <td class="description last"><p>seconds after which which session timeout should kick in.
+After these many seconds <a href="RemoteAuthPropertiesBuilder.html#~timeoutCallback">timeout callback</a> will be invoked.</p></td>
         </tr>
 
     
@@ -4012,7 +4012,7 @@ After these many seconds <a href="RemoteAuthPropertiesBuilder.html#~timeoutCallb
 
             
 
-            <td class="description last">Callback to handle timeout notifications.</td>
+            <td class="description last"><p>Callback to handle timeout notifications.</p></td>
         </tr>
 
     
@@ -4121,7 +4121,7 @@ After these many seconds <a href="RemoteAuthPropertiesBuilder.html#~timeoutCallb
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Tue Sep 18 2018 18:24:48 GMT+0530 (IST)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Tue Mar 05 2019 11:03:42 GMT+0530 (India Standard Time)
 </footer>
 
 <script> prettyPrint(); </script>

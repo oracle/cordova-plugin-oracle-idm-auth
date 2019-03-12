@@ -30,12 +30,12 @@
     
         <h2><span class="attribs"><span class="type-signature"></span></span>FedAuthPropertiesBuilder<span class="signature">(appName, loginUrl, logoutUrl, loginSuccessUrl, loginFailureUrl)</span><span class="type-signature"></span></h2>
         
-            <div class="class-description">This is the builder for federated authentication / web SSO.
-Using this builder to <a href="global.html#init">init</a> an authentication flow will return <a href="RemoteAuthenticationFlow.html">RemoteAuthenticationFlow</a> in the init promise.
+            <div class="class-description"><p>This is the builder for federated authentication / web SSO.
+Using this builder to <a href="global.html#init">init</a> an authentication flow will return <a href="RemoteAuthenticationFlow.html">RemoteAuthenticationFlow</a> in the init promise.</p>
 <p>In this type of authentication, while logging in, the plugin brings up a WebView and loads the <a href="FedAuthPropertiesBuilder.html#loginUrl">login page</a> provided in the configuration.
 User has credentials on this page. When login is successful, the WebView will be removed and user will be redirected back to the app.
-While showing the WebView, plugin provides basic operations such as "Forward", "Back", "Reload" and "Cancel" to deal with any issues the user faces on this page.
-For example, user may accidentally click a link on the login page. In this case, user can use "Back" button to come back to the login page.
+While showing the WebView, plugin provides basic operations such as &quot;Forward&quot;, &quot;Back&quot;, &quot;Reload&quot; and &quot;Cancel&quot; to deal with any issues the user faces on this page.
+For example, user may accidentally click a link on the login page. In this case, user can use &quot;Back&quot; button to come back to the login page.
 For example, if the login page is not loaded correctly, user may want to try reloading the page, before cancelling the login.
 If user cancels the login, the promise returned by <a href="AuthenticationFlow.html#login">AuthenticationFlow#login</a> will be rejected.
 For iOS, <a href="https://developer.apple.com/documentation/uikit/uiwebview">UIWebView</a> will be used by default.
@@ -121,7 +121,7 @@ Note: Irrespective of whether user cancels the logout or accepts the logout in t
 
             
 
-            <td class="description last">Application name</td>
+            <td class="description last"><p>Application name</p></td>
         </tr>
 
     
@@ -144,7 +144,7 @@ Note: Irrespective of whether user cancels the logout or accepts the logout in t
 
             
 
-            <td class="description last">Fed auth login end point.</td>
+            <td class="description last"><p>Fed auth login end point.</p></td>
         </tr>
 
     
@@ -167,7 +167,7 @@ Note: Irrespective of whether user cancels the logout or accepts the logout in t
 
             
 
-            <td class="description last">Fed auth logout end point.</td>
+            <td class="description last"><p>Fed auth logout end point.</p></td>
         </tr>
 
     
@@ -190,7 +190,7 @@ Note: Irrespective of whether user cancels the logout or accepts the logout in t
 
             
 
-            <td class="description last">End point to which server redirects after successful login.</td>
+            <td class="description last"><p>End point to which server redirects after successful login.</p></td>
         </tr>
 
     
@@ -213,7 +213,7 @@ Note: Irrespective of whether user cancels the logout or accepts the logout in t
 
             
 
-            <td class="description last">End point to which server redirects after unsuccessful login.</td>
+            <td class="description last"><p>End point to which server redirects after unsuccessful login.</p></td>
         </tr>
 
     
@@ -375,7 +375,7 @@ Note: Irrespective of whether user cancels the logout or accepts the logout in t
 
             
 
-            <td class="description last">Application name</td>
+            <td class="description last"><p>Application name</p></td>
         </tr>
 
     
@@ -553,7 +553,7 @@ Note: Irrespective of whether user cancels the logout or accepts the logout in t
 
         
 <div class="param-desc">
-    validate and return properties collected.
+    <p>validate and return properties collected.</p>
 </div>
 
 
@@ -638,7 +638,7 @@ Note: Irrespective of whether user cancels the logout or accepts the logout in t
 
             
 
-            <td class="description last">whether to confirm the logout automatically when presented with a logout confirmation screen from the server.</td>
+            <td class="description last"><p>whether to confirm the logout automatically when presented with a logout confirmation screen from the server.</p></td>
         </tr>
 
     
@@ -787,7 +787,7 @@ Note: Irrespective of whether user cancels the logout or accepts the logout in t
 
             
 
-            <td class="description last">DOM id of the logout confirmation button. Used when FedAuthPropertiesBuilder#confirmLogoutAutomatically is turned on.</td>
+            <td class="description last"><p>DOM id of the logout confirmation button. Used when FedAuthPropertiesBuilder#confirmLogoutAutomatically is turned on.</p></td>
         </tr>
 
     
@@ -936,7 +936,7 @@ Note: Irrespective of whether user cancels the logout or accepts the logout in t
 
             
 
-            <td class="description last">any custom headers. These are returned along with other authentication headers in RemoteAuthenticationFlow#getHeaders()</td>
+            <td class="description last"><p>any custom headers. These are returned along with other authentication headers in RemoteAuthenticationFlow#getHeaders()</p></td>
         </tr>
 
     
@@ -1090,8 +1090,8 @@ Note: Irrespective of whether user cancels the logout or accepts the logout in t
 
             
 
-            <td class="description last">if WKWebView should be enabled. Applicable only for iOS.
-Note: App should install cordova-plugin-wkwebview-engine when using this.</td>
+            <td class="description last"><p>if WKWebView should be enabled. Applicable only for iOS.
+Note: App should install cordova-plugin-wkwebview-engine when using this.</p></td>
         </tr>
 
     
@@ -1192,7 +1192,7 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</td>
 
 
 <div class="description">
-    Deprecated: This is not applicable for all remote authentications. Use method available in builder subclasses where applicable.
+    <p>Deprecated: This is not applicable for all remote authentications. Use method available in builder subclasses where applicable.</p>
 </div>
 
 
@@ -1244,7 +1244,7 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</td>
 
             
 
-            <td class="description last">seconds after which which idle timeout should kick in when user is idle.</td>
+            <td class="description last"><p>seconds after which which idle timeout should kick in when user is idle.</p></td>
         </tr>
 
     
@@ -1400,7 +1400,7 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</td>
 
             
 
-            <td class="description last">End point to which server redirects after unsuccessful login.</td>
+            <td class="description last"><p>End point to which server redirects after unsuccessful login.</p></td>
         </tr>
 
     
@@ -1549,7 +1549,7 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</td>
 
             
 
-            <td class="description last">End point to which server redirects after successful login.</td>
+            <td class="description last"><p>End point to which server redirects after successful login.</p></td>
         </tr>
 
     
@@ -1698,7 +1698,7 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</td>
 
             
 
-            <td class="description last">Fed auth login end point.</td>
+            <td class="description last"><p>Fed auth login end point.</p></td>
         </tr>
 
     
@@ -1847,7 +1847,7 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</td>
 
             
 
-            <td class="description last">End point to which server redirects after unsuccessful logout. Used along with logout confirmation screen usecase.</td>
+            <td class="description last"><p>End point to which server redirects after unsuccessful logout. Used along with logout confirmation screen usecase.</p></td>
         </tr>
 
     
@@ -1996,7 +1996,7 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</td>
 
             
 
-            <td class="description last">End point to which server redirects after successful logout. Used along with logout confirmation screen usecase.</td>
+            <td class="description last"><p>End point to which server redirects after successful logout. Used along with logout confirmation screen usecase.</p></td>
         </tr>
 
     
@@ -2145,7 +2145,7 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</td>
 
             
 
-            <td class="description last">specifiy timeout before which ongoing logout attempt will be aborted.</td>
+            <td class="description last"><p>specifiy timeout before which ongoing logout attempt will be aborted.</p></td>
         </tr>
 
     
@@ -2299,7 +2299,7 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</td>
 
             
 
-            <td class="description last">Fed auth logout end point.</td>
+            <td class="description last"><p>Fed auth logout end point.</p></td>
         </tr>
 
     
@@ -2448,7 +2448,7 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</td>
 
             
 
-            <td class="description last">if relay response token needs to be parsed. Used in case of SAML flows.</td>
+            <td class="description last"><p>if relay response token needs to be parsed. Used in case of SAML flows.</p></td>
         </tr>
 
     
@@ -2549,7 +2549,7 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</td>
 
 
 <div class="description">
-    Deprecated: This is not applicable for all remote authentications. Use method available in builder subclasses where applicable.
+    <p>Deprecated: This is not applicable for all remote authentications. Use method available in builder subclasses where applicable.</p>
 </div>
 
 
@@ -2601,7 +2601,7 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</td>
 
             
 
-            <td class="description last">percentage of idle timeout before which timeout callback should be invoked.</td>
+            <td class="description last"><p>percentage of idle timeout before which timeout callback should be invoked.</p></td>
         </tr>
 
     
@@ -2709,7 +2709,7 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</td>
 
 
 <div class="description">
-    Convenience method to add key value pairs of auth settings to properties.
+    <p>Convenience method to add key value pairs of auth settings to properties.</p>
 </div>
 
 
@@ -2761,7 +2761,7 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</td>
 
             
 
-            <td class="description last">Authentication property key</td>
+            <td class="description last"><p>Authentication property key</p></td>
         </tr>
 
     
@@ -2784,7 +2784,7 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</td>
 
             
 
-            <td class="description last">Authentication property value</td>
+            <td class="description last"><p>Authentication property value</p></td>
         </tr>
 
     
@@ -2938,10 +2938,10 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</td>
 
             
 
-            <td class="description last">set to the same value as configured in the fed auth server.
+            <td class="description last"><p>set to the same value as configured in the fed auth server.
 After these many seconds <a href="RemoteAuthPropertiesBuilder.html#~timeoutCallback">timeout callback</a> will be invoked.
 Note: This does not trigger any session timeout on the server. That configuration is controlled by the server.
-The effect of setting this is only to remove cookies after such time when server session would have time out.</td>
+The effect of setting this is only to remove cookies after such time when server session would have time out.</p></td>
         </tr>
 
     
@@ -3095,7 +3095,7 @@ The effect of setting this is only to remove cookies after such time when server
 
             
 
-            <td class="description last">Callback to handle timeout notifications.</td>
+            <td class="description last"><p>Callback to handle timeout notifications.</p></td>
         </tr>
 
     
@@ -3204,7 +3204,7 @@ The effect of setting this is only to remove cookies after such time when server
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Tue Sep 18 2018 18:24:48 GMT+0530 (IST)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Tue Mar 05 2019 11:03:42 GMT+0530 (India Standard Time)
 </footer>
 
 <script> prettyPrint(); </script>

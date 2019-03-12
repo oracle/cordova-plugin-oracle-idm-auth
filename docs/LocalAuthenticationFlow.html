@@ -30,10 +30,10 @@
     
         <h2><span class="attribs"><span class="type-signature"></span></span>LocalAuthenticationFlow</h2>
         
-            <div class="class-description">This class represents local authentication flow object which can be used for performing local authentications.
+            <div class="class-description"><p>This class represents local authentication flow object which can be used for performing local authentications.
 This class is not directly instantiated.
 Instance of this class can be obtained when the promise returned from <a href="global.html#init">init</a> resolves, when using properties from <a href="LocalAuthPropertiesBuilder.html">LocalAuthPropertiesBuilder</a>.
-Setting up and using a local authentication flow is explained in the <a href="LocalAuthPropertiesBuilder.html">builder</a> documentation.
+Setting up and using a local authentication flow is explained in the <a href="LocalAuthPropertiesBuilder.html">builder</a> documentation.</p>
 <p>
 Multiple <a href="LocalAuthPropertiesBuilder.html#.LocalAuthenticatorType">types</a> of local authentications are supported by this flow.
 App can provide a configuration area where user can enable / disable the local authentication types that app wants to support.
@@ -130,7 +130,7 @@ and any number of times as needed. Each time user will be challenged.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2046">line 2046</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2054">line 2054</a>
     </li></ul></dd>
     
 
@@ -203,7 +203,7 @@ and any number of times as needed. Each time user will be challenged.
 
 
 <div class="description">
-    Returns the local auth manager associated with this flow.
+    <p>Returns the local auth manager associated with this flow.</p>
 </div>
 
 
@@ -247,7 +247,7 @@ and any number of times as needed. Each time user will be challenged.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2124">line 2124</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2132">line 2132</a>
     </li></ul></dd>
     
 
@@ -307,7 +307,7 @@ and any number of times as needed. Each time user will be challenged.
 
 
 <div class="description">
-    This method is used for checking if the user is authenticated or not.
+    <p>This method is used for checking if the user is authenticated or not.</p>
 </div>
 
 
@@ -356,7 +356,7 @@ and any number of times as needed. Each time user will be challenged.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2207">line 2207</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2214">line 2214</a>
     </li></ul></dd>
     
 
@@ -416,7 +416,7 @@ and any number of times as needed. Each time user will be challenged.
 
 
 <div class="description">
-    This method is used to login. <p>The promise is resolved when login succeeds. The user can be redirected to the app once this happens.</p>
+    <p>This method is used to login. <p>The promise is resolved when login succeeds. The user can be redirected to the app once this happens.</p></p>
 <p>The promise gets rejected with an <a href="global.html#AuthError">AuthError</a> object which contains information on the reason of failure.
 This information can be used to shown the reason why login did not succeed.
 App keep track of these failures and implement specific policies related to maximum attempts and steps to do after multiple failures here.</p>
@@ -485,7 +485,7 @@ User will have a way to fall back on to PIN based authentication as per device p
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2134">line 2134</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2142">line 2142</a>
     </li></ul></dd>
     
 
@@ -512,7 +512,7 @@ User will have a way to fall back on to PIN based authentication as per device p
 
         
 <div class="param-desc">
-    If the promise is rejected, the callback will receive and object of type <a href="global.html#AuthError">AuthError</a>
+    <p>If the promise is rejected, the callback will receive and object of type <a href="global.html#AuthError">AuthError</a></p>
 </div>
 
 
@@ -549,7 +549,7 @@ User will have a way to fall back on to PIN based authentication as per device p
 
 
 <div class="description">
-    Logout is a noop for local authentication. The promise returned resolves immediately.
+    <p>Logout is a noop for local authentication. The promise returned resolves immediately.</p>
 </div>
 
 
@@ -601,7 +601,7 @@ User will have a way to fall back on to PIN based authentication as per device p
 
             
 
-            <td class="description last">pass true to reset all saved information for this auth.</td>
+            <td class="description last"><p>pass true to reset saved information for this auth. See this table above for specifics on what is cleared.</p></td>
         </tr>
 
     
@@ -647,7 +647,7 @@ User will have a way to fall back on to PIN based authentication as per device p
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2196">line 2196</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2203">line 2203</a>
     </li></ul></dd>
     
 
@@ -715,7 +715,7 @@ User will have a way to fall back on to PIN based authentication as per device p
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Tue Sep 18 2018 18:24:48 GMT+0530 (IST)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Tue Mar 05 2019 11:03:42 GMT+0530 (India Standard Time)
 </footer>
 
 <script> prettyPrint(); </script>

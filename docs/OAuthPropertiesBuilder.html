@@ -30,15 +30,15 @@
     
         <h2><span class="attribs"><span class="type-signature"></span></span>OAuthPropertiesBuilder<span class="signature">(appName, oAuthAuthorizationGrantType, oAuthTokenEndpoint, oAuthClientID)</span><span class="type-signature"></span></h2>
         
-            <div class="class-description">This is the builder for OAuth.
-Using this builder to <a href="global.html#init">init</a> an authentication flow will return <a href="RemoteAuthenticationFlow.html">RemoteAuthenticationFlow</a> in the init promise.
+            <div class="class-description"><p>This is the builder for OAuth.
+Using this builder to <a href="global.html#init">init</a> an authentication flow will return <a href="RemoteAuthenticationFlow.html">RemoteAuthenticationFlow</a> in the init promise.</p>
 <p>In this type of authentication login can be configured to use an embedded WebView or an external browser.
 This can be <a href="OAuthPropertiesBuilder.html#browserMode">configured</a>.
 <ul style="list-style:none">
 <li><a href="OAuthPropertiesBuilder.html#.BrowserMode">Using Embedded WebView</a>: Plugin brings up a WebView where OAuth login webpage is loaded.
 User has to provide credentials on this page and login. When login is successful, the WebView will be removed and user will be redirected back to the app.
-While showing the WebView, plugin provides basic operations such as "Forward", "Back", "Reload" and "Cancel" to deal with any issues the user faces on this page.
-For example, user may accidentally click a link on the login page. In this case, user can use "Back" button to come back to the login page.
+While showing the WebView, plugin provides basic operations such as &quot;Forward&quot;, &quot;Back&quot;, &quot;Reload&quot; and &quot;Cancel&quot; to deal with any issues the user faces on this page.
+For example, user may accidentally click a link on the login page. In this case, user can use &quot;Back&quot; button to come back to the login page.
 For example, if the login page is not loaded correctly, user may want to try reloading the page, before cancelling the login.
 If user cancels the login, the promise returned by <a href="AuthenticationFlow.html#login">AuthenticationFlow#login</a> will be rejected.</li>
 <li><a href="OAuthPropertiesBuilder.html#.BrowserMode">Using External Browser</a>: Plugin redirects user to the default browser in the device and loads the OAuth login webpage.
@@ -46,12 +46,12 @@ User has to provide credentials on this page and login. When login is successful
 
 For using this feature there are three prerequisites:
 <ul>
-<li>App needs to configure a <a href="https://www.npmjs.com/package/cordova-plugin-customurlscheme">custom URL scheme</a>.
+<li>App needs to configure a <a href="https://%3Ca%20href=%22http://www.npmjs.com/package/cordova-plugin-customurlscheme">custom">www.npmjs.com/package/cordova-plugin-customurlscheme|custom</a> URL scheme</a>.
 It has to be noted that once the external browser is launched and login page is loaded, app does not have any control.
 Custom URL scheme is the way for any redirects back to the app.</li>
 <li>OAuth server should have the capability to use the same custom URL scheme and redirect the user back to app after successful login or logout.
 This is typically part of OAuth server configuration.
-For example, "Redirect URL" should be configured from the admin console to point to app's custom URL scheme in case of IDCS server.</li>
+For example, &quot;Redirect URL&quot; should be configured from the admin console to point to app's custom URL scheme in case of IDCS server.</li>
 <li><a href="OAuthPropertiesBuilder.html#oAuthRedirectEndpoint">Redirect end point</a> in configuration should be provided as the URL scheme.</li>
 </ul>
 The advantage of using external browser is that it makes this login as a single sign on for all the apps in the device.
@@ -64,13 +64,13 @@ In case of OAuth, typically user does not logout when using external browser as 
 User will be challenged to login only if the OAuth token expires.
 Still, if the app wants to provide a logout option to the user, it can be done by calling <a href="AuthenticationFlow.html#logout">AuthenticationFlow#logout</a>.
 This step does not have any user interaction.
-OAuth logout page is loaded either in WebView or external browser as configured and then is dismissed once logout is complete.</p
+OAuth logout page is loaded either in WebView or external browser as configured and then is dismissed once logout is complete.&lt;/p
 <p>
 Some OAuth servers supports refresh token.
 Auth tokens generally are short lived and refresh tokens are long lived.
 When the auth token expires, the refresh token can be used to obtain a new auth token and there is no need to challenge the user.
 For obtaining the refresh token, some servers requires special scope to be passed.
-For e.g: IDCS needs "offline_access" scope to be used.
+For e.g: IDCS needs &quot;offline_access&quot; scope to be used.
 App needs to pass the relevant scope, if needed by the server, for this feature to work</p></div>
         
     
@@ -142,7 +142,7 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
 
             
 
-            <td class="description last">Application name</td>
+            <td class="description last"><p>Application name</p></td>
         </tr>
 
     
@@ -165,7 +165,7 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
 
             
 
-            <td class="description last">OAuth authorization grant type.</td>
+            <td class="description last"><p>OAuth authorization grant type.</p></td>
         </tr>
 
     
@@ -188,7 +188,7 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
 
             
 
-            <td class="description last">OAuth token end point.</td>
+            <td class="description last"><p>OAuth token end point.</p></td>
         </tr>
 
     
@@ -211,7 +211,7 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
 
             
 
-            <td class="description last">OAuth client id.</td>
+            <td class="description last"><p>OAuth client id.</p></td>
         </tr>
 
     
@@ -317,7 +317,7 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
 
 
 <div class="description">
-    Enum values for <a href="OAuthPropertiesBuilder.html#browserMode">OAuthPropertiesBuilder#browserMode</a>
+    <p>Enum values for <a href="OAuthPropertiesBuilder.html#browserMode">OAuthPropertiesBuilder#browserMode</a></p>
 </div>
 
 
@@ -368,7 +368,7 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
 
             
 
-            <td class="description last">Browser mode is external. An external browser will be opened.</td>
+            <td class="description last"><p>Browser mode is external. An external browser will be opened.</p></td>
         </tr>
 
     
@@ -391,7 +391,7 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
 
             
 
-            <td class="description last">Browser mode is embedded. An embedded browser will be opened within the app.</td>
+            <td class="description last"><p>Browser mode is embedded. An embedded browser will be opened within the app.</p></td>
         </tr>
 
     
@@ -454,7 +454,7 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
 
 
 <div class="description">
-    Enum values for <a href="OAuthPropertiesBuilder.html#oAuthAuthorizationGrantType">OAuthPropertiesBuilder#oAuthAuthorizationGrantType</a>
+    <p>Enum values for <a href="OAuthPropertiesBuilder.html#oAuthAuthorizationGrantType">OAuthPropertiesBuilder#oAuthAuthorizationGrantType</a></p>
 </div>
 
 
@@ -505,7 +505,7 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
 
             
 
-            <td class="description last">OAuth grant type is implicit</td>
+            <td class="description last"><p>OAuth grant type is implicit</p></td>
         </tr>
 
     
@@ -528,7 +528,7 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
 
             
 
-            <td class="description last">OAuth grant type is authorization code</td>
+            <td class="description last"><p>OAuth grant type is authorization code</p></td>
         </tr>
 
     
@@ -551,7 +551,7 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
 
             
 
-            <td class="description last">OAuth grant type is resource owner</td>
+            <td class="description last"><p>OAuth grant type is resource owner</p></td>
         </tr>
 
     
@@ -574,7 +574,7 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
 
             
 
-            <td class="description last">OAuth grant type is client credentials</td>
+            <td class="description last"><p>OAuth grant type is client credentials</p></td>
         </tr>
 
     
@@ -697,7 +697,7 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
 
             
 
-            <td class="description last">Application name</td>
+            <td class="description last"><p>Application name</p></td>
         </tr>
 
     
@@ -851,7 +851,7 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
 
             
 
-            <td class="description last">Browser mode to be used.</td>
+            <td class="description last"><p>Browser mode to be used.</p></td>
         </tr>
 
     
@@ -1024,7 +1024,7 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
 
         
 <div class="param-desc">
-    validate and return properties collected.
+    <p>validate and return properties collected.</p>
 </div>
 
 
@@ -1061,7 +1061,7 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
 
 
 <div class="description">
-    Applicable for 2 legged OAuth flows when user is challenge to collect user credentials.
+    <p>Applicable for 2 legged OAuth flows when user is challenge to collect user credentials.</p>
 </div>
 
 
@@ -1113,7 +1113,7 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
 
             
 
-            <td class="description last">Callback to handle credential challenge.</td>
+            <td class="description last"><p>Callback to handle credential challenge.</p></td>
         </tr>
 
     
@@ -1262,7 +1262,7 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
 
             
 
-            <td class="description last">any custom headers. These are returned along with other authentication headers in RemoteAuthenticationFlow#getHeaders()</td>
+            <td class="description last"><p>any custom headers. These are returned along with other authentication headers in RemoteAuthenticationFlow#getHeaders()</p></td>
         </tr>
 
     
@@ -1368,8 +1368,8 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
 
 
 <div class="description">
-    This method can be used to enable PKCE for OAuth. PKCE is more secured way of using OAUTH for mobile apps.
-See <a href="http://www.ateam-oracle.com/identity-cloud-service-mobile-clients-and-pkce-support">this blog</a>
+    <p>This method can be used to enable PKCE for OAuth. PKCE is more secured way of using OAUTH for mobile apps.
+See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-service-mobile-clients-and-pkce-support">this">www.ateam-oracle.com/identity-cloud-service-mobile-clients-and-pkce-support|this</a> blog</a></p>
 </div>
 
 
@@ -1421,7 +1421,7 @@ See <a href="http://www.ateam-oracle.com/identity-cloud-service-mobile-clients-a
 
             
 
-            <td class="description last">whether to enable PKCE or not.</td>
+            <td class="description last"><p>whether to enable PKCE or not.</p></td>
         </tr>
 
     
@@ -1522,7 +1522,7 @@ See <a href="http://www.ateam-oracle.com/identity-cloud-service-mobile-clients-a
 
 
 <div class="description">
-    Deprecated: This is not applicable for all remote authentications. Use method available in builder subclasses where applicable.
+    <p>Deprecated: This is not applicable for all remote authentications. Use method available in builder subclasses where applicable.</p>
 </div>
 
 
@@ -1574,7 +1574,7 @@ See <a href="http://www.ateam-oracle.com/identity-cloud-service-mobile-clients-a
 
             
 
-            <td class="description last">seconds after which which idle timeout should kick in when user is idle.</td>
+            <td class="description last"><p>seconds after which which idle timeout should kick in when user is idle.</p></td>
         </tr>
 
     
@@ -1730,7 +1730,7 @@ See <a href="http://www.ateam-oracle.com/identity-cloud-service-mobile-clients-a
 
             
 
-            <td class="description last">specifiy timeout before which ongoing logout attempt will be aborted.</td>
+            <td class="description last"><p>specifiy timeout before which ongoing logout attempt will be aborted.</p></td>
         </tr>
 
     
@@ -1884,7 +1884,7 @@ See <a href="http://www.ateam-oracle.com/identity-cloud-service-mobile-clients-a
 
             
 
-            <td class="description last">OAuth logout URL.</td>
+            <td class="description last"><p>OAuth logout URL.</p></td>
         </tr>
 
     
@@ -2033,7 +2033,7 @@ See <a href="http://www.ateam-oracle.com/identity-cloud-service-mobile-clients-a
 
             
 
-            <td class="description last">authorization end point.</td>
+            <td class="description last"><p>authorization end point.</p></td>
         </tr>
 
     
@@ -2182,7 +2182,7 @@ See <a href="http://www.ateam-oracle.com/identity-cloud-service-mobile-clients-a
 
             
 
-            <td class="description last">authorization end point.</td>
+            <td class="description last"><p>authorization end point.</p></td>
         </tr>
 
     
@@ -2331,7 +2331,7 @@ See <a href="http://www.ateam-oracle.com/identity-cloud-service-mobile-clients-a
 
             
 
-            <td class="description last">OAuth client id.</td>
+            <td class="description last"><p>OAuth client id.</p></td>
         </tr>
 
     
@@ -2480,7 +2480,7 @@ See <a href="http://www.ateam-oracle.com/identity-cloud-service-mobile-clients-a
 
             
 
-            <td class="description last">client secret.</td>
+            <td class="description last"><p>client secret.</p></td>
         </tr>
 
     
@@ -2629,7 +2629,7 @@ See <a href="http://www.ateam-oracle.com/identity-cloud-service-mobile-clients-a
 
             
 
-            <td class="description last">End point to redirect after successful authentication. Typically this is app's URL scheme.</td>
+            <td class="description last"><p>End point to redirect after successful authentication. Typically this is app's URL scheme.</p></td>
         </tr>
 
     
@@ -2778,7 +2778,7 @@ See <a href="http://www.ateam-oracle.com/identity-cloud-service-mobile-clients-a
 
             
 
-            <td class="description last">OAuth scopes.</td>
+            <td class="description last"><p>OAuth scopes.</p></td>
         </tr>
 
     
@@ -2927,7 +2927,7 @@ See <a href="http://www.ateam-oracle.com/identity-cloud-service-mobile-clients-a
 
             
 
-            <td class="description last">OAuth token end point.</td>
+            <td class="description last"><p>OAuth token end point.</p></td>
         </tr>
 
     
@@ -3028,7 +3028,7 @@ See <a href="http://www.ateam-oracle.com/identity-cloud-service-mobile-clients-a
 
 
 <div class="description">
-    Deprecated: This is not applicable for all remote authentications. Use method available in builder subclasses where applicable.
+    <p>Deprecated: This is not applicable for all remote authentications. Use method available in builder subclasses where applicable.</p>
 </div>
 
 
@@ -3080,7 +3080,7 @@ See <a href="http://www.ateam-oracle.com/identity-cloud-service-mobile-clients-a
 
             
 
-            <td class="description last">percentage of idle timeout before which timeout callback should be invoked.</td>
+            <td class="description last"><p>percentage of idle timeout before which timeout callback should be invoked.</p></td>
         </tr>
 
     
@@ -3188,7 +3188,7 @@ See <a href="http://www.ateam-oracle.com/identity-cloud-service-mobile-clients-a
 
 
 <div class="description">
-    Convenience method to add key value pairs of auth settings to properties.
+    <p>Convenience method to add key value pairs of auth settings to properties.</p>
 </div>
 
 
@@ -3240,7 +3240,7 @@ See <a href="http://www.ateam-oracle.com/identity-cloud-service-mobile-clients-a
 
             
 
-            <td class="description last">Authentication property key</td>
+            <td class="description last"><p>Authentication property key</p></td>
         </tr>
 
     
@@ -3263,7 +3263,7 @@ See <a href="http://www.ateam-oracle.com/identity-cloud-service-mobile-clients-a
 
             
 
-            <td class="description last">Authentication property value</td>
+            <td class="description last"><p>Authentication property value</p></td>
         </tr>
 
     
@@ -3369,7 +3369,7 @@ See <a href="http://www.ateam-oracle.com/identity-cloud-service-mobile-clients-a
 
 
 <div class="description">
-    Deprecated: This is not applicable for all remote authentications. Use method available in builder subclasses where applicable.
+    <p>Deprecated: This is not applicable for all remote authentications. Use method available in builder subclasses where applicable.</p>
 </div>
 
 
@@ -3421,7 +3421,7 @@ See <a href="http://www.ateam-oracle.com/identity-cloud-service-mobile-clients-a
 
             
 
-            <td class="description last">seconds after which which session timeout should kick in.</td>
+            <td class="description last"><p>seconds after which which session timeout should kick in.</p></td>
         </tr>
 
     
@@ -3537,7 +3537,7 @@ See <a href="http://www.ateam-oracle.com/identity-cloud-service-mobile-clients-a
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Tue Sep 18 2018 18:24:48 GMT+0530 (IST)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Tue Mar 05 2019 11:03:42 GMT+0530 (India Standard Time)
 </footer>
 
 <script> prettyPrint(); </script>

@@ -1782,8 +1782,8 @@ var IdmAuthFlows = function() {
     /**
      * Option object to be used with {@link AuthenticationFlow#isAuthenticated}
      * @typedef {Object} AuthenticationFlow~IsAuthenticatedOptions
-     * @property {Array.<String>} OAuthScope - OAuth scopes for which isAuthenticated should be checked. Applicable only for OAuth
-     * @property {boolean} refreshExpiredTokens - Whether to refresh token or not. Applicable only for for OAuth
+     * @property {Array.<String>} OAuthScope - OAuth scopes for which isAuthenticated should be checked. Applicable only for OAuth. Default is empty array.
+     * @property {boolean} refreshExpiredTokens - Whether to refresh token or not. Applicable only for for OAuth. Defaults to true.
      */
     /**
      * @abstract
@@ -1938,6 +1938,14 @@ var IdmAuthFlows = function() {
      * There is one special case when device is offline. In this case, logout will throw an error because logout URL loading will fail.
      * But device local logout will be successful. Application should handle this error, check for the device status (offline / online)
      * and then decide to show the error message to the user.</p>
+     * The following table describes what is cleared on logout with different values for purgeSettings:
+     *
+     * |     purgeSettings       |  false                       | true                |
+     * | :---------------------- | :-------------------------   | :------------------ |
+     * | HttpBasicAuthentication | Clear remembered credentials | Clears offline, remembered credentials, user preferences |
+     * | FederatedAuthentication | Clear Cookies by loading logout URL | |
+     * | OAuth, OpenID           | Clear access token           | Invalidate session maintained by the browser by loading logout URL. |
+     *
      * @function logout
      * @memberof RemoteAuthenticationFlow.prototype
      * @param {boolean} purgeSettings - pass true to reset all saved information for this auth. Falls back to 'false' if non boolean is passed.
@@ -2196,7 +2204,7 @@ var IdmAuthFlows = function() {
      * Logout is a noop for local authentication. The promise returned resolves immediately.
      * @function logout
      * @memberof LocalAuthenticationFlow.prototype
-     * @param {boolean} purgeSettings - pass true to reset all saved information for this auth.
+     * @param {boolean} purgeSettings - pass true to reset saved information for this auth. Not applicable in this case.
      * @return {Promise.<AuthenticationFlow>}
      */
     this.logout = function(purgeSettings) {

@@ -1,5 +1,10 @@
 # Release Notes
 
+## 1.1.5 (12 Mar, 2019)
+* Bug fix in Android with OpenId usecase where user was considered logged in even after access token expired.
+* Fix to refresh access token when checking for isAuthenticated.
+* Doc improvements.
+
 ## 1.1.4 (21 Feb, 2019)
 * Bug fixes for local authentication.
 * Temporary fix for basic auth to fall back to successful login irrespective of status returned by server.

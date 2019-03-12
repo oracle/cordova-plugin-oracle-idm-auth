@@ -30,9 +30,9 @@
     
         <h2><span class="attribs"><span class="type-signature"></span></span>LocalAuthPropertiesBuilder<span class="signature">(id, pinChallengeCallback)</span><span class="type-signature"></span></h2>
         
-            <div class="class-description">This is the builder for Local auth. This can be used for for device level authentication.
+            <div class="class-description"><p>This is the builder for Local auth. This can be used for for device level authentication.
 Using this builder to <a href="global.html#init">init</a> an authentication flow will return <a href="LocalAuthenticationFlow.html">LocalAuthenticationFlow</a> in the init promise.
-Multiple types of <a href="LocalAuthPropertiesBuilder.html#.LocalAuthenticatorType">local authentications</a> are supported.
+Multiple types of <a href="LocalAuthPropertiesBuilder.html#.LocalAuthenticatorType">local authentications</a> are supported.</p>
 <p>For fingerprint based local auth, fingerprint is collected by the device using native UI. This UI is provided by each device OS.
 Device OS allows certain customizations to this UI, such as labels and titles.
 App can optionally set
@@ -115,7 +115,7 @@ The callback implementation details are explained in <a href="LocalAuthPropertie
 
             
 
-            <td class="description last">Unique id for the local authentication flow.</td>
+            <td class="description last"><p>Unique id for the local authentication flow.</p></td>
         </tr>
 
     
@@ -138,7 +138,7 @@ The callback implementation details are explained in <a href="LocalAuthPropertie
 
             
 
-            <td class="description last">Callback for handling PIN challenges.</td>
+            <td class="description last"><p>Callback for handling PIN challenges.</p></td>
         </tr>
 
     
@@ -244,7 +244,7 @@ The callback implementation details are explained in <a href="LocalAuthPropertie
 
 
 <div class="description">
-    Enum values for types of local authenticators supported. Used in <a href="LocalAuthenticationFlow.html">LocalAuthenticationFlow</a> and <a href="LocalAuthenticationFlowManager.html">LocalAuthenticationFlowManager</a>
+    <p>Enum values for types of local authenticators supported. Used in <a href="LocalAuthenticationFlow.html">LocalAuthenticationFlow</a> and <a href="LocalAuthenticationFlowManager.html">LocalAuthenticationFlowManager</a></p>
 </div>
 
 
@@ -295,7 +295,7 @@ The callback implementation details are explained in <a href="LocalAuthPropertie
 
             
 
-            <td class="description last">Local authentication type is PIN.</td>
+            <td class="description last"><p>Local authentication type is PIN.</p></td>
         </tr>
 
     
@@ -318,7 +318,7 @@ The callback implementation details are explained in <a href="LocalAuthPropertie
 
             
 
-            <td class="description last">Local authentication type is Fingerprint.</td>
+            <td class="description last"><p>Local authentication type is Fingerprint.</p></td>
         </tr>
 
     
@@ -381,7 +381,7 @@ The callback implementation details are explained in <a href="LocalAuthPropertie
 
 
 <div class="description">
-    Enum values for challenge reason in <a href="LocalAuthPropertiesBuilder.html#~localAuthPinChallengeCallback">pin challenge callback</a>.
+    <p>Enum values for challenge reason in <a href="LocalAuthPropertiesBuilder.html#~localAuthPinChallengeCallback">pin challenge callback</a>.</p>
 </div>
 
 
@@ -432,8 +432,8 @@ The callback implementation details are explained in <a href="LocalAuthPropertie
 
             
 
-            <td class="description last">Reason for pin challenge is to login.
-In this case current pin has to be collected from the user and passed to <a href="LocalAuthPropertiesBuilder.html#~localAuthCompletionCallback">completion callback</a></td>
+            <td class="description last"><p>Reason for pin challenge is to login.
+In this case current pin has to be collected from the user and passed to <a href="LocalAuthPropertiesBuilder.html#~localAuthCompletionCallback">completion callback</a></p></td>
         </tr>
 
     
@@ -456,8 +456,8 @@ In this case current pin has to be collected from the user and passed to <a href
 
             
 
-            <td class="description last">Reason for pin challenge is to set a new pin.
-In this case a new pin has to be collected from the user and passed to <a href="LocalAuthPropertiesBuilder.html#~localAuthCompletionCallback">completion callback</a></td>
+            <td class="description last"><p>Reason for pin challenge is to set a new pin.
+In this case a new pin has to be collected from the user and passed to <a href="LocalAuthPropertiesBuilder.html#~localAuthCompletionCallback">completion callback</a></p></td>
         </tr>
 
     
@@ -480,8 +480,8 @@ In this case a new pin has to be collected from the user and passed to <a href="
 
             
 
-            <td class="description last">Reason for pin challenge is to change existing pin.
-In this case both current and new pin has to be collected from the user and passed to <a href="LocalAuthPropertiesBuilder.html#~localAuthCompletionCallback">completion callback</a></td>
+            <td class="description last"><p>Reason for pin challenge is to change existing pin.
+In this case both current and new pin has to be collected from the user and passed to <a href="LocalAuthPropertiesBuilder.html#~localAuthCompletionCallback">completion callback</a></p></td>
         </tr>
 
     
@@ -628,7 +628,7 @@ In this case both current and new pin has to be collected from the user and pass
 
         
 <div class="param-desc">
-    validate and return properties collected.
+    <p>validate and return properties collected.</p>
 </div>
 
 
@@ -713,7 +713,7 @@ In this case both current and new pin has to be collected from the user and pass
 
             
 
-            <td class="description last">Unique id for the local authentication flow.</td>
+            <td class="description last"><p>Unique id for the local authentication flow.</p></td>
         </tr>
 
     
@@ -862,7 +862,7 @@ In this case both current and new pin has to be collected from the user and pass
 
             
 
-            <td class="description last">Callback for handling PIN challenges.</td>
+            <td class="description last"><p>Callback for handling PIN challenges.</p></td>
         </tr>
 
     
@@ -963,7 +963,7 @@ In this case both current and new pin has to be collected from the user and pass
 
 
 <div class="description">
-    Convenience method to add key value pairs of auth settings to properties.
+    <p>Convenience method to add key value pairs of auth settings to properties.</p>
 </div>
 
 
@@ -1015,7 +1015,7 @@ In this case both current and new pin has to be collected from the user and pass
 
             
 
-            <td class="description last">Authentication property key</td>
+            <td class="description last"><p>Authentication property key</p></td>
         </tr>
 
     
@@ -1038,7 +1038,7 @@ In this case both current and new pin has to be collected from the user and pass
 
             
 
-            <td class="description last">Authentication property value</td>
+            <td class="description last"><p>Authentication property value</p></td>
         </tr>
 
     
@@ -1215,7 +1215,7 @@ In this case both current and new pin has to be collected from the user and pass
 
             
 
-            <td class="description last">Whether to override the existing translations or not. Defaults to true.</td>
+            <td class="description last"><p>Whether to override the existing translations or not. Defaults to true.</p></td>
         </tr>
 
     
@@ -1322,7 +1322,7 @@ In this case both current and new pin has to be collected from the user and pass
 
 
 <div class="description">
-    Local authentication completion callback. Used to complete a PIN challenge by submitting the PIN collected from the user.
+    <p>Local authentication completion callback. Used to complete a PIN challenge by submitting the PIN collected from the user.</p>
 </div>
 
 
@@ -1386,9 +1386,9 @@ In this case both current and new pin has to be collected from the user and pass
 
             
 
-            <td class="description last">Existing PIN collected from user. To be passed when
+            <td class="description last"><p>Existing PIN collected from user. To be passed when
                  <a href="LocalAuthPropertiesBuilder.html#.PinChallengeReason">LocalAuthPropertiesBuilder.PinChallengeReason.Login</a>
-                 or <a href="LocalAuthPropertiesBuilder.html#.PinChallengeReason">LocalAuthPropertiesBuilder.PinChallengeReason.ChangePin</a> is requested.</td>
+                 or <a href="LocalAuthPropertiesBuilder.html#.PinChallengeReason">LocalAuthPropertiesBuilder.PinChallengeReason.ChangePin</a> is requested.</p></td>
         </tr>
 
     
@@ -1421,9 +1421,9 @@ In this case both current and new pin has to be collected from the user and pass
 
             
 
-            <td class="description last">New PIN to be set, collected from user. To be passed when
+            <td class="description last"><p>New PIN to be set, collected from user. To be passed when
                  <a href="LocalAuthPropertiesBuilder.html#.PinChallengeReason">LocalAuthPropertiesBuilder.PinChallengeReason.SetPin</a>
-                 or <a href="LocalAuthPropertiesBuilder.html#.PinChallengeReason">LocalAuthPropertiesBuilder.PinChallengeReason.ChangePin</a> is requested.</td>
+                 or <a href="LocalAuthPropertiesBuilder.html#.PinChallengeReason">LocalAuthPropertiesBuilder.PinChallengeReason.ChangePin</a> is requested.</p></td>
         </tr>
 
     
@@ -1506,7 +1506,7 @@ In this case both current and new pin has to be collected from the user and pass
 
 
 <div class="description">
-    Local authentication PIN challenge callback
+    <p>Local authentication PIN challenge callback</p>
 <p>This callback is invoked when there is a requirement to collect PIN from the user.
 App should show a UI for collecting PIN from the user.
 Depending on the <a href="LocalAuthPropertiesBuilder.html#.PinChallengeReason">challenge reason</a> passed to this callback,
@@ -1589,7 +1589,7 @@ Both callbacks are provided as part of <a href="LocalAuthPropertiesBuilder.html#
 
             
 
-            <td class="description last">To be used by the app to either submit or cancel the current challenge.</td>
+            <td class="description last"><p>To be used by the app to either submit or cancel the current challenge.</p></td>
         </tr>
 
     
@@ -1666,7 +1666,7 @@ Both callbacks are provided as part of <a href="LocalAuthPropertiesBuilder.html#
 
 
 <div class="description">
-    Local authentication challenge handler
+    <p>Local authentication challenge handler</p>
 </div>
 
 
@@ -1727,7 +1727,7 @@ Both callbacks are provided as part of <a href="LocalAuthPropertiesBuilder.html#
 
             
 
-            <td class="description last">App invokes this passing pin collector to proceed with the current challenge.</td>
+            <td class="description last"><p>App invokes this passing pin collector to proceed with the current challenge.</p></td>
         </tr>
 
     
@@ -1750,7 +1750,7 @@ Both callbacks are provided as part of <a href="LocalAuthPropertiesBuilder.html#
 
             
 
-            <td class="description last">App invokes this to cancel the current challenge.</td>
+            <td class="description last"><p>App invokes this to cancel the current challenge.</p></td>
         </tr>
 
     
@@ -1813,7 +1813,7 @@ Both callbacks are provided as part of <a href="LocalAuthPropertiesBuilder.html#
 
 
 <div class="description">
-    Localized strings for fingerprint authentication dialog prompt.
+    <p>Localized strings for fingerprint authentication dialog prompt.</p>
 </div>
 
 
@@ -1884,7 +1884,7 @@ Both callbacks are provided as part of <a href="LocalAuthPropertiesBuilder.html#
 
             
 
-            <td class="description last">Text to be shown to the user on the dialog.</td>
+            <td class="description last"><p>Text to be shown to the user on the dialog.</p></td>
         </tr>
 
     
@@ -1915,7 +1915,7 @@ Both callbacks are provided as part of <a href="LocalAuthPropertiesBuilder.html#
 
             
 
-            <td class="description last">Label for the PIN fallback button in the dialog.</td>
+            <td class="description last"><p>Label for the PIN fallback button in the dialog.</p></td>
         </tr>
 
     
@@ -1946,7 +1946,7 @@ Both callbacks are provided as part of <a href="LocalAuthPropertiesBuilder.html#
 
             
 
-            <td class="description last">Label for the cancel button in the dialog.</td>
+            <td class="description last"><p>Label for the cancel button in the dialog.</p></td>
         </tr>
 
     
@@ -1977,7 +1977,7 @@ Both callbacks are provided as part of <a href="LocalAuthPropertiesBuilder.html#
 
             
 
-            <td class="description last">Text to be shown when fingerprint authentication is successful. Applicable to Android only.</td>
+            <td class="description last"><p>Text to be shown when fingerprint authentication is successful. Applicable to Android only.</p></td>
         </tr>
 
     
@@ -2008,7 +2008,7 @@ Both callbacks are provided as part of <a href="LocalAuthPropertiesBuilder.html#
 
             
 
-            <td class="description last">Text to be shown when fingerprint authentication is unsuccessful. Applicable to Android only.</td>
+            <td class="description last"><p>Text to be shown when fingerprint authentication is unsuccessful. Applicable to Android only.</p></td>
         </tr>
 
     
@@ -2039,7 +2039,7 @@ Both callbacks are provided as part of <a href="LocalAuthPropertiesBuilder.html#
 
             
 
-            <td class="description last">Title for the dialog. Applicable to Android only.</td>
+            <td class="description last"><p>Title for the dialog. Applicable to Android only.</p></td>
         </tr>
 
     
@@ -2070,7 +2070,7 @@ Both callbacks are provided as part of <a href="LocalAuthPropertiesBuilder.html#
 
             
 
-            <td class="description last">Hint text to be shown to the user. Applicable to Android only.</td>
+            <td class="description last"><p>Hint text to be shown to the user. Applicable to Android only.</p></td>
         </tr>
 
     
@@ -2145,7 +2145,7 @@ Both callbacks are provided as part of <a href="LocalAuthPropertiesBuilder.html#
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Tue Sep 18 2018 18:24:48 GMT+0530 (IST)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Tue Mar 05 2019 11:03:42 GMT+0530 (India Standard Time)
 </footer>
 
 <script> prettyPrint(); </script>

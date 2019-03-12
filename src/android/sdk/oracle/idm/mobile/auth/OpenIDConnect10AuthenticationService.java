@@ -257,10 +257,10 @@ public class OpenIDConnect10AuthenticationService extends OAuthAuthorizationCode
     public boolean isValid(OMAuthenticationContext authContext, boolean validateOnline) {
 
         if (authContext.getAuthenticationProvider() == OMAuthenticationContext.AuthenticationProvider.OPENIDCONNECT10) {
-            boolean result = isValidInternalAccessToken(authContext, validateOnline);//standard access token validation used in all OAuth services
-            OMLog.debug(TAG, "Access token(s) valid : " + result);
-            result = isValidIdToken(authContext, false);
-            return result;
+            boolean bAccessValid = isValidInternalAccessToken(authContext, validateOnline);//standard access token validation used in all OAuth services
+            OMLog.debug(TAG, "Access token(s) valid : " + bAccessValid);
+            boolean bIdValid = isValidIdToken(authContext, false);
+            return bAccessValid && bIdValid;
         }
         OMLog.info(TAG, "isValid - Not an Open ID Use case!");
         return true;

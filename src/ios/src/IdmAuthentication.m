@@ -223,21 +223,17 @@ NS_ASSUME_NONNULL_BEGIN
 
   OMAuthenticationContext* context = [self.ommss authenticationContext];
   BOOL isValid = NO;
-  BOOL refreshExpiredTokens = NO;
-  NSSet* scopeSet = nil;
+  // There is no reason why we should not refresh the expired token if we can.
+  BOOL refreshExpiredTokens = YES;
+  NSSet* scopeSet = [[NSSet alloc] init];
 
   if (properties) {
     scopeSet = [self extractScopeSet:properties];
     refreshExpiredTokens = [(NSNumber*) properties[@"refreshExpiredTokens"] boolValue];
   }
 
-  if (context != nil) {
-    if (scopeSet) {
-      isValid = [[self.ommss authenticationContext] isValidForScopes:scopeSet refreshExpiredToken:refreshExpiredTokens];
-    } else {
-      isValid = [[self.ommss authenticationContext] isValid];
-    }
-  }
+  if (context != nil)
+    isValid = [[self.ommss authenticationContext] isValidForScopes:scopeSet refreshExpiredToken:refreshExpiredTokens];
 
   CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary: @{@"isAuthenticated" : [NSNumber numberWithBool:isValid]}];
   [commandDelegate sendPluginResult:result callbackId:callbackId];

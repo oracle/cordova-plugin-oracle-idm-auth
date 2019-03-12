@@ -30,16 +30,16 @@
     
         <h2><span class="attribs"><span class="type-signature"></span></span>RemoteAuthenticationFlow</h2>
         
-            <div class="class-description">Remote authentication flow object.
+            <div class="class-description"><p>Remote authentication flow object.
 This class is not directly instantiated.
 Instance of this class can be obtained when the promise returned from <a href="global.html#init">init</a> resolves.
-Auth properties passed to <a href="global.html#init">init</a> should be from one of:
-<ul style="list-style: none;">
+Auth properties passed to <a href="global.html#init">init</a> should be from one of:</p>
+<p><ul style="list-style: none;">
 <li><a href="FedAuthPropertiesBuilder.html">FedAuthPropertiesBuilder</a></li>
 <li><a href="OAuthPropertiesBuilder.html">OAuthPropertiesBuilder</a></li>
 <li><a href="OpenIDConnectPropertiesBuilder.html">OpenIDConnectPropertiesBuilder</a></li>
 </ul>
-Setting up and using these authentication flows are explained in the respective builder documentations.</div>
+Setting up and using these authentication flows are explained in the respective builder documentations.</p></div>
         
     
 </header>
@@ -172,9 +172,9 @@ Setting up and using these authentication flows are explained in the respective 
 
 
 <div class="description">
-    This method is used to get Authorization headers and any custom headers to be set for making XHR requests to secured end points.
-Headers are returned as an object in a format that can be directly added to the XHR request headers.
-<pre>
+    <p>This method is used to get Authorization headers and any custom headers to be set for making XHR requests to secured end points.
+Headers are returned as an object in a format that can be directly added to the XHR request headers.</p>
+<p><pre>
 authFlow.getHeaders().then(function(headers){
   var request; // Represents an XHR request
   ...
@@ -185,7 +185,7 @@ authFlow.getHeaders().then(function(headers){
   }
   ...
 }
-</pre>
+</pre></p>
 <p>Note: <a href="HttpBasicAuthPropertiesBuilder.html#offlineAuthAllowed">HttpBasicAuthPropertiesBuilder#offlineAuthAllowed</a> should be true for retrieving headers in case of HTTP basic auth.</p>
 </div>
 
@@ -238,7 +238,7 @@ authFlow.getHeaders().then(function(headers){
 
             
 
-            <td class="description last">options to be used</td>
+            <td class="description last"><p>options to be used</p></td>
         </tr>
 
     
@@ -279,7 +279,7 @@ authFlow.getHeaders().then(function(headers){
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1965">line 1965</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1973">line 1973</a>
     </li></ul></dd>
     
 
@@ -306,7 +306,7 @@ authFlow.getHeaders().then(function(headers){
 
         
 <div class="param-desc">
-    If the promise is rejected, the callback will receive and object of type <a href="global.html#AuthError">AuthError</a>
+    <p>If the promise is rejected, the callback will receive and object of type <a href="global.html#AuthError">AuthError</a></p>
 </div>
 
 
@@ -343,7 +343,7 @@ authFlow.getHeaders().then(function(headers){
 
 
 <div class="description">
-    This method is used to find out if the user is authenticated.
+    <p>This method is used to find out if the user is authenticated.</p>
 </div>
 
 
@@ -395,7 +395,7 @@ authFlow.getHeaders().then(function(headers){
 
             
 
-            <td class="description last">options to be used</td>
+            <td class="description last"><p>options to be used</p></td>
         </tr>
 
     
@@ -468,7 +468,7 @@ authFlow.getHeaders().then(function(headers){
 
         
 <div class="param-desc">
-    If the promise is rejected, the callback will receive and object of type <a href="global.html#AuthError">AuthError</a>
+    <p>If the promise is rejected, the callback will receive and object of type <a href="global.html#AuthError">AuthError</a></p>
 </div>
 
 
@@ -505,22 +505,22 @@ authFlow.getHeaders().then(function(headers){
 
 
 <div class="description">
-    This method is used to login. <p>The promise is resolved when login succeeds. Once login is successful,
+    <p>This method is used to login. <p>The promise is resolved when login succeeds. Once login is successful,
 if this authentication is for accessing the app, user can be allowed to do so.
 If it is to access data secured resources this operation can now be performed.
 It may also be required to obtain certain headers for accessing the secured resource.
-In this case <a href="RemoteAuthenticationFlow.html#getHeaders">RemoteAuthenticationFlow#getHeaders</a> can be used.</p>
-<p>The promise gets rejected with an <a href="global.html#AuthError">AuthError</a> object which contains information on the reason of failure.
+In this case <a href="RemoteAuthenticationFlow.html#getHeaders">RemoteAuthenticationFlow#getHeaders</a> can be used.</p></p>
+<p><p>The promise gets rejected with an <a href="global.html#AuthError">AuthError</a> object which contains information on the reason of failure.
 This information can be used to shown the reason why login did not succeed.
-App can keep track of these failures and implement specific policies related to maximum attempts and steps to do after multiple failures here.</p>
-<p>Sample usage:</p><pre>
+App can keep track of these failures and implement specific policies related to maximum attempts and steps to do after multiple failures here.</p></p>
+<p><p>Sample usage:</p><pre>
 cordova.plugins.IdmAuthFlows.init(authProps).then(
   function(authenticationFlow) {
     var loginPromise = authenticationFlow.login();
     loginPromise.then(...);
     loginPromise.catch(...);
   }
-);</pre>
+);</pre></p>
 </div>
 
 
@@ -596,7 +596,7 @@ cordova.plugins.IdmAuthFlows.init(authProps).then(
 
         
 <div class="param-desc">
-    If the promise is rejected, the callback will receive and object of type <a href="global.html#AuthError">AuthError</a>
+    <p>If the promise is rejected, the callback will receive and object of type <a href="global.html#AuthError">AuthError</a></p>
 </div>
 
 
@@ -633,15 +633,42 @@ cordova.plugins.IdmAuthFlows.init(authProps).then(
 
 
 <div class="description">
-    This method is used to logout.
-<p>Once the promise is resolved, the user can be shown the login page to re-login or a way to attempt for the same.
+    <p>This method is used to logout.</p>
+<p><p>Once the promise is resolved, the user can be shown the login page to re-login or a way to attempt for the same.
 <a href="AuthenticationFlow.html#login">AuthenticationFlow#login</a> can be invoked on the same <a href="AuthenticationFlow.html">AuthenticationFlow</a> object.
-There is no need to create a new one, unless there is some change in the authentication properties such as server details.</p>
-<p>User is essentially logged out even if logout promise is rejected.
+There is no need to create a new one, unless there is some change in the authentication properties such as server details.</p></p>
+<p><p>User is essentially logged out even if logout promise is rejected.
 App can decide not to show the logout error to the end user as there is no action associated with it.
 There is one special case when device is offline. In this case, logout will throw an error because logout URL loading will fail.
 But device local logout will be successful. Application should handle this error, check for the device status (offline / online)
 and then decide to show the error message to the user.</p>
+The following table describes what is cleared on logout with different values for purgeSettings:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">purgeSettings</th>
+<th style="text-align:left">false</th>
+<th style="text-align:left">true</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">HttpBasicAuthentication</td>
+<td style="text-align:left">Clear remembered credentials</td>
+<td style="text-align:left">Clears offline, remembered credentials, user preferences</td>
+</tr>
+<tr>
+<td style="text-align:left">FederatedAuthentication</td>
+<td style="text-align:left">Clear Cookies by loading logout URL</td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">OAuth, OpenID</td>
+<td style="text-align:left">Clear access token</td>
+<td style="text-align:left">Invalidate session maintained by the browser by loading logout URL.</td>
+</tr>
+</tbody>
+</table>
 </div>
 
 
@@ -693,7 +720,7 @@ and then decide to show the error message to the user.</p>
 
             
 
-            <td class="description last">pass true to reset all saved information for this auth. Falls back to 'false' if non boolean is passed.</td>
+            <td class="description last"><p>pass true to reset all saved information for this auth. Falls back to 'false' if non boolean is passed.</p></td>
         </tr>
 
     
@@ -766,7 +793,7 @@ and then decide to show the error message to the user.</p>
 
         
 <div class="param-desc">
-    If the promise is rejected, the callback will receive and object of type <a href="global.html#AuthError">AuthError</a>
+    <p>If the promise is rejected, the callback will receive and object of type <a href="global.html#AuthError">AuthError</a></p>
 </div>
 
 
@@ -803,7 +830,7 @@ and then decide to show the error message to the user.</p>
 
 
 <div class="description">
-    Option object to be used with <a href="RemoteAuthenticationFlow.html#getHeaders">RemoteAuthenticationFlow#getHeaders</a>
+    <p>Option object to be used with <a href="RemoteAuthenticationFlow.html#getHeaders">RemoteAuthenticationFlow#getHeaders</a></p>
 </div>
 
 
@@ -864,7 +891,7 @@ and then decide to show the error message to the user.</p>
 
             
 
-            <td class="description last">URL for which cookies and headers need to retrieved. Applicable only for for FedAuth.</td>
+            <td class="description last"><p>URL for which cookies and headers need to retrieved. Applicable only for for FedAuth.</p></td>
         </tr>
 
     
@@ -887,9 +914,9 @@ and then decide to show the error message to the user.</p>
 
             
 
-            <td class="description last">Scopes for which header is requested.
+            <td class="description last"><p>Scopes for which header is requested.
 Need to be set for OAuth cases where fine grained control on the token is needed.
-If not specified, the first OAuth token available will be returned. Applicable only for for OAuth</td>
+If not specified, the first OAuth token available will be returned. Applicable only for for OAuth</p></td>
         </tr>
 
     
@@ -928,7 +955,7 @@ If not specified, the first OAuth token available will be returned. Applicable o
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1957">line 1957</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1965">line 1965</a>
     </li></ul></dd>
     
 
@@ -964,7 +991,7 @@ If not specified, the first OAuth token available will be returned. Applicable o
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Tue Sep 18 2018 18:24:48 GMT+0530 (IST)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Tue Mar 05 2019 11:03:42 GMT+0530 (India Standard Time)
 </footer>
 
 <script> prettyPrint(); </script>

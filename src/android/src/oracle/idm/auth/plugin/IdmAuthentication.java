@@ -5,12 +5,7 @@
 package oracle.idm.auth.plugin;
 
 import java.io.UnsupportedEncodingException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 
 import android.content.BroadcastReceiver;
@@ -183,8 +178,10 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
     Log.d(TAG, "isAuthenticated invoked.");
     try
     {
-      Set<String> scopeSet = null;
-      boolean refreshExpiredTokens = false;
+
+      Set<String> scopeSet = Collections.EMPTY_SET;
+      // There is no reason why we should not refresh the expired token if we can.
+      boolean refreshExpiredTokens = true;
 
       if (props != null && props.length() > 0)
       {
@@ -193,36 +190,20 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
         {
           String key = keys.next();
           if (OMMobileSecurityService.OM_PROP_OAUTH_SCOPE.equals(key))
-          {
             scopeSet = _extractSet(props, key);
-            continue;
-          }
-
-          if ("refreshExpiredTokens".equals(key))
-          {
+          else if (_REFRESH_EXPIRED_TOKENS.equals(key))
             refreshExpiredTokens = props.optBoolean(key);
-          }
         }
       }
+
       OMAuthenticationContext context = _ommss.retrieveAuthenticationContext();
-      boolean isValid = false;
-
-      if (context != null)
-      {
-        if (scopeSet != null)
-        {
-          Log.d(TAG, "Invoking isValid with scopeSet and refreshExpiredTokens options.");
-          isValid = context.isValid(scopeSet, refreshExpiredTokens);
-        }
-        else
-        {
-          Log.d(TAG, "Invoking isValid.");
-          isValid = context.isValid();
-        }
-      }
-
       Map<String, Object> authResponse = new HashMap<String, Object>();
-      authResponse.put("isAuthenticated", isValid);
+
+      if (context == null)
+        authResponse.put(_IS_AUTHENTICATED_KEY, false);
+      else
+        authResponse.put(_IS_AUTHENTICATED_KEY, context.isValid(scopeSet, refreshExpiredTokens));
+
       callbackContext.success(new JSONObject(authResponse));
     }
     catch (OMMobileSecurityException securityEx)
@@ -818,6 +799,8 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
   private static final String _BEARER = "Bearer";
   private static final String _BASIC = "Basic";
   private static final String _CHALLENGE_ERROR = "error";
+  private static final String _REFRESH_EXPIRED_TOKENS = "refreshExpiredTokens";
+  private static final String _IS_AUTHENTICATED_KEY = "isAuthenticated";
 
 
   /**

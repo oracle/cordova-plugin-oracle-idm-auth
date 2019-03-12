@@ -171,6 +171,73 @@ exports.defineAutoTests = function() {
         done();
       });
     });
+    // Fails in iOS - Bug 29389078
+    describe('enable and disable PIN fails and then login and disable.', function() {
+      var firstDisable, secondDisable;
+      beforeEach(function(done) {
+        resetTest();
+        pinAuthFlow.getManager().getEnabled()
+          .then(function(enabled) {
+            enabledStates.push(enabled);
+          })
+          .then(function() {
+            currPin = undefined;
+            newPin = "1234";
+            return pinAuthFlow.getManager().enable(localAuthTypes.PIN);
+          })
+          .then(function() {
+            return pinAuthFlow.isAuthenticated();
+          })
+          .then(function(isAuth) {
+            isAuthenticatedStates.push(isAuth);
+            return pinAuthFlow.getManager().getEnabled();
+          })
+          .then(function(enabled) {
+            enabledStates.push(enabled);
+            return pinAuthFlow.getManager().disable(localAuthTypes.PIN);
+          })
+          .catch(function(err) {
+            firstDisable = false;
+            firstDisableErr = err;
+            currPin = "1234";
+            newPin = undefined;
+            return pinAuthFlow.login();
+          })
+          .then(function() {
+            return pinAuthFlow.getManager().disable(localAuthTypes.PIN);
+          })
+          .then(function() {
+            secondDisable = true;
+            return pinAuthFlow.getManager().getEnabled();
+          })
+          .then(function(enabled) {
+            enabledStates.push(enabled);
+            done();
+          })
+          .catch(done);
+      });
+      it('works as expected.', function(done) {
+        expect(firstDisableErr).toBeDefined();
+        expect(firstDisable).not.toBeTruthy();
+        window.TestUtil.verifyPluginError(firstDisableErr, "10427");
+        expect(firstDisableErr).toBeDefined();
+        expect(secondDisable).toBeTruthy();
+        expect(enabledStates.length).toBe(3);
+        expect(enabledStates[0].length).toBe(0);
+        expect(enabledStates[1].length).toBe(1);
+        expect(enabledStates[1][0]).toBe(localAuthTypes.PIN);
+        expect(enabledStates[2].length).toBe(0);
+
+        expect(challengeReasons.length).toBe(2);
+        expect(challengeReasons[0]).toBe(pinChallengeReason.SetPin);
+        expect(challengeReasons[1]).toBe(pinChallengeReason.Login);
+
+        expect(isAuthenticatedStates.length).toBe(1);
+        expect(isAuthenticatedStates[0]).not.toBeTruthy();
+
+        done();
+      });
+    });
 
     describe('enable and login and disable.', function() {
       beforeEach(function(done) {
@@ -653,6 +720,5 @@ exports.defineAutoTests = function() {
         done();
       });
     });
-
   });
 };
