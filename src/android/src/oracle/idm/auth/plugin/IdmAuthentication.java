@@ -178,32 +178,19 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
     Log.d(TAG, "isAuthenticated invoked.");
     try
     {
-
-      Set<String> scopeSet = Collections.EMPTY_SET;
-      // There is no reason why we should not refresh the expired token if we can.
-      boolean refreshExpiredTokens = true;
-
-      if (props != null && props.length() > 0)
-      {
-        Iterator<String> keys = props.keys();
-        while (keys.hasNext())
-        {
-          String key = keys.next();
-          if (OMMobileSecurityService.OM_PROP_OAUTH_SCOPE.equals(key))
-            scopeSet = _extractSet(props, key);
-          else if (_REFRESH_EXPIRED_TOKENS.equals(key))
-            refreshExpiredTokens = props.optBoolean(key);
-        }
-      }
-
+      boolean isValid;
       OMAuthenticationContext context = _ommss.retrieveAuthenticationContext();
-      Map<String, Object> authResponse = new HashMap<String, Object>();
 
       if (context == null)
-        authResponse.put(_IS_AUTHENTICATED_KEY, false);
+        isValid = false;
+      else  if (_authType == OMMobileSecurityService.AuthServerType.OpenIDConnect10
+          || _authType == OMMobileSecurityService.AuthServerType.OAuth20)
+        isValid = checkIsValidForOauth(context, props);
       else
-        authResponse.put(_IS_AUTHENTICATED_KEY, context.isValid(scopeSet, refreshExpiredTokens));
+        isValid = context.isValid();
 
+      Map<String, Object> authResponse = new HashMap<String, Object>();
+      authResponse.put(_IS_AUTHENTICATED_KEY, isValid);
       callbackContext.success(new JSONObject(authResponse));
     }
     catch (OMMobileSecurityException securityEx)
@@ -211,6 +198,27 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
       Log.e(TAG, "Error while checking authentication status: " + securityEx.getMessage());
       IdmAuthenticationPlugin.invokeCallbackError(callbackContext, securityEx);
     }
+  }
+
+  private boolean checkIsValidForOauth(OMAuthenticationContext context, JSONObject props) {
+    Set<String> scopeSet = Collections.EMPTY_SET;
+    // There is no reason why we should not refresh the expired token if we can.
+    boolean refreshExpiredTokens = true;
+
+    if (props != null && props.length() > 0)
+    {
+      Iterator<String> keys = props.keys();
+      while (keys.hasNext())
+      {
+        String key = keys.next();
+        if (OMMobileSecurityService.OM_PROP_OAUTH_SCOPE.equals(key))
+          scopeSet = _extractSet(props, key);
+        else if (_REFRESH_EXPIRED_TOKENS.equals(key))
+          refreshExpiredTokens = props.optBoolean(key);
+      }
+    }
+
+    return context.isValid(scopeSet, refreshExpiredTokens);
   }
 
   /**

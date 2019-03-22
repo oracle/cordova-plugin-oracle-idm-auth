@@ -2218,9 +2218,16 @@ var IdmAuthFlows = function() {
      * @return {Promise.<boolean>}
      */
     this.isAuthenticated = function(options) {
+      // Since there is no concept of logout with local auth,
+      // once user logged in, is always logged in.
+      if (lastAuthenticated)
+        return Promise.resolve(true);
+
+      // If there is no lastAuthenticated,
+      // we need to check if there are any authenticators enabled.
       return new Promise(function(resolve, reject) {
-        manager.getEnabled().then(function(enabled){
-          resolve(enabled[0] === lastAuthenticated);
+        manager.getEnabled().then(function(enabled) {
+          resolve(enabled.length == 0);
         }).catch(function(err) {
           reject(getError(errorCodes.GetEnabledAuthsError));
         });

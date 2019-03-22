@@ -1,5 +1,9 @@
 # Release Notes
 
+## 1.1.6 (22 Mar, 2019)
+* Fix regression - isAuthenticated not returning correct value for basic auth.
+* Improve the way isAuthenticated is determined for local authentication.
+
 ## 1.1.5 (12 Mar, 2019)
 * Bug fix in Android with OpenId usecase where user was considered logged in even after access token expired.
 * Fix to refresh access token when checking for isAuthenticated.

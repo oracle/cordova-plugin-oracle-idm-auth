@@ -222,7 +222,26 @@ NS_ASSUME_NONNULL_BEGIN
   }
 
   OMAuthenticationContext* context = [self.ommss authenticationContext];
-  BOOL isValid = NO;
+  BOOL isValid;
+  NSString* authType = (NSString*) self.properties[OM_PROP_AUTHSERVER_TYPE];
+
+  if (context == nil) {
+    isValid = NO;
+  } else if ([OM_PROP_OAUTH_OAUTH20_SERVER isEqualToString:authType] ||
+        [OM_PROP_OPENID_CONNECT_SERVER isEqualToString:authType]) {
+    isValid = [self checkIsValidForOauth: context props:properties];
+  } else {
+    isValid = [context isValid];
+  }
+
+  CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
+                                          messageAsDictionary: @{@"isAuthenticated" : [NSNumber numberWithBool:isValid]}];
+  [commandDelegate sendPluginResult:result callbackId:callbackId];
+  IdmLog(@"isAuthenticated completed: %d", isValid);
+}
+
+- (BOOL) checkIsValidForOauth: (OMAuthenticationContext*) context
+                        props:(NSDictionary*) properties {
   // There is no reason why we should not refresh the expired token if we can.
   BOOL refreshExpiredTokens = YES;
   NSSet* scopeSet = [[NSSet alloc] init];
@@ -232,12 +251,7 @@ NS_ASSUME_NONNULL_BEGIN
     refreshExpiredTokens = [(NSNumber*) properties[@"refreshExpiredTokens"] boolValue];
   }
 
-  if (context != nil)
-    isValid = [[self.ommss authenticationContext] isValidForScopes:scopeSet refreshExpiredToken:refreshExpiredTokens];
-
-  CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary: @{@"isAuthenticated" : [NSNumber numberWithBool:isValid]}];
-  [commandDelegate sendPluginResult:result callbackId:callbackId];
-  IdmLog(@"isAuthenticated completed: %d", isValid);
+  return [[self.ommss authenticationContext] isValidForScopes:scopeSet refreshExpiredToken:refreshExpiredTokens];
 }
 
 /**

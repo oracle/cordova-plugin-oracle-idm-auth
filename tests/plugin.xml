@@ -1,48 +1,53 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
-    xmlns:rim="http://www.blackberry.com/ns/widgets"
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    id="cordova-plugin-oracle-idm-auth-tests"
-    version="1.1.5">
-    <name>cordova-plugin-oracle-idm-auth-tests</name>
-    <description>JasmineJS tests written for cordova-plugin-oracle-idm-auth plugin</description>
+  xmlns:rim="http://www.blackberry.com/ns/widgets"
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  id="cordova-plugin-oracle-idm-auth-tests"
+  version="1.1.6">
+  <name>cordova-plugin-oracle-idm-auth-tests</name>
+  <description>JasmineJS tests written for cordova-plugin-oracle-idm-auth plugin</description>
 
-    <!-- The trick to add multiple JS files is to have a unique name that ends with '.tests' -->
-    <!-- TestConfig and TestUtils should be loaded first, as it contains the test environment configuration and utility methods. -->
-    <js-module src="TestConfig.js" name="config.tests">
-    </js-module>
-    <js-module src="TestUtil.js" name="util.tests">
-    </js-module>
+  <!-- The trick to add multiple JS files is to have a unique name that ends with '.tests' -->
+  <!-- TestConfig and TestUtils should be loaded first, as it contains the test environment configuration and utility methods. -->
+  <js-module src="TestConfig.js" name="config.tests">
+  </js-module>
+  <js-module src="TestUtil.js" name="util.tests">
+  </js-module>
 
-    <!-- Test cases. -->
-    <js-module src="dep-api-tests.js" name="depapi.tests">
-    </js-module>
-    <js-module src="dep-builder-tests.js" name="builder.tests">
-    </js-module>
-    <js-module src="api-tests.js" name="api.tests">
-    </js-module>
-    <js-module src="http-basic-builder-tests.js" name="http.basic.builder.tests">
-    </js-module>
-    <js-module src="fed-builder-tests.js" name="fed.builder.tests">
-    </js-module>
-    <js-module src="oauth-builder-tests.js" name="oauth.builder.tests">
-    </js-module>
-    <js-module src="openid-builder-tests.js" name="open.id.builder.tests">
-    </js-module>
-    <js-module src="local-builder-tests.js" name="local.builder.tests">
-    </js-module>
-    <js-module src="http-basic-auth-flow-tests.js" name="http.basic.auth.flow.tests">
-    </js-module>
-    <js-module src="http-basic-auth-flow-tests-2.js" name="http.basic.auth.flow.2.tests">
-    </js-module>
-    <js-module src="mcs-http-basic-auth-flow-tests.js" name="mcs.http.basic.auth.flow.tests">
-    </js-module>
-    <js-module src="pin-auth-tests.js" name="pin.auth.tests">
-    </js-module>
-    <js-module src="web-sso-tests.js" name="web.sso.tests">
-    </js-module>
-    <js-module src="oauth-tests.js" name="oauth.tests">
-    </js-module>
-    <js-module src="open-id-tests.js" name="openid.tests">
-    </js-module>
+  <!-- Test cases. -->
+  <!-- Fully automated tests -->
+  <js-module src="dep-api-tests.js" name="depapi.tests">
+  </js-module>
+  <js-module src="dep-builder-tests.js" name="builder.tests">
+  </js-module>
+  <js-module src="api-tests.js" name="api.tests">
+  </js-module>
+  <js-module src="http-basic-builder-tests.js" name="http.basic.builder.tests">
+  </js-module>
+  <js-module src="fed-builder-tests.js" name="fed.builder.tests">
+  </js-module>
+  <js-module src="oauth-builder-tests.js" name="oauth.builder.tests">
+  </js-module>
+  <js-module src="openid-builder-tests.js" name="open.id.builder.tests">
+  </js-module>
+  <js-module src="local-builder-tests.js" name="local.builder.tests">
+  </js-module>
+  <js-module src="http-basic-auth-flow-tests.js" name="http.basic.auth.flow.tests">
+  </js-module>
+  <js-module src="http-basic-auth-flow-tests-2.js" name="http.basic.auth.flow.2.tests">
+  </js-module>
+  <js-module src="pin-auth-tests.js" name="pin.auth.tests">
+  </js-module>
+
+  <!-- Bad env -->
+  <js-module src="mcs-http-basic-auth-flow-tests.js" name="mcs.http.basic.auth.flow.tests">
+  </js-module>
+
+  <!-- Manual intervention needed to input cred, in case of webview / external browser -->
+  <js-module src="web-sso-tests.js" name="web.sso.tests">
+  </js-module>
+  <js-module src="oauth-tests.js" name="oauth.tests">
+  </js-module>
+  <js-module src="open-id-tests.js" name="openid.tests">
+  </js-module>
 </plugin>

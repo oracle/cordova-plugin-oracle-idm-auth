@@ -7,7 +7,7 @@ exports.defineAutoTests = function() {
   var idmAuthFlowPlugin = cordova.plugins.IdmAuthFlows;
   var pinChallengeReason = idmAuthFlowPlugin.LocalAuthPropertiesBuilder.PinChallengeReason;
   var localAuthTypes = idmAuthFlowPlugin.LocalAuthPropertiesBuilder.LocalAuthenticatorType;
-  var pinAuthFlow, isCancelFlow, currPin, newPin, challengeReasons, enabledStates, loginResults, isAuthenticatedStates, disableSuccess;
+  var pinAuthFlow, isCancelFlow, currPin, newPin, challengeReasons, enabledStates, loginResults, disableSuccess;
 
   var resetTest = function() {
     challengeReasons = [];
@@ -16,7 +16,6 @@ exports.defineAutoTests = function() {
     currPin = undefined;
     newPin = undefined;
     loginResults = [];
-    isAuthenticatedStates = [];
     disableSuccess = false;
   };
 
@@ -171,75 +170,11 @@ exports.defineAutoTests = function() {
         done();
       });
     });
-    // Fails in iOS - Bug 29389078
-    describe('enable and disable PIN fails and then login and disable.', function() {
-      var firstDisable, secondDisable;
-      beforeEach(function(done) {
-        resetTest();
-        pinAuthFlow.getManager().getEnabled()
-          .then(function(enabled) {
-            enabledStates.push(enabled);
-          })
-          .then(function() {
-            currPin = undefined;
-            newPin = "1234";
-            return pinAuthFlow.getManager().enable(localAuthTypes.PIN);
-          })
-          .then(function() {
-            return pinAuthFlow.isAuthenticated();
-          })
-          .then(function(isAuth) {
-            isAuthenticatedStates.push(isAuth);
-            return pinAuthFlow.getManager().getEnabled();
-          })
-          .then(function(enabled) {
-            enabledStates.push(enabled);
-            return pinAuthFlow.getManager().disable(localAuthTypes.PIN);
-          })
-          .catch(function(err) {
-            firstDisable = false;
-            firstDisableErr = err;
-            currPin = "1234";
-            newPin = undefined;
-            return pinAuthFlow.login();
-          })
-          .then(function() {
-            return pinAuthFlow.getManager().disable(localAuthTypes.PIN);
-          })
-          .then(function() {
-            secondDisable = true;
-            return pinAuthFlow.getManager().getEnabled();
-          })
-          .then(function(enabled) {
-            enabledStates.push(enabled);
-            done();
-          })
-          .catch(done);
-      });
-      it('works as expected.', function(done) {
-        expect(firstDisableErr).toBeDefined();
-        expect(firstDisable).not.toBeTruthy();
-        window.TestUtil.verifyPluginError(firstDisableErr, "10427");
-        expect(firstDisableErr).toBeDefined();
-        expect(secondDisable).toBeTruthy();
-        expect(enabledStates.length).toBe(3);
-        expect(enabledStates[0].length).toBe(0);
-        expect(enabledStates[1].length).toBe(1);
-        expect(enabledStates[1][0]).toBe(localAuthTypes.PIN);
-        expect(enabledStates[2].length).toBe(0);
 
-        expect(challengeReasons.length).toBe(2);
-        expect(challengeReasons[0]).toBe(pinChallengeReason.SetPin);
-        expect(challengeReasons[1]).toBe(pinChallengeReason.Login);
-
-        expect(isAuthenticatedStates.length).toBe(1);
-        expect(isAuthenticatedStates[0]).not.toBeTruthy();
-
-        done();
-      });
-    });
-
+    // We can test isAuthenticated for false only once.
+    // User once logged in is always logged in for that instance of the app.
     describe('enable and login and disable.', function() {
+      var isAuthenticatedStates = [];
       beforeEach(function(done) {
         resetTest();
         pinAuthFlow.getManager().getEnabled()
@@ -304,7 +239,68 @@ exports.defineAutoTests = function() {
         expect(isAuthenticatedStates.length).toBe(3);
         expect(isAuthenticatedStates[0]).not.toBeTruthy();
         expect(isAuthenticatedStates[1]).toBeTruthy();
-        expect(isAuthenticatedStates[2]).not.toBeTruthy();
+        expect(isAuthenticatedStates[2]).toBeTruthy();
+
+        done();
+      });
+    });
+
+    // Fails in iOS - Bug 29389078
+    describe('enable and disable PIN fails and then login and disable.', function() {
+      var firstDisable, secondDisable;
+      beforeEach(function(done) {
+        resetTest();
+        pinAuthFlow.getManager().getEnabled()
+          .then(function(enabled) {
+            enabledStates.push(enabled);
+          })
+          .then(function() {
+            currPin = undefined;
+            newPin = "1234";
+            return pinAuthFlow.getManager().enable(localAuthTypes.PIN);
+          })
+          .then(function() {
+            return pinAuthFlow.getManager().getEnabled();
+          })
+          .then(function(enabled) {
+            enabledStates.push(enabled);
+            return pinAuthFlow.getManager().disable(localAuthTypes.PIN);
+          })
+          .catch(function(err) {
+            firstDisable = false;
+            firstDisableErr = err;
+            currPin = "1234";
+            newPin = undefined;
+            return pinAuthFlow.login();
+          })
+          .then(function() {
+            return pinAuthFlow.getManager().disable(localAuthTypes.PIN);
+          })
+          .then(function() {
+            secondDisable = true;
+            return pinAuthFlow.getManager().getEnabled();
+          })
+          .then(function(enabled) {
+            enabledStates.push(enabled);
+            done();
+          })
+          .catch(done);
+      });
+      it('works as expected.', function(done) {
+        expect(firstDisableErr).toBeDefined();
+        expect(firstDisable).not.toBeTruthy();
+        window.TestUtil.verifyPluginError(firstDisableErr, "10427");
+        expect(firstDisableErr).toBeDefined();
+        expect(secondDisable).toBeTruthy();
+        expect(enabledStates.length).toBe(3);
+        expect(enabledStates[0].length).toBe(0);
+        expect(enabledStates[1].length).toBe(1);
+        expect(enabledStates[1][0]).toBe(localAuthTypes.PIN);
+        expect(enabledStates[2].length).toBe(0);
+
+        expect(challengeReasons.length).toBe(2);
+        expect(challengeReasons[0]).toBe(pinChallengeReason.SetPin);
+        expect(challengeReasons[1]).toBe(pinChallengeReason.Login);
 
         done();
       });
