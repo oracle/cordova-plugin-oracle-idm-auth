@@ -7,10 +7,12 @@ exports.defineAutoTests = function() {
   var idmAuthFlowPlugin = cordova.plugins.IdmAuthFlows;
   var pinChallengeReason = idmAuthFlowPlugin.LocalAuthPropertiesBuilder.PinChallengeReason;
   var localAuthTypes = idmAuthFlowPlugin.LocalAuthPropertiesBuilder.LocalAuthenticatorType;
-  var pinAuthFlow, isCancelFlow, currPin, newPin, challengeReasons, enabledStates, loginResults, disableSuccess;
+  var pinAuthFlow, isCancelFlow, currPin, newPin, challengeReasons, challengeErrors;
+  var enabledStates, loginResults, disableSuccess;
 
   var resetTest = function() {
     challengeReasons = [];
+    challengeErrors = [];
     enabledStates = [];
     isCancelFlow = undefined;
     currPin = undefined;
@@ -19,8 +21,10 @@ exports.defineAutoTests = function() {
     disableSuccess = false;
   };
 
-  var pinChallenge = function (challengeReason, completionHandler) {
+  var pinChallenge = function (challengeReason, completionHandler, err) {
     challengeReasons.push(challengeReason);
+    if (err)
+      challengeErrors.push(err);
     if (isCancelFlow) {
       completionHandler.cancel();
       return;
@@ -32,6 +36,7 @@ exports.defineAutoTests = function() {
   var pinAuthProps = new idmAuthFlowPlugin.LocalAuthPropertiesBuilder()
                             .id("testPinAuth")
                             .pinChallengeCallback(pinChallenge)
+                            .maxLoginAttemptsForPIN(3)
                             .build();
 
   var init = function(done) {
@@ -540,7 +545,7 @@ exports.defineAutoTests = function() {
       });
     });
 
-    describe('enable, login with wrong PIN, login with correct PIN, disable', function() {
+    describe('enable, login with wrong PIN, login with correct PIN, disable, with maxRetry check.', function() {
       var loginErr;
       beforeEach(function(done) {
         resetTest();
@@ -548,7 +553,7 @@ exports.defineAutoTests = function() {
         newPin = "1234";
         pinAuthFlow.getManager().enable(localAuthTypes.PIN)
           .then(function() {
-            currPin = "2222";
+            currPin = "2222";  // Wrong PIN
             newPin = undefined;
             return pinAuthFlow.login();
           })
@@ -570,10 +575,17 @@ exports.defineAutoTests = function() {
       it('throws expected error code.', function(done) {
         expect(disableSuccess).toBeTruthy();
         window.TestUtil.verifyPluginError(loginErr, "10408");
-        expect(challengeReasons.length).toBe(3);
+        expect(challengeReasons.length).toBe(5);
         expect(challengeReasons[0]).toBe(pinChallengeReason.SetPin);
         expect(challengeReasons[1]).toBe(pinChallengeReason.Login);
         expect(challengeReasons[2]).toBe(pinChallengeReason.Login);
+        expect(challengeReasons[3]).toBe(pinChallengeReason.Login);
+        expect(challengeReasons[4]).toBe(pinChallengeReason.Login);
+
+        expect(challengeErrors.length).toBe(2);
+        window.TestUtil.verifyPluginError(challengeErrors[0], "10408");
+        window.TestUtil.verifyPluginError(challengeErrors[1], "10408");
+
         done();
       });
     });
@@ -655,11 +667,18 @@ exports.defineAutoTests = function() {
       it('throws expected error code.', function(done) {
         expect(disableSuccess).toBeTruthy();
         window.TestUtil.verifyPluginError(pinChangeErr, "70009");
-        expect(challengeReasons.length).toBe(4);
+        expect(challengeReasons.length).toBe(6);
         expect(challengeReasons[0]).toBe(pinChallengeReason.SetPin);
         expect(challengeReasons[1]).toBe(pinChallengeReason.Login);
         expect(challengeReasons[2]).toBe(pinChallengeReason.ChangePin);
-        expect(challengeReasons[3]).toBe(pinChallengeReason.Login);
+        expect(challengeReasons[3]).toBe(pinChallengeReason.ChangePin);
+        expect(challengeReasons[4]).toBe(pinChallengeReason.ChangePin);
+        expect(challengeReasons[5]).toBe(pinChallengeReason.Login);
+
+        expect(challengeErrors.length).toBe(2);
+        window.TestUtil.verifyPluginError(challengeErrors[0], "70009");
+        window.TestUtil.verifyPluginError(challengeErrors[1], "70009");
+
         done();
       });
     });

@@ -38,5 +38,6 @@ exports.defineAutoTests = function() {
       });
     });
     describe('translations', window.TestUtil.validator(Builder, 'translations', 'object'));
+    describe('maxLoginAttemptsForPIN', window.TestUtil.validator(Builder, 'maxLoginAttemptsForPIN', 'number'));
   });
 };

@@ -158,6 +158,7 @@ exports.defineAutoTests = function() {
           urlValidator(Builder, property);
         fnValidator(Builder, property, type === 'function');
         objectValidator(Builder, property, type === 'object');
+        numberValidator(Builder, property, type === 'number');
       };
     },
     xmlHttpRequestPromise: function(headers, securedUrl, withCred) {

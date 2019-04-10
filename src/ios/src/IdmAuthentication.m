@@ -281,12 +281,11 @@ withFedAuthSecuredUrl: (NSString*) fedAuthSecuredUrl
   if ([OM_PROP_AUTHSERVER_HTTPBASIC isEqualToString:authType]) {
     returnHeaders = [self headersForBasicAuth:context];
   } else if ([OM_PROP_AUTHSERVER_FED_AUTH isEqualToString:authType]) {
-    // SAML case, return OAUTH tokens
-    if ([(NSNumber*) self.properties[OM_PROP_PARSE_TOKEN_RELAY_RESPONSE] boolValue] == YES) {
-      returnHeaders = [self headersForOAuth:scopes context:context];
-    } else {
-      returnHeaders = [self headersForFedAuth:fedAuthSecuredUrl context:context];
-    }
+    // SAML case, return OAUTH tokens as well
+    if ([(NSNumber*) self.properties[OM_PROP_PARSE_TOKEN_RELAY_RESPONSE] boolValue] == YES)
+      [returnHeaders addEntriesFromDictionary:[self headersForOAuth:scopes context:context]];
+    if (fedAuthSecuredUrl != nil)
+      [returnHeaders addEntriesFromDictionary:[self headersForFedAuth:fedAuthSecuredUrl context:context]];
   } else if ([OM_PROP_OAUTH_OAUTH20_SERVER isEqualToString:authType] || [OM_PROP_OPENID_CONNECT_SERVER isEqualToString:authType]) {
     returnHeaders = [self headersForOAuth:scopes context:context];
   }

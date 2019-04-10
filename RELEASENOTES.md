@@ -1,5 +1,9 @@
 # Release Notes
 
+## 1.1.7 (10 Apr, 2019)
+* Added max retry for PIN authentication. This kicks in for login attempts using PIN, directly or as fallback from Fingerprint. It also kicks in for PIN change.
+* For SAML based WebSSO, with parseTokenRelayResponse turned on, getHeaders can return cookies as headers in addition to the access tokens when header options specify fedAuthSecuredUrl.
+
 ## 1.1.6 (22 Mar, 2019)
 * Fix regression - isAuthenticated not returning correct value for basic auth.
 * Improve the way isAuthenticated is determined for local authentication.

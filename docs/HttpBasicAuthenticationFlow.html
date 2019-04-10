@@ -86,7 +86,7 @@ Setting up and using HTTP basic authentication flow is explained in the <a href=
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2021">line 2021</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2053">line 2053</a>
     </li></ul></dd>
     
 
@@ -161,7 +161,7 @@ Setting up and using HTTP basic authentication flow is explained in the <a href=
 <div class="description">
     <p>This method is used to get Authorization headers and any custom headers to be set for making XHR requests to secured end points.
 Headers are returned as an object in a format that can be directly added to the XHR request headers.</p>
-<p><pre>
+<pre>
 authFlow.getHeaders().then(function(headers){
   var request; // Represents an XHR request
   ...
@@ -172,8 +172,7 @@ authFlow.getHeaders().then(function(headers){
   }
   ...
 }
-</pre></p>
-<p>Note: <a href="HttpBasicAuthPropertiesBuilder.html#offlineAuthAllowed">HttpBasicAuthPropertiesBuilder#offlineAuthAllowed</a> should be true for retrieving headers in case of HTTP basic auth.</p>
+</pre>
 </div>
 
 
@@ -271,7 +270,7 @@ authFlow.getHeaders().then(function(headers){
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1973">line 1973</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1999">line 1999</a>
     </li></ul></dd>
     
 
@@ -298,7 +297,41 @@ authFlow.getHeaders().then(function(headers){
 
         
 <div class="param-desc">
-    <p>If the promise is rejected, the callback will receive and object of type <a href="global.html#AuthError">AuthError</a></p>
+    <ul>
+<li>headers needed to be used for accessing secured resource.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Type of Auth</th>
+<th style="text-align:left">What headers are returned</th>
+<th style="text-align:left">Comments</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">HttpBasicAuthentication</td>
+<td style="text-align:left">Basic auth header</td>
+<td style="text-align:left">Generated from stored credentials. <a href="HttpBasicAuthPropertiesBuilder.html#offlineAuthAllowed">HttpBasicAuthPropertiesBuilder#offlineAuthAllowed</a> should be true for SDK to store the credentials.</td>
+</tr>
+<tr>
+<td style="text-align:left">FederatedAuthentication</td>
+<td style="text-align:left">Relevant cookies as header</td>
+<td style="text-align:left">options.fedAuthSecuredUrl has to be set</td>
+</tr>
+<tr>
+<td style="text-align:left">FederatedAuthentication with <a href="FedAuthPropertiesBuilder.html#parseTokenRelayResponse">FedAuthPropertiesBuilder#parseTokenRelayResponse</a> turned ON</td>
+<td style="text-align:left">Bearer token</td>
+<td style="text-align:left">Can specify options.oauthScopes to get token for scope or a set of scopes.</td>
+</tr>
+<tr>
+<td style="text-align:left">OAuth, OpenID</td>
+<td style="text-align:left">Bearer token</td>
+<td style="text-align:left">Can specify options.oauthScopes to get token for scope or a set of scopes.</td>
+</tr>
+</tbody>
+</table>
+<p>If the promise is rejected, the callback will receive and object of type <a href="global.html#AuthError">AuthError</a></p>
 </div>
 
 
@@ -433,7 +466,7 @@ authFlow.getHeaders().then(function(headers){
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1915">line 1915</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1941">line 1941</a>
     </li></ul></dd>
     
 
@@ -561,7 +594,7 @@ cordova.plugins.IdmAuthFlows.init(authProps).then(
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1841">line 1841</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1867">line 1867</a>
     </li></ul></dd>
     
 
@@ -758,7 +791,7 @@ The following table describes what is cleared on logout with different values fo
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1931">line 1931</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1957">line 1957</a>
     </li></ul></dd>
     
 
@@ -866,7 +899,7 @@ The following table describes what is cleared on logout with different values fo
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2035">line 2035</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2067">line 2067</a>
     </li></ul></dd>
     
 
@@ -938,7 +971,7 @@ The following table describes what is cleared on logout with different values fo
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Tue Mar 05 2019 11:03:42 GMT+0530 (India Standard Time)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Tue Apr 02 2019 10:11:28 GMT+0530 (India Standard Time)
 </footer>
 
 <script> prettyPrint(); </script>

@@ -297,11 +297,11 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
         case FederatedAuth:
           if (isSamlFlow())
           {
-            headers = _fetchOauthHeaders(context, scopes);
+            headers.putAll(_fetchOauthHeaders(context, scopes));
           }
-          else
+          if (fedAuthSecuredUrl != null)
           {
-            headers = context.getRequestParams(fedAuthSecuredUrl, false);
+            headers.putAll(context.getRequestParams(fedAuthSecuredUrl, false));
           }
           break;
       }
