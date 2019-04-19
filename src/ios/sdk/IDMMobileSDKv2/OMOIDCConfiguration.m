@@ -97,7 +97,6 @@
     {
         self.issuer = [config valueForKey:OM_PROP_ISSUER];
         self.userInfoEndpoint = [NSURL URLWithString:[config valueForKey:OM_PROP_USERINFO_ENDPOINT]];
-        self.revocationEndpoint = [NSURL URLWithString:[config valueForKey:OM_PROP_USERINFO_ENDPOINT]];
         self.revocationEndpoint = [NSURL URLWithString:[config valueForKey:OM_PROP_REVOCATION_ENDPOINT]];
         self.introspectionEndpoint = [NSURL URLWithString:[config valueForKey:OM_PROP_INTROSPECT_ENDPOINT]];
         self.endSessionEndpoint = [NSURL URLWithString:[config valueForKey:OM_PROP_END_SESSION_ENDPOINT]];
