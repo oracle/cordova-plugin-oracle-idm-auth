@@ -336,6 +336,18 @@
             [self.mss.cacheDict removeObjectForKey:self.mss.authKey];
         }
 
+        if ([(OMFedAuthConfiguration*)self.mss.configuration parseTokenRelayResponse]) {
+            
+            if ([self isTokensValid:self.tokens])
+            {
+                valid = true;
+            }
+            else
+            {
+                valid = false;
+            }
+        }
+
     }
     else if ([self.mss.configuration
               isKindOfClass:[OMClientCertConfiguration class]])
@@ -359,15 +371,9 @@
         }
         else
         {
-            NSDate *currentDate = [NSDate date];
-            for (OMToken *token in self.tokens)
+            if ([self isTokensValid:self.tokens])
             {
-                NSTimeInterval interval = [currentDate
-                                           timeIntervalSinceDate:token.tokenIssueDate];
-                if(interval < token.expiryTimeInSeconds)
-                {
-                    return TRUE;
-                }
+                return true;
             }
             OMOAuthConfiguration *config = (OMOAuthConfiguration*)self.mss.configuration;
             valid =  [self isValidForScopes:config.scope
@@ -375,6 +381,28 @@
         }
     }
     return valid;
+}
+
+- (BOOL)isTokensValid:(NSArray*)omTokens
+{
+    BOOL isValid = NO;
+    
+    if([omTokens count] >0)
+    {
+        NSDate *currentDate = [NSDate date];
+        for (OMToken *token in omTokens)
+        {
+            NSTimeInterval interval = [currentDate
+                                       timeIntervalSinceDate:token.tokenIssueDate];
+            if(interval < token.expiryTimeInSeconds)
+            {
+                isValid = true;
+                return isValid;
+            }
+        }
+    }
+        
+    return isValid;
 }
 
 - (NSDictionary *)requestParametersForURL:(NSString *)theURL

@@ -263,10 +263,11 @@
        
         self.kek = [OMKeyChain itemForKey:[self kekKey] accessGroup:nil];
         
-        [[OMKeyManager sharedManager] updateKeyStore:self.instanceId
-                                kek:self.kek newKek:newKek error:error];
+        OMKeyStore *currentKeyStrore = [[OMKeyManager sharedManager]
+                                        updateKeyStore:self.instanceId
+                                        kek:self.kek newKek:newKek error:error];
         
-        if (!*error)
+        if (currentKeyStrore)
         {
             _kek = newKek;
             [OMKeyChain setItem:_kek forKey:[self kekKey] accessGroup:nil

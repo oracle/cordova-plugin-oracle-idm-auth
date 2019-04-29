@@ -301,7 +301,7 @@
             authError = [OMObject createErrorWithCode:
                          OMERR_USER_AUTHENTICATION_FAILED];
         }
-        else if(![self isStatusCodeValid: response])
+        else if(([(NSHTTPURLResponse*)response statusCode] / 100) != 2)
         {
             if (self.configuration.collectIdentityDomain)
             {
@@ -364,21 +364,6 @@
 
 }
 
-- (BOOL) isStatusCodeValid:(NSURLResponse *) response
-{
-    long statusCode = [(NSHTTPURLResponse*)response statusCode];
-    BOOL isValid = false;
-
-  if (statusCode/100 == 2)
-  {
-      isValid= true;
-  }
-  else if (statusCode/100 == 4 && statusCode != 401)
-  {
-      isValid= true;
-  }
-  return isValid;
-}
 
 -(void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task
 willPerformHTTPRedirection:(NSHTTPURLResponse *)response

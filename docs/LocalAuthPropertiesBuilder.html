@@ -179,7 +179,7 @@ The callback implementation details are explained in <a href="LocalAuthPropertie
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1573">line 1573</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1603">line 1603</a>
     </li></ul></dd>
     
 
@@ -357,7 +357,7 @@ The callback implementation details are explained in <a href="LocalAuthPropertie
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1770">line 1770</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1818">line 1818</a>
     </li></ul></dd>
     
 
@@ -520,7 +520,7 @@ In this case both current and new pin has to be collected from the user and pass
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1744">line 1744</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1792">line 1792</a>
     </li></ul></dd>
     
 
@@ -601,7 +601,7 @@ In this case both current and new pin has to be collected from the user and pass
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1721">line 1721</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1769">line 1769</a>
     </li></ul></dd>
     
 
@@ -754,7 +754,7 @@ In this case both current and new pin has to be collected from the user and pass
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1642">line 1642</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1683">line 1683</a>
     </li></ul></dd>
     
 
@@ -812,6 +812,15 @@ In this case both current and new pin has to be collected from the user and pass
     
 
 
+
+<div class="description">
+    <p>This property comes into play whenever user is challenged to login using PIN.
+Typically this happens with <a href="LocalAuthenticationFlow.html#login">LocalAuthenticationFlow#login</a> is invoked.
+This also happens when <a href="LocalAuthenticationFlowManager.html#disable">LocalAuthenticationFlowManager#disable</a> or <a href="LocalAuthenticationFlowManager.html#changePin">LocalAuthenticationFlowManager#changePin</a>
+is called, because as a first step for those actions, user has to login using PIN.
+When this property is set to a number greater than 1, user has those many attempts to login, if a wrong PIN was provided.
+Once max attempts are reached, the respective action's promise will be rejected.</p>
+</div>
 
 
 
@@ -903,7 +912,7 @@ In this case both current and new pin has to be collected from the user and pass
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1702">line 1702</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1744">line 1744</a>
     </li></ul></dd>
     
 
@@ -1052,7 +1061,7 @@ In this case both current and new pin has to be collected from the user and pass
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1653">line 1653</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1694">line 1694</a>
     </li></ul></dd>
     
 
@@ -1405,7 +1414,7 @@ In this case both current and new pin has to be collected from the user and pass
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1664">line 1664</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1706">line 1706</a>
     </li></ul></dd>
     
 
@@ -1536,8 +1545,10 @@ In this case both current and new pin has to be collected from the user and pass
             
 
             <td class="description last"><p>Existing PIN collected from user. To be passed when
-                 <a href="LocalAuthPropertiesBuilder.html#.PinChallengeReason">LocalAuthPropertiesBuilder.PinChallengeReason.Login</a>
-                 or <a href="LocalAuthPropertiesBuilder.html#.PinChallengeReason">LocalAuthPropertiesBuilder.PinChallengeReason.ChangePin</a> is requested.</p></td>
+                 <a href="LocalAuthPropertiesBuilder.html#.PinChallengeReason">LocalAuthPropertiesBuilder.PinChallengeReason.Login</a> is requested.
+                 Since <a href="LocalAuthenticationFlowManager.html#changePin">changePin</a> now does a login upfront,
+                 there is no need to pass this parameter for
+                 <a href="LocalAuthPropertiesBuilder.html#.PinChallengeReason">LocalAuthPropertiesBuilder.PinChallengeReason.ChangePin</a> requests.</p></td>
         </tr>
 
     
@@ -1613,7 +1624,7 @@ In this case both current and new pin has to be collected from the user and pass
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1598">line 1598</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1636">line 1636</a>
     </li></ul></dd>
     
 
@@ -1647,7 +1658,7 @@ In this case both current and new pin has to be collected from the user and pass
     
 
     
-    <h4 class="name" id="~localAuthPinChallengeCallback"><span class="type-signature"></span>localAuthPinChallengeCallback<span class="signature">(challengeReason, challengeHandler, error<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="~localAuthPinChallengeCallback"><span class="type-signature"></span>localAuthPinChallengeCallback<span class="signature">(challengeReason, challengeHandler, error<span class="signature-attributes">opt</span>, options<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></h4>
     
 
     
@@ -1655,15 +1666,14 @@ In this case both current and new pin has to be collected from the user and pass
 
 
 <div class="description">
-    <p>Local authentication PIN challenge callback</p>
-<p>This callback is invoked when there is a requirement to collect PIN from the user.
+    <p>Local authentication PIN challenge callback
+This callback is invoked when there is a requirement to collect PIN from the user.
 App should show a UI for collecting PIN from the user.
 Depending on the <a href="LocalAuthPropertiesBuilder.html#.PinChallengeReason">challenge reason</a> passed to this callback,
 app should collect existing PIN and / or new PIN from the user.
 App should then use the <a href="LocalAuthPropertiesBuilder.html#~localAuthCompletionCallback">completion callback</a> to submit the PIN.
 If user wishes to cancel the login attempt, app should invoke <a href="RemoteAuthPropertiesBuilder.html#~challengeCancelCallback">cancel callback</a>.
-Both callbacks are provided as part of <a href="LocalAuthPropertiesBuilder.html#~LocalAuthPinChallengeHandler">challenge handler</a> passed to this callback.
-</p>
+Both callbacks are provided as part of <a href="LocalAuthPropertiesBuilder.html#~LocalAuthPinChallengeHandler">challenge handler</a> passed to this callback.</p>
 </div>
 
 
@@ -1793,6 +1803,39 @@ Both callbacks are provided as part of <a href="LocalAuthPropertiesBuilder.html#
         </tr>
 
     
+
+        <tr>
+            
+                <td class="name"><code>options</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type"><a href="LocalAuthPropertiesBuilder.html#~PinChallengeOptions">LocalAuthPropertiesBuilder~PinChallengeOptions</a></span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last"><p>Object containing additional information (if any) passed to the PIN challenge callback.</p></td>
+        </tr>
+
+    
     </tbody>
 </table>
 
@@ -1830,7 +1873,7 @@ Both callbacks are provided as part of <a href="LocalAuthPropertiesBuilder.html#
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1614">line 1614</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1649">line 1649</a>
     </li></ul></dd>
     
 
@@ -1989,7 +2032,127 @@ Both callbacks are provided as part of <a href="LocalAuthPropertiesBuilder.html#
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1608">line 1608</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1629">line 1629</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+            
+                
+<h4 class="name" id="~PinChallengeOptions">PinChallengeOptions</h4>
+
+
+
+
+
+
+    <h5>Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">Object</span>
+
+
+        </li>
+    </ul>
+
+
+
+
+
+    <h5 class="subsection-title">Properties:</h5>
+
+    
+
+<table class="props">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>loginAttemptCount</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">number</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>Current login attempt. When maxLoginAttemptsForPIN is set, this will track the current retry attempt.</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1666">line 1666</a>
     </li></ul></dd>
     
 
@@ -2309,7 +2472,7 @@ Both callbacks are provided as part of <a href="LocalAuthPropertiesBuilder.html#
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1630">line 1630</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1671">line 1671</a>
     </li></ul></dd>
     
 
@@ -2345,7 +2508,7 @@ Both callbacks are provided as part of <a href="LocalAuthPropertiesBuilder.html#
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Tue Apr 02 2019 10:11:28 GMT+0530 (India Standard Time)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Wed Apr 24 2019 15:06:54 GMT+0530 (India Standard Time)
 </footer>
 
 <script> prettyPrint(); </script>

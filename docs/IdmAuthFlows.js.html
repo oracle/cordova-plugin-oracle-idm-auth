@@ -259,7 +259,7 @@ var IdmAuthFlows = function() {
   };
 
   /**
-   * Utility method to validate number is greater than or equal to.
+   * Utility method to validate number is greater than or equal to zero.
    */
   var assertPositiveOrZero = function(input, field)
   {
@@ -1081,6 +1081,12 @@ var IdmAuthFlows = function() {
    var FedAuthPropertiesBuilder = function(appName, loginUrl, logoutUrl, loginSuccessUrl, loginFailureUrl) {
     RemoteAuthPropertiesBuilder.call(this, appName);
     this.put(authPropertyKeys.AuthServerType, authServerTypes.FederatedAuthentication);
+    // There is a feature to remember the user name for fed auth cases.
+    // Android has this support inbuilt in the OS level. So setting this property does not make a difference for Android.
+    // iOS SDK needs this flag to remember the user name. So to make things consistent across platforms, this is set by default.
+    // In android, user has to long press the user name field to get access to the remembered username.
+    // In iOS, it is pre-populated.
+    this.put(authPropertyKeys.RememberUsernameAllowed, true);
 
     /**
      * @function loginUrl
@@ -1238,6 +1244,23 @@ var IdmAuthFlows = function() {
       return this;
     };
 
+    /**
+     * This does not work for normal FedAuth cases. This is applicable for SAML kind of cases where
+     * {@link FedAuthPropertiesBuilder#parseTokenRelayResponse} is turned on.
+     * In this context, this parameter can be used for turning on access token reuse over app restarts.
+     * With this turned on, when app is restarted, a user trying to login won't be prompted for
+     * credentials, if there is a valid JWT token.
+     * @function sessionActiveOnRestart
+     * @memberof FedAuthPropertiesBuilder.prototype
+     * @param {boolean} active - Whether to preserve login across restarts.
+     * @return {FedAuthPropertiesBuilder}
+     */
+    this.sessionActiveOnRestart = function(active) {
+      assertBoolean(active, authPropertyKeys.SessionActiveOnRestart);
+      this.put(authPropertyKeys.SessionActiveOnRestart, active);
+      return this;
+    }
+
     if (loginUrl)
       this.loginUrl(loginUrl);
     if (logoutUrl)
@@ -1264,6 +1287,13 @@ var IdmAuthFlows = function() {
           throw new Error('Mandatory parameter loginSuccessUrl not set.');
         if (!this.props[authPropertyKeys.LoginFailureURL])
           throw new Error('Mandatory parameter loginFailureUrl not set.');
+
+        // As per IDM SDK, when SessionActiveOnRestart is set, session timeout and idle timeout should not be set.
+        if (this.props[authPropertyKeys.SessionActiveOnRestart]) {
+          delete this.props[authPropertyKeys.SessionTimeOutValue];
+          delete this.props[authPropertyKeys.IdleTimeOutValue];
+        }
+
         return Object.getPrototypeOf(FedAuthPropertiesBuilder.prototype).build.call(this);
       }
     }
@@ -1623,36 +1653,47 @@ var IdmAuthFlows = function() {
     PropertiesBuilder.call(this);
     this.put(authPropertyKeys.AuthServerType, authServerTypes.LocalAuthenticator);
     this.put(authPropertyKeys.MaxLoginAttempts, 1);
-    /**
-     * Local authentication completion callback. Used to complete a PIN challenge by submitting the PIN collected from the user.
-     * @callback LocalAuthPropertiesBuilder~localAuthCompletionCallback
-     * @param {number=} currentPin - Existing PIN collected from user. To be passed when
-     *                  {@link LocalAuthPropertiesBuilder.PinChallengeReason|LocalAuthPropertiesBuilder.PinChallengeReason.Login}
-     *                  or {@link LocalAuthPropertiesBuilder.PinChallengeReason|LocalAuthPropertiesBuilder.PinChallengeReason.ChangePin} is requested.
-     * @param {number=} newPin - New PIN to be set, collected from user. To be passed when
-     *                  {@link LocalAuthPropertiesBuilder.PinChallengeReason|LocalAuthPropertiesBuilder.PinChallengeReason.SetPin}
-     *                  or {@link LocalAuthPropertiesBuilder.PinChallengeReason|LocalAuthPropertiesBuilder.PinChallengeReason.ChangePin} is requested.
-     */
+
     /**
      * Local authentication challenge handler
      * @typedef {Object} LocalAuthPropertiesBuilder~LocalAuthPinChallengeHandler
      * @property {LocalAuthPropertiesBuilder~localAuthCompletionCallback} submit - App invokes this passing pin collector to proceed with the current challenge.
      * @property {RemoteAuthPropertiesBuilder~challengeCancelCallback} cancel - App invokes this to cancel the current challenge.
      */
+
+    /**
+     * Local authentication completion callback. Used to complete a PIN challenge by submitting the PIN collected from the user.
+     * @callback LocalAuthPropertiesBuilder~localAuthCompletionCallback
+     * @param {number=} currentPin - Existing PIN collected from user. To be passed when
+     *                  {@link LocalAuthPropertiesBuilder.PinChallengeReason|LocalAuthPropertiesBuilder.PinChallengeReason.Login} is requested.
+     *                  Since {@link LocalAuthenticationFlowManager#changePin|changePin} now does a login upfront,
+     *                  there is no need to pass this parameter for
+     *                  {@link LocalAuthPropertiesBuilder.PinChallengeReason|LocalAuthPropertiesBuilder.PinChallengeReason.ChangePin} requests.
+     * @param {number=} newPin - New PIN to be set, collected from user. To be passed when
+     *                  {@link LocalAuthPropertiesBuilder.PinChallengeReason|LocalAuthPropertiesBuilder.PinChallengeReason.SetPin}
+     *                  or {@link LocalAuthPropertiesBuilder.PinChallengeReason|LocalAuthPropertiesBuilder.PinChallengeReason.ChangePin} is requested.
+     */
+
     /**
      * Local authentication PIN challenge callback
-     * &lt;p>This callback is invoked when there is a requirement to collect PIN from the user.
+     * This callback is invoked when there is a requirement to collect PIN from the user.
      * App should show a UI for collecting PIN from the user.
      * Depending on the {@link LocalAuthPropertiesBuilder.PinChallengeReason|challenge reason} passed to this callback,
      * app should collect existing PIN and / or new PIN from the user.
      * App should then use the {@link LocalAuthPropertiesBuilder~localAuthCompletionCallback|completion callback} to submit the PIN.
      * If user wishes to cancel the login attempt, app should invoke {@link RemoteAuthPropertiesBuilder~challengeCancelCallback|cancel callback}.
      * Both callbacks are provided as part of {@link LocalAuthPropertiesBuilder~LocalAuthPinChallengeHandler|challenge handler} passed to this callback.
-     * &lt;/p>
+     *
      * @callback LocalAuthPropertiesBuilder~localAuthPinChallengeCallback
      * @param {LocalAuthPropertiesBuilder.PinChallengeReason} challengeReason
      * @param {LocalAuthPropertiesBuilder~LocalAuthPinChallengeHandler} challengeHandler - To be used by the app to either submit or cancel the current challenge.
      * @param {Error=} error - Error (if any) with the previous attempt to login using PIN and maxLoginAttemptsForPIN has not reached.
+     * @param {LocalAuthPropertiesBuilder~PinChallengeOptions=} options - Object containing additional information (if any) passed to the PIN challenge callback.
+     */
+
+    /**
+     * @typedef {Object} LocalAuthPropertiesBuilder~PinChallengeOptions
+     * @property {number} loginAttemptCount - Current login attempt. When maxLoginAttemptsForPIN is set, this will track the current retry attempt.
      */
 
     /**
@@ -1689,6 +1730,7 @@ var IdmAuthFlows = function() {
       this.put(authPropertyKeys.PinChallengeCallback, pinCallback);
       return this;
     };
+
     /**
      * @function translations
      * @param {LocalAuthPropertiesBuilder~Translations} translations
@@ -1728,6 +1770,12 @@ var IdmAuthFlows = function() {
     };
 
     /**
+     * This property comes into play whenever user is challenged to login using PIN.
+     * Typically this happens with {@link LocalAuthenticationFlow#login} is invoked.
+     * This also happens when {@link LocalAuthenticationFlowManager#disable} or {@link LocalAuthenticationFlowManager#changePin}
+     * is called, because as a first step for those actions, user has to login using PIN.
+     * When this property is set to a number greater than 1, user has those many attempts to login, if a wrong PIN was provided.
+     * Once max attempts are reached, the respective action's promise will be rejected.
      * @function maxLoginAttemptsForPIN
      * @memberof LocalAuthPropertiesBuilder.prototype
      * @param {number} attempts - maximum login attempts, should be greater than zero. Defaults to 1.
@@ -2175,9 +2223,10 @@ var IdmAuthFlows = function() {
     var pinCallback = authProps[authPropertyKeys.PinChallengeCallback];
     var lastAuthenticated;
     var self = this;
-    var manager = new LocalAuthenticationFlowManager(authProps, enabledAuths);
 
     var loginUsingPin = function(resolve, reject, primaryAuth, err) {
+      var options = {};
+      options.loginAttemptCount = currentAttempt;
       pinCallback(LocalAuthPropertiesBuilder.PinChallengeReason.Login, {
         cancel: function() {
           reject(getError(errorCodes.UserCancelledAuthentication));
@@ -2185,7 +2234,7 @@ var IdmAuthFlows = function() {
         submit: function(currentPin, newPin) {
           exec(function() {
             lastAuthenticated = primaryAuth;
-            resolve(self);
+            resolve({flow: self, loginPin: currentPin});
           }, function(err) {
             if (currentAttempt >= maxAttempts)
               reject(err);
@@ -2195,8 +2244,17 @@ var IdmAuthFlows = function() {
             }
           }, TAG, 'authenticatePin', [id, currentPin]);
         }
-      }, err);
+      }, err, options);
     };
+
+    var loginUsingPinWithRetry = function(primaryAuth) {
+      currentAttempt = 1;
+      return new Promise(function(resolve, reject) {
+        loginUsingPin(resolve, reject, primaryAuth);
+      });
+    };
+
+    var manager = new LocalAuthenticationFlowManager(authProps, enabledAuths, loginUsingPinWithRetry);
 
     /**
      * Returns the local auth manager associated with this flow.
@@ -2251,9 +2309,14 @@ var IdmAuthFlows = function() {
             return;
           }
 
-          currentAttempt = 1;
           if (primaryAuth === LocalAuthPropertiesBuilder.LocalAuthenticatorType.PIN) {
-            loginUsingPin(resolve, reject, primaryAuth);
+            loginUsingPinWithRetry(primaryAuth)
+              .then(function(result) {
+                resolve(result.flow);
+              })
+              .catch(function(err) {
+                reject(err);
+              });
           } else if (primaryAuth === LocalAuthPropertiesBuilder.LocalAuthenticatorType.Fingerprint) {
             exec(function(resp){
               if (resp === "fallback") {
@@ -2288,9 +2351,16 @@ var IdmAuthFlows = function() {
      * @return {Promise.&lt;boolean>}
      */
     this.isAuthenticated = function(options) {
+      // Since there is no concept of logout with local auth,
+      // once user logged in, is always logged in.
+      if (lastAuthenticated)
+        return Promise.resolve(true);
+
+      // If there is no lastAuthenticated,
+      // we need to check if there are any authenticators enabled.
       return new Promise(function(resolve, reject) {
-        manager.getEnabled().then(function(enabled){
-          resolve(enabled[0] === lastAuthenticated);
+        manager.getEnabled().then(function(enabled) {
+          resolve(enabled.length == 0);
         }).catch(function(err) {
           reject(getError(errorCodes.GetEnabledAuthsError));
         });
@@ -2310,13 +2380,13 @@ var IdmAuthFlows = function() {
    * @hideconstructor
    * @param {Object} authProps - properties object obtained from {@link Builder#build}
    * @param {Array.&lt;LocalAuthPropertiesBuilder.LocalAuthenticatorType>} enabledAuths - enabled local auths, in primary first order.
+   * @param {Function} loginUsingPinWithRetry - method that can be used to have user login using PIN.
    */
-  var LocalAuthenticationFlowManager = function(authProps, enabledAuths) {
+  var LocalAuthenticationFlowManager = function(authProps, enabledAuths, loginUsingPinWithRetry) {
     var id = authProps[authPropertyKeys.LocalAuthFlowId];
     var maxAttempts = authProps[authPropertyKeys.MaxLoginAttempts];
     var pinCallback = authProps[authPropertyKeys.PinChallengeCallback];
     var enablePromise, disablePromise;
-    var currentAttempt;
 
     /**
      * Get all enabled local authenticator types, in primary first order.
@@ -2407,6 +2477,7 @@ var IdmAuthFlows = function() {
 
       return enablePromise;
     };
+
     /**
      * Disable local authenticator denoted by localAuthenticationType.
      * Note: User can disable PIN only after disabling Fingerprint.
@@ -2438,21 +2509,27 @@ var IdmAuthFlows = function() {
           return;
         }
 
-        exec(function(primaryAuth) {
-          var disabledAuthIndex = enabledAuths.indexOf(localAuthenticationType);
-          if (disabledAuthIndex > -1)
-            enabledAuths.splice(disabledAuthIndex, 1);
+        loginUsingPinWithRetry(LocalAuthPropertiesBuilder.LocalAuthenticatorType.PIN)
+        .then(function() {
+          exec(function(primaryAuth) {
+            var disabledAuthIndex = enabledAuths.indexOf(localAuthenticationType);
+            if (disabledAuthIndex > -1)
+              enabledAuths.splice(disabledAuthIndex, 1);
 
-          if (primaryAuth !== '') {
-            var primaryAuthIndex = enabledAuths.indexOf(primaryAuth);
-            if (primaryAuthIndex > -1)
-              enabledAuths.splice(primaryAuthIndex, 1);
+            if (primaryAuth !== '') {
+              var primaryAuthIndex = enabledAuths.indexOf(primaryAuth);
+              if (primaryAuthIndex > -1)
+                enabledAuths.splice(primaryAuthIndex, 1);
 
-            enabledAuths.unshift(primaryAuth);
-          }
+              enabledAuths.unshift(primaryAuth);
+            }
 
-          resolve();
-        }, reject, TAG, 'disableLocalAuth', [id, localAuthenticationType]);
+            resolve();
+          }, reject, TAG, 'disableLocalAuth', [id, localAuthenticationType]);
+        })
+        .catch(function(err) {
+          reject(err);
+        });
       });
 
       var clearPromise = function() {
@@ -2464,24 +2541,6 @@ var IdmAuthFlows = function() {
       return disablePromise;
     };
 
-    var changePinWithRetry = function(resolve, reject, err) {
-      pinCallback(LocalAuthPropertiesBuilder.PinChallengeReason.ChangePin, {
-        cancel: function() {
-          reject(getError(errorCodes.UserCancelledAuthentication));
-        },
-        submit: function(currentPin, newPin) {
-          exec(resolve, function(err) {
-            if (currentAttempt >= maxAttempts)
-              reject(err);
-            else {
-              currentAttempt++;
-              changePinWithRetry(resolve, reject, err);
-            }
-          }, TAG, 'changePin', [id, currentPin, newPin]);
-        }
-      }, err);
-    };
-
     /**
      * Change pin for currently enabled local authenticator.
      *
@@ -2491,14 +2550,27 @@ var IdmAuthFlows = function() {
      * If the promise is rejected, the callback will receive and object of type {@link AuthError}
      */
     this.changePin = function() {
-      return new Promise(function(resolve, reject) {
+      var changePinPromise = new Promise(function(resolve, reject) {
         if (enabledAuths.indexOf(LocalAuthPropertiesBuilder.LocalAuthenticatorType.PIN) > -1) {
-          currentAttempt = 1;
-          changePinWithRetry(resolve, reject);
+          loginUsingPinWithRetry(LocalAuthPropertiesBuilder.LocalAuthenticatorType.PIN)
+          .then(function(result) {
+            pinCallback(LocalAuthPropertiesBuilder.PinChallengeReason.ChangePin, {
+              cancel: function() {
+                reject(getError(errorCodes.UserCancelledAuthentication));
+              },
+              submit: function(currentPin, newPin) {
+                exec(resolve, reject, TAG, 'changePin', [id, result.loginPin, newPin]);
+              }
+            });
+          }).catch(function(err) {
+            reject(err);
+          });
         } else {
           reject(getError(errorCodes.ChangePinWhenPinNotEnabled));
         }
       });
+
+      return changePinPromise;
     };
   };
 
@@ -2948,7 +3020,7 @@ module.exports = IdmAuthFlows;
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Tue Apr 02 2019 10:11:28 GMT+0530 (India Standard Time)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Wed Apr 24 2019 15:06:54 GMT+0530 (India Standard Time)
 </footer>
 
 <script> prettyPrint(); </script>

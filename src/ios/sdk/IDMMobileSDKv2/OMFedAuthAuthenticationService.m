@@ -14,6 +14,7 @@
 #import "OMToken.h"
 #import "OMWKWebViewClient.h"
 #import <WebKit/WebKit.h>
+#import "OMCredentialStore.h"
 
 @interface OMFedAuthAuthenticationService  ()<UIWebViewDelegate,WKNavigationDelegate>
 
@@ -220,6 +221,11 @@
         [self resetMaxRetryCount];
     }
     
+    if (self.configuration.rememberUsernameAllowed)
+    {
+        [self storeRememberCredentials:self.authData];
+    }
+
     [self.context startTimers];
     
     [OMURLProtocol setOMAObject:nil];
@@ -336,7 +342,15 @@
         [self.authData setValue:error forKey:OM_ERROR];
         [self completedAuthentication];
 
+    }else
+    {
+        if (self.configuration.rememberUsernameAllowed)
+        {
+            [self injectUsernameToWebView:webView];
+
+        }
     }
+    
 }
 - (void)webView:(UIWebView *)webView didFailLoadWithError:(NSError *)error;
 {
@@ -471,6 +485,14 @@
         [self.authData setValue:error forKey:OM_ERROR];
         [self completedAuthentication];
     }
+    else
+    {
+        if (self.configuration.rememberUsernameAllowed)
+        {
+            [self injectUsernameToWebView:webView];
+            
+        }
+    }
     
 }
 
@@ -489,27 +511,8 @@
 {
     __block BOOL usernameFound = FALSE;
     __block BOOL passwordFound = FALSE;
-    NSArray *usernameTokens = [NSArray arrayWithObjects:@"username",
-                               @"uname", @"email", @"uid", @"userid", nil];
-    // add app provided tokens
-    NSSet *usernameParamName = self.configuration.fedAuthUsernameParamName;
-    if ([usernameParamName count])
-    {
-        NSSet *moreUsernameTokens =
-        [usernameParamName objectsPassingTest:^(id obj, BOOL *stop)
-         {
-             if ([obj isKindOfClass:[NSString class]])
-             {
-                 NSString *value = obj;
-                 return (BOOL)[value length];
-             }
-             else
-                 return NO;
-         }];
-        usernameTokens = [usernameTokens
-                          arrayByAddingObjectsFromArray:[moreUsernameTokens
-                                                         allObjects]];
-    }
+    
+    NSArray *usernameTokens = [self userNameTokensList];
     
     if (bodyData != nil &&
         NSOrderedSame == [httpType caseInsensitiveCompare:@"POST"])
@@ -817,6 +820,136 @@
     }
     
     return found;
+}
+
+- (void)injectUsernameToWebView:(id)webView
+{
+    __block BOOL usernameInjected = NO;
+
+    NSArray *tokenList = [self userNameTokensList];
+    
+    [self retrieveRememberCredentials:self.authData];
+    NSString *username = [self.authData valueForKey:OM_USERNAME];
+
+    if (!username)
+    {
+        return;
+    }
+    
+    for (NSString *token in tokenList)
+    {
+        NSString *fillUsernameJS = [NSString
+                                    stringWithFormat:
+                                    @"document.getElementById('%@').value = '%@'",
+                                    token,username];
+        
+        if (!self.configuration.enableWKWebView)
+        {
+            NSString *fillData = [webView stringByEvaluatingJavaScriptFromString:fillUsernameJS];
+            
+            NSLog(@"fillData = %@ token = %@",fillData,token);
+            
+            if (NSOrderedSame == [username caseInsensitiveCompare:fillData])
+            {
+                usernameInjected = YES;
+            }
+
+        }
+        else
+        {
+            [webView evaluateJavaScript:fillUsernameJS
+                      completionHandler:^(id _Nullable result,
+                                          NSError * _Nullable error)
+             {
+                 if ([result isKindOfClass:[NSString class]] && [result length] > 0)
+                 {
+                     [self.authData setObject:result
+                                       forKey:OM_USERNAME];
+                     usernameInjected = YES;
+                 }
+                 
+             }];
+
+        }
+        
+        if (usernameInjected)
+        {
+            break;
+        }
+        
+    }
+
+}
+- (NSArray*)userNameTokensList
+{
+    NSArray *usernameTokens = [NSArray arrayWithObjects:@"username",
+                               @"uname", @"email", @"uid", @"userid", nil];
+    // add app provided tokens
+    NSSet *usernameParamName = self.configuration.fedAuthUsernameParamName;
+    if ([usernameParamName count])
+    {
+        NSSet *moreUsernameTokens =
+        [usernameParamName objectsPassingTest:^(id obj, BOOL *stop)
+         {
+             if ([obj isKindOfClass:[NSString class]])
+             {
+                 NSString *value = obj;
+                 return (BOOL)[value length];
+             }
+             else
+                 return NO;
+         }];
+        usernameTokens = [usernameTokens
+                          arrayByAddingObjectsFromArray:[moreUsernameTokens
+                                                         allObjects]];
+    }
+
+    return usernameTokens;
+}
+
+- (void) storeRememberCredentials:(NSMutableDictionary *) authnData
+{
+    if (![authnData count])
+    {
+        return;
+    }
+    
+    NSString *rememberCredKey = [self.mss rememberCredKey];
+    if (![rememberCredKey length])
+    {
+        return;
+    }
+    OMMobileSecurityConfiguration *config = self.mss.configuration;
+    
+    NSString *username = [authnData valueForKey:OM_USERNAME];
+    NSString *tenant = [authnData valueForKey:OM_IDENTITY_DOMAIN];
+    
+    
+  if (config.rememberUsernameAllowed)
+    {
+        OMCredential *currentCredential = [[OMCredential alloc]
+                                      initWithUserName:username
+                                      password:nil tenantName:tenant
+                                      properties:nil];
+        [[OMCredentialStore sharedCredentialStore] saveCredential:currentCredential
+                                                    forKey:rememberCredKey];
+    }
+}
+
+- (void) retrieveRememberCredentials:(NSMutableDictionary *) authnData
+{
+    NSString *rememberCredKey = nil;
+    
+    rememberCredKey = [self.mss rememberCredKey];
+    
+    if (![rememberCredKey length] || !authnData)
+    {
+        return;
+    }
+
+    OMCredential *cred = [[OMCredentialStore sharedCredentialStore]
+                          getCredential:rememberCredKey];
+    [authnData setValue:cred.userName forKey:OM_USERNAME];
 }
 
 @end

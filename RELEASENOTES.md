@@ -1,5 +1,13 @@
 # Release Notes
 
+## 1.1.8 (29 Apr, 2019)
+* Removed "Temporary fix for basic auth to fall back to successful login irrespective of status returned by server" introduced in v1.1.4.
+* Authenticate user using PIN before disabling any local authentication.
+* iOS supports remembering username with FedAuth. Android has this support inbuilt in the OS level. Refer [android doc on autofill].(https://android-developers.googleblog.com/2017/11/getting-your-android-app-ready-for.html)
+* sessionActiveOnRestart property can be set to reuse valid JWT token across app restarts with FedAuth SAML cases (when ParseTokenRelayResponse is set). User will not be challenged for credentials when there is a valid token available.
+* Pass loginAttemptCount into PIN challenge callback.
+* Authenticate user using PIN (with retry) before change PIN and then capture the new PIN. This simplifies the change PIN flow.
+
 ## 1.1.7 (10 Apr, 2019)
 * Added max retry for PIN authentication. This kicks in for login attempts using PIN, directly or as fallback from Fingerprint. It also kicks in for PIN change.
 * For SAML based WebSSO, with parseTokenRelayResponse turned on, getHeaders can return cookies as headers in addition to the access tokens when header options specify fedAuthSecuredUrl.

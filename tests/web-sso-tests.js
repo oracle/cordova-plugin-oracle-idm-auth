@@ -19,6 +19,8 @@ exports.defineAutoTests = function() {
       .logoutUrl(window.TestConfig.saml.logoutUrl)
       .loginSuccessUrl(window.TestConfig.saml.loginSuccessUrl)
       .loginFailureUrl(window.TestConfig.saml.loginFailureUrl)
+      .logoutSuccessUrl(window.TestConfig.saml.logoutSuccessUrl)
+      .logoutFailureUrl(window.TestConfig.saml.logoutFailureUrl)
       .parseTokenRelayResponse(true)
       .build();
 
@@ -42,7 +44,7 @@ exports.defineAutoTests = function() {
       })
       .then(function(headers) {
         fedHeaders = headers;
-        return window.TestUtil.xmlHttpRequestPromise(headers, securedUrl);
+        return window.TestUtil.xmlHttpRequestPromise(undefined, securedUrl);
       })
       .then(function(result) {
         httpCallResult = result;

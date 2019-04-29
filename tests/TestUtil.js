@@ -30,14 +30,14 @@ exports.defineAutoTests = function() {
       it('should allow number', function() {
         expect(function() {
           var b = new Builder();
-          b[property].call(b, 200);
+          b[property].call(b, 100);
         }).not.toThrow();
       });
     } else {
       it('should not allow number', function() {
         expect(function() {
           var b = new Builder();
-          b[property].call(b, 200);
+          b[property].call(b, 100);
         }).toThrow();
       });
     }
@@ -180,8 +180,12 @@ exports.defineAutoTests = function() {
           else
             resolve();
         });
-        request.addEventListener("error", resolve);
-        request.addEventListener("abort", resolve);
+        request.addEventListener("error", function() {
+          resolve('Error occurred');
+        });
+        request.addEventListener("abort", function() {
+          resolve('Error occurred');
+        });
 
         request.send();
       });

@@ -152,10 +152,11 @@
                               iteration:PBKDF2_ITERATION_COUNT
                               keySize:PBKDF2_KEY_LENGTH outError:error];
             
-            [[OMKeyManager sharedManager] updateKeyStore:self.instanceId
+            OMKeyStore *currentKeyStrore = [[OMKeyManager sharedManager]
+                                            updateKeyStore:self.instanceId
                                         kek:self.kek newKek:newKek error:error];
 
-            if (!*error)
+            if (currentKeyStrore)
             {
             _kek = newKek;
             [self.secureStorage saveDataForId:[self pinLengthKey]

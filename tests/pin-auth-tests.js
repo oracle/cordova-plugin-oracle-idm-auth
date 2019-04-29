@@ -7,12 +7,13 @@ exports.defineAutoTests = function() {
   var idmAuthFlowPlugin = cordova.plugins.IdmAuthFlows;
   var pinChallengeReason = idmAuthFlowPlugin.LocalAuthPropertiesBuilder.PinChallengeReason;
   var localAuthTypes = idmAuthFlowPlugin.LocalAuthPropertiesBuilder.LocalAuthenticatorType;
-  var pinAuthFlow, isCancelFlow, currPin, newPin, challengeReasons, challengeErrors;
+  var pinAuthFlow, isCancelFlow, currPin, newPin, challengeReasons, challengeErrors, challengeCount;
   var enabledStates, loginResults, disableSuccess;
 
   var resetTest = function() {
     challengeReasons = [];
     challengeErrors = [];
+    challengeCount = [];
     enabledStates = [];
     isCancelFlow = undefined;
     currPin = undefined;
@@ -21,10 +22,15 @@ exports.defineAutoTests = function() {
     disableSuccess = false;
   };
 
-  var pinChallenge = function (challengeReason, completionHandler, err) {
+  var pinChallenge = function (challengeReason, completionHandler, err, options) {
     challengeReasons.push(challengeReason);
+
     if (err)
       challengeErrors.push(err);
+
+    if (options && options.loginAttemptCount)
+      challengeCount.push(options.loginAttemptCount);
+
     if (isCancelFlow) {
       completionHandler.cancel();
       return;
@@ -178,7 +184,7 @@ exports.defineAutoTests = function() {
 
     // We can test isAuthenticated for false only once.
     // User once logged in is always logged in for that instance of the app.
-    describe('enable and login and disable.', function() {
+    describe('enable and then disable with implicit login.', function() {
       var isAuthenticatedStates = [];
       beforeEach(function(done) {
         resetTest();
@@ -196,20 +202,12 @@ exports.defineAutoTests = function() {
           })
           .then(function(isAuth) {
             isAuthenticatedStates.push(isAuth)
-            currPin = "1234";
-            newPin = undefined;
-            return pinAuthFlow.login();
-          })
-          .then(function() {
-            return pinAuthFlow.isAuthenticated();
-          })
-          .then(function(isAuth) {
-            isAuthenticatedStates.push(isAuth)
-            loginResults.push(true);
             return pinAuthFlow.getManager().getEnabled();
           })
           .then(function(enabled) {
             enabledStates.push(enabled);
+            currPin = "1234";
+            newPin = undefined;
             return pinAuthFlow.getManager().disable(localAuthTypes.PIN);
           })
           .then(function() {
@@ -234,78 +232,13 @@ exports.defineAutoTests = function() {
         expect(enabledStates[1][0]).toBe(localAuthTypes.PIN);
         expect(enabledStates[2].length).toBe(0);
 
-        expect(loginResults.length).toBe(1);
-        expect(loginResults[0]).toBeTruthy();
-
         expect(challengeReasons.length).toBe(2);
         expect(challengeReasons[0]).toBe(pinChallengeReason.SetPin);
         expect(challengeReasons[1]).toBe(pinChallengeReason.Login);
 
-        expect(isAuthenticatedStates.length).toBe(3);
+        expect(isAuthenticatedStates.length).toBe(2);
         expect(isAuthenticatedStates[0]).not.toBeTruthy();
         expect(isAuthenticatedStates[1]).toBeTruthy();
-        expect(isAuthenticatedStates[2]).toBeTruthy();
-
-        done();
-      });
-    });
-
-    // Fails in iOS - Bug 29389078
-    describe('enable and disable PIN fails and then login and disable.', function() {
-      var firstDisable, secondDisable;
-      beforeEach(function(done) {
-        resetTest();
-        pinAuthFlow.getManager().getEnabled()
-          .then(function(enabled) {
-            enabledStates.push(enabled);
-          })
-          .then(function() {
-            currPin = undefined;
-            newPin = "1234";
-            return pinAuthFlow.getManager().enable(localAuthTypes.PIN);
-          })
-          .then(function() {
-            return pinAuthFlow.getManager().getEnabled();
-          })
-          .then(function(enabled) {
-            enabledStates.push(enabled);
-            return pinAuthFlow.getManager().disable(localAuthTypes.PIN);
-          })
-          .catch(function(err) {
-            firstDisable = false;
-            firstDisableErr = err;
-            currPin = "1234";
-            newPin = undefined;
-            return pinAuthFlow.login();
-          })
-          .then(function() {
-            return pinAuthFlow.getManager().disable(localAuthTypes.PIN);
-          })
-          .then(function() {
-            secondDisable = true;
-            return pinAuthFlow.getManager().getEnabled();
-          })
-          .then(function(enabled) {
-            enabledStates.push(enabled);
-            done();
-          })
-          .catch(done);
-      });
-      it('works as expected.', function(done) {
-        expect(firstDisableErr).toBeDefined();
-        expect(firstDisable).not.toBeTruthy();
-        window.TestUtil.verifyPluginError(firstDisableErr, "10427");
-        expect(firstDisableErr).toBeDefined();
-        expect(secondDisable).toBeTruthy();
-        expect(enabledStates.length).toBe(3);
-        expect(enabledStates[0].length).toBe(0);
-        expect(enabledStates[1].length).toBe(1);
-        expect(enabledStates[1][0]).toBe(localAuthTypes.PIN);
-        expect(enabledStates[2].length).toBe(0);
-
-        expect(challengeReasons.length).toBe(2);
-        expect(challengeReasons[0]).toBe(pinChallengeReason.SetPin);
-        expect(challengeReasons[1]).toBe(pinChallengeReason.Login);
 
         done();
       });
@@ -368,9 +301,10 @@ exports.defineAutoTests = function() {
         expect(loginResults.length).toBe(1);
         expect(loginResults[0]).toBeTruthy();
 
-        expect(challengeReasons.length).toBe(2);
+        expect(challengeReasons.length).toBe(3);
         expect(challengeReasons[0]).toBe(pinChallengeReason.SetPin);
         expect(challengeReasons[1]).toBe(pinChallengeReason.Login);
+        expect(challengeReasons[2]).toBe(pinChallengeReason.Login);
         done();
       });
     });
@@ -432,9 +366,10 @@ exports.defineAutoTests = function() {
         expect(enabledStates[2][0]).toBe(localAuthTypes.PIN);
         expect(enabledStates[3].length).toBe(0);
 
-        expect(challengeReasons.length).toBe(2);
+        expect(challengeReasons.length).toBe(3);
         expect(challengeReasons[0]).toBe(pinChallengeReason.SetPin);
         expect(challengeReasons[1]).toBe(pinChallengeReason.Login);
+        expect(challengeReasons[2]).toBe(pinChallengeReason.Login);
 
         expect(loginResults.length).toBe(2);
         window.TestUtil.verifyPluginError(loginResults[0], "P1013");
@@ -459,7 +394,7 @@ exports.defineAutoTests = function() {
           .then(function() {
             currPin = "1234";
             newPin = "2345";
-            pinAuthFlow.getManager().changePin();
+            return pinAuthFlow.getManager().changePin();
           })
           .then(function() {
             currPin = "2345";
@@ -493,13 +428,16 @@ exports.defineAutoTests = function() {
         expect(loginResults[0]).toBeTruthy();
         expect(loginResults[1]).toBeTruthy();
 
-        expect(challengeReasons.length).toBe(6);
+        expect(challengeReasons.length).toBe(9);
         expect(challengeReasons[0]).toBe(pinChallengeReason.SetPin);
         expect(challengeReasons[1]).toBe(pinChallengeReason.Login);
-        expect(challengeReasons[2]).toBe(pinChallengeReason.ChangePin);
-        expect(challengeReasons[3]).toBe(pinChallengeReason.Login);
-        expect(challengeReasons[4]).toBe(pinChallengeReason.ChangePin);
+        expect(challengeReasons[2]).toBe(pinChallengeReason.Login);
+        expect(challengeReasons[3]).toBe(pinChallengeReason.ChangePin);
+        expect(challengeReasons[4]).toBe(pinChallengeReason.Login);
         expect(challengeReasons[5]).toBe(pinChallengeReason.Login);
+        expect(challengeReasons[6]).toBe(pinChallengeReason.ChangePin);
+        expect(challengeReasons[7]).toBe(pinChallengeReason.Login);
+        expect(challengeReasons[8]).toBe(pinChallengeReason.Login);
         done();
       });
     });
@@ -537,10 +475,11 @@ exports.defineAutoTests = function() {
       it('throws expected error code.', function(done) {
         expect(disableSuccess).toBeTruthy();
         window.TestUtil.verifyPluginError(loginErr, "10029");
-        expect(challengeReasons.length).toBe(3);
+        expect(challengeReasons.length).toBe(4);
         expect(challengeReasons[0]).toBe(pinChallengeReason.SetPin);
         expect(challengeReasons[1]).toBe(pinChallengeReason.Login);
         expect(challengeReasons[2]).toBe(pinChallengeReason.Login);
+        expect(challengeReasons[3]).toBe(pinChallengeReason.Login);
         done();
       });
     });
@@ -575,16 +514,23 @@ exports.defineAutoTests = function() {
       it('throws expected error code.', function(done) {
         expect(disableSuccess).toBeTruthy();
         window.TestUtil.verifyPluginError(loginErr, "10408");
-        expect(challengeReasons.length).toBe(5);
+        expect(challengeReasons.length).toBe(6);
         expect(challengeReasons[0]).toBe(pinChallengeReason.SetPin);
         expect(challengeReasons[1]).toBe(pinChallengeReason.Login);
         expect(challengeReasons[2]).toBe(pinChallengeReason.Login);
         expect(challengeReasons[3]).toBe(pinChallengeReason.Login);
         expect(challengeReasons[4]).toBe(pinChallengeReason.Login);
+        expect(challengeReasons[5]).toBe(pinChallengeReason.Login);
 
         expect(challengeErrors.length).toBe(2);
         window.TestUtil.verifyPluginError(challengeErrors[0], "10408");
         window.TestUtil.verifyPluginError(challengeErrors[1], "10408");
+        expect(challengeCount.length).toBe(5);
+        expect(challengeCount[0]).toBe(1);
+        expect(challengeCount[1]).toBe(2);
+        expect(challengeCount[2]).toBe(3);
+        expect(challengeCount[3]).toBe(1);
+        expect(challengeCount[4]).toBe(1);
 
         done();
       });
@@ -611,6 +557,9 @@ exports.defineAutoTests = function() {
           })
           .catch(function(er) {
             changePinErr = er;
+            currPin = "1234";
+            newPin = undefined;
+            isCancelFlow = false;
             return pinAuthFlow.getManager().disable(localAuthTypes.PIN);
           })
           .then(function() {
@@ -622,10 +571,11 @@ exports.defineAutoTests = function() {
       it('throws expected error code.', function(done) {
         expect(disableSuccess).toBeTruthy();
         window.TestUtil.verifyPluginError(changePinErr, "10029");
-        expect(challengeReasons.length).toBe(3);
+        expect(challengeReasons.length).toBe(4);
         expect(challengeReasons[0]).toBe(pinChallengeReason.SetPin);
         expect(challengeReasons[1]).toBe(pinChallengeReason.Login);
-        expect(challengeReasons[2]).toBe(pinChallengeReason.ChangePin);
+        expect(challengeReasons[2]).toBe(pinChallengeReason.Login);
+        expect(challengeReasons[3]).toBe(pinChallengeReason.Login);
         done();
       });
     });
@@ -666,18 +616,26 @@ exports.defineAutoTests = function() {
       });
       it('throws expected error code.', function(done) {
         expect(disableSuccess).toBeTruthy();
-        window.TestUtil.verifyPluginError(pinChangeErr, "70009");
-        expect(challengeReasons.length).toBe(6);
+        window.TestUtil.verifyPluginError(pinChangeErr, "10408");
+        expect(challengeReasons.length).toBe(7);
         expect(challengeReasons[0]).toBe(pinChallengeReason.SetPin);
         expect(challengeReasons[1]).toBe(pinChallengeReason.Login);
-        expect(challengeReasons[2]).toBe(pinChallengeReason.ChangePin);
-        expect(challengeReasons[3]).toBe(pinChallengeReason.ChangePin);
-        expect(challengeReasons[4]).toBe(pinChallengeReason.ChangePin);
+        expect(challengeReasons[2]).toBe(pinChallengeReason.Login);
+        expect(challengeReasons[3]).toBe(pinChallengeReason.Login);
+        expect(challengeReasons[4]).toBe(pinChallengeReason.Login);
         expect(challengeReasons[5]).toBe(pinChallengeReason.Login);
+        expect(challengeReasons[6]).toBe(pinChallengeReason.Login);
 
         expect(challengeErrors.length).toBe(2);
-        window.TestUtil.verifyPluginError(challengeErrors[0], "70009");
-        window.TestUtil.verifyPluginError(challengeErrors[1], "70009");
+        window.TestUtil.verifyPluginError(challengeErrors[0], "10408");
+        window.TestUtil.verifyPluginError(challengeErrors[1], "10408");
+        expect(challengeCount.length).toBe(6);
+        expect(challengeCount[0]).toBe(1);
+        expect(challengeCount[1]).toBe(1);
+        expect(challengeCount[2]).toBe(2);
+        expect(challengeCount[3]).toBe(3);
+        expect(challengeCount[4]).toBe(1);
+        expect(challengeCount[5]).toBe(1);
 
         done();
       });
@@ -722,11 +680,13 @@ exports.defineAutoTests = function() {
       });
       it('works as expected.', function(done) {
         expect(disableSuccess).toBeTruthy();
-        expect(challengeReasons.length).toBe(4);
+        expect(challengeReasons.length).toBe(6);
         expect(challengeReasons[0]).toBe(pinChallengeReason.SetPin);
         expect(challengeReasons[1]).toBe(pinChallengeReason.Login);
-        expect(challengeReasons[2]).toBe(pinChallengeReason.SetPin);
-        expect(challengeReasons[3]).toBe(pinChallengeReason.Login);
+        expect(challengeReasons[2]).toBe(pinChallengeReason.Login);
+        expect(challengeReasons[3]).toBe(pinChallengeReason.SetPin);
+        expect(challengeReasons[4]).toBe(pinChallengeReason.Login);
+        expect(challengeReasons[5]).toBe(pinChallengeReason.Login);
 
         expect(loginResults.length).toBe(2);
         expect(loginResults[0]).toBeTruthy();

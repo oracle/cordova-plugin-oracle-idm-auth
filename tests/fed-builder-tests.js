@@ -103,11 +103,87 @@ exports.defineAutoTests = function() {
     describe('confirmLogoutButtonId', window.TestUtil.validator(Builder, 'confirmLogoutButtonId', 'string'));
     describe('customAuthHeaders', window.TestUtil.validator(Builder, 'customAuthHeaders', 'object'));
     describe('enableWkWebView', window.TestUtil.validator(Builder, 'enableWkWebView', 'boolean'));
+    describe('idleTimeOutInSeconds', window.TestUtil.validator(Builder, 'idleTimeOutInSeconds', 'number'));
     describe('sessionTimeOutInSeconds', window.TestUtil.validator(Builder, 'sessionTimeOutInSeconds', 'number'));
     describe('logoutFailureUrl', window.TestUtil.validator(Builder, 'logoutFailureUrl', 'url'));
     describe('logoutSuccessUrl', window.TestUtil.validator(Builder, 'logoutSuccessUrl', 'url'));
     describe('logoutTimeOutInSeconds', window.TestUtil.validator(Builder, 'logoutTimeOutInSeconds', 'number'));
     describe('parseTokenRelayResponse', window.TestUtil.validator(Builder, 'parseTokenRelayResponse', 'boolean'));
     describe('timeoutCallback', window.TestUtil.validator(Builder, 'timeoutCallback', 'function'));
+    describe('sessionActiveOnRestart', window.TestUtil.validator(Builder, 'sessionActiveOnRestart', 'boolean'));
+
+    describe('Timeouts with sessionActiveOnRestart', function() {
+      it ('removes idle timeout when sessionActiveOnRestart is true', function() {
+        var props = new Builder()
+          .appName('App')
+          .loginUrl(goodLoginUrl)
+          .logoutUrl(goodLogoutUrl)
+          .loginSuccessUrl(goodLoginSuccessUrl)
+          .loginFailureUrl(goodLoginFailureUrl)
+          .idleTimeOutInSeconds(300)
+          .sessionActiveOnRestart(true)
+          .build();
+        expect(props.IdleTimeOutInSeconds).not.toBeDefined();
+        expect(props.SessionTimeOutValue).not.toBeDefined();
+      });
+
+      it ('removes session timeout when sessionActiveOnRestart is true', function() {
+        var props = new Builder()
+          .appName('App')
+          .loginUrl(goodLoginUrl)
+          .logoutUrl(goodLogoutUrl)
+          .loginSuccessUrl(goodLoginSuccessUrl)
+          .loginFailureUrl(goodLoginFailureUrl)
+          .sessionTimeOutInSeconds(6000)
+          .sessionActiveOnRestart(true)
+          .build();
+        expect(props.IdleTimeOutValue).not.toBeDefined();
+        expect(props.SessionTimeOutValue).not.toBeDefined();
+      });
+
+      it ('removes session and idle timeouts when sessionActiveOnRestart is true', function() {
+        var props = new Builder()
+          .appName('App')
+          .loginUrl(goodLoginUrl)
+          .logoutUrl(goodLogoutUrl)
+          .loginSuccessUrl(goodLoginSuccessUrl)
+          .loginFailureUrl(goodLoginFailureUrl)
+          .sessionTimeOutInSeconds(6000)
+          .idleTimeOutInSeconds(300)
+          .sessionActiveOnRestart(true)
+          .build();
+        expect(props.IdleTimeOutValue).not.toBeDefined();
+        expect(props.SessionTimeOutValue).not.toBeDefined();
+      });
+
+      it ('retains session and idle timeouts when sessionActiveOnRestart is false', function() {
+        var props = new Builder()
+          .appName('App')
+          .loginUrl(goodLoginUrl)
+          .logoutUrl(goodLogoutUrl)
+          .loginSuccessUrl(goodLoginSuccessUrl)
+          .loginFailureUrl(goodLoginFailureUrl)
+          .sessionTimeOutInSeconds(6000)
+          .idleTimeOutInSeconds(300)
+          .sessionActiveOnRestart(false)
+          .build();
+        expect(props.IdleTimeOutValue).toBe(300);
+        expect(props.SessionTimeOutValue).toBe(6000);
+      });
+
+      it ('retains session and idle timeouts when sessionActiveOnRestart is not set', function() {
+        var props = new Builder()
+          .appName('App')
+          .loginUrl(goodLoginUrl)
+          .logoutUrl(goodLogoutUrl)
+          .loginSuccessUrl(goodLoginSuccessUrl)
+          .loginFailureUrl(goodLoginFailureUrl)
+          .sessionTimeOutInSeconds(6000)
+          .idleTimeOutInSeconds(300)
+          .build();
+        expect(props.IdleTimeOutValue).toBe(300);
+        expect(props.SessionTimeOutValue).toBe(6000);
+      });
+    });
   });
 };

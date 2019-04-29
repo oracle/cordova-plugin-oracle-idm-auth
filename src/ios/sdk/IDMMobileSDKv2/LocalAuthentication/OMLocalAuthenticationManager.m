@@ -246,11 +246,15 @@ static NSString *AuthIdList = @"authidlist";
         
         if (authInstanceId)
         {
-            [self deleteAuthData:instanceId];
-            [self.authenticatorIdInfo[instanceId] setIsEnabled:NO];
-            [self saveAuthenticatorIdInfo];
-            [self.authenticator removeObjectForKey:instanceId];
-            disabled = YES;
+            [self deleteAuthData:instanceId withError:error];
+            if (error == NULL || !*error)
+            {
+                [self.authenticatorIdInfo[instanceId] setIsEnabled:NO];
+                [self saveAuthenticatorIdInfo];
+                [self.authenticator removeObjectForKey:instanceId];
+                disabled = YES;
+
+            }
         }
     }
     
@@ -262,12 +266,11 @@ static NSString *AuthIdList = @"authidlist";
     return disabled;
 }
 
-- (void)deleteAuthData:(NSString*)instanceId
+- (void)deleteAuthData:(NSString*)instanceId withError:(NSError**)error
 {
     OMAuthenticator * currentAuth = [self authenticatorForInstanceId:instanceId
-                                                               error:nil];
-    NSError *error = nil;
-    [currentAuth deleteAuthData:&error];
+                                                               error:error];
+    [currentAuth deleteAuthData:error];
     
 }
 

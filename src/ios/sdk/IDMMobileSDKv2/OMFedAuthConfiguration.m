@@ -31,14 +31,16 @@
             id logoutURL = [properties valueForKey:OM_PROP_LOGOUT_URL];
             id logoutSucessesURL = [properties valueForKey:OM_PROP_LOGOUT_SUCCESS_URL];
             id logoutFailureURL = [properties valueForKey:OM_PROP_LOGOUT_FAILURE_URL];
+            id rememberUsernameEnabled = [properties
+                                          valueForKey:OM_PROP_REMEMBER_USERNAME_ALLOWED];
 
             id parseTokenRelayResponse = [properties
                                           valueForKey:
                                           OM_PROP_PARSE_TOKEN_RELAY_RESPONSE];
             id usernameParamName = [properties
                                     valueForKey:OM_PROP_USERNAME_PARAM_NAME];
-            if (requiredTokens &&
-                [requiredTokens isKindOfClass:[NSSet class]] == true)
+            if (usernameParamName &&
+                [usernameParamName isKindOfClass:[NSSet class]] == true)
             {
                 _fedAuthUsernameParamName = usernameParamName;
             }
@@ -107,6 +109,31 @@
 
             _parseTokenRelayResponse = [OMMobileSecurityConfiguration
                                         boolValue:parseTokenRelayResponse];
+            
+            id enableWebkit = [properties valueForKey:OM_PROP_ENABLE_WKWEBVIEW];
+            BOOL enable = [OMMobileSecurityConfiguration boolValue:enableWebkit];
+            
+            if (enable && [OMMobileSecurityConfiguration
+                           isWKWebViewAvailable])
+            {
+                _enableWKWebView = [OMMobileSecurityConfiguration
+                                    boolValue:enableWebkit];
+                
+            }
+            
+            id autoConfirmLogout = [properties valueForKey:OM_PROP_CONFIRM_LOGOUT_AUTOMATICALLY];
+            
+            _autoConfirmLogout = [OMMobileSecurityConfiguration boolValue:autoConfirmLogout];
+            
+            id logoutButtonList = [properties valueForKey:OM_PROP_CONFIRM_LOGOUT_BUTTON_ID];
+            
+            if (logoutButtonList &&
+                [logoutButtonList isKindOfClass:[NSSet class]])
+            {
+                _confirmLogoutButtons = logoutButtonList;
+            }
+            self.rememberUsernameAllowed = [OMMobileSecurityConfiguration
+                                            boolValue:rememberUsernameEnabled];
         }
         else
         {
@@ -114,28 +141,6 @@
 
         }
         
-        id enableWebkit = [properties valueForKey:OM_PROP_ENABLE_WKWEBVIEW];
-        BOOL enable = [OMMobileSecurityConfiguration boolValue:enableWebkit];
-
-        if (enable && [OMMobileSecurityConfiguration
-                                    isWKWebViewAvailable])
-        {
-            _enableWKWebView = [OMMobileSecurityConfiguration
-                                boolValue:enableWebkit];
-            
-        }
-        
-        id autoConfirmLogout = [properties valueForKey:OM_PROP_CONFIRM_LOGOUT_AUTOMATICALLY];
-        
-        _autoConfirmLogout = [OMMobileSecurityConfiguration boolValue:autoConfirmLogout];
-        
-        id logoutButtonList = [properties valueForKey:OM_PROP_CONFIRM_LOGOUT_BUTTON_ID];
-
-        if (logoutButtonList &&
-            [logoutButtonList isKindOfClass:[NSSet class]])
-        {
-            _confirmLogoutButtons = logoutButtonList;
-        }
 
         if (errorCode !=-1)
         {
