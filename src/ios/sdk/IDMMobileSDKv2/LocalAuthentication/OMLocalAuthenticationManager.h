@@ -11,6 +11,8 @@
 
 + (OMLocalAuthenticationManager *)sharedManager;
 
+-(void)useBiometricInsteadOfTouchID:(BOOL)useBiometric;
+
 - (BOOL)registerAuthenticator:(NSString*)authenticatorName
                     className:(NSString*)className error:(NSError **)error;
 

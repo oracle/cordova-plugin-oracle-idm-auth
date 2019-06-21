@@ -24,7 +24,7 @@ import oracle.idm.mobile.logging.OMLog;
 /**
  * Utility class for Remember Credential feature.
  */
-class RCUtility {
+public class RCUtility {
     private static final String TAG = RCUtility.class.getSimpleName();
 
     final static int OPTION_SELECTED_BY_USER = 1;
@@ -45,7 +45,7 @@ class RCUtility {
     OMMobileSecurityConfiguration mConfig;
     OMCredentialStore mCredentialStore;
 
-    RCUtility(Context context, OMMobileSecurityConfiguration config, OMCredentialStore credentialStore) {
+    public RCUtility(Context context, OMMobileSecurityConfiguration config, OMCredentialStore credentialStore) {
         mContext = context;
         mConfig = config;
         mCredentialStore = credentialStore;

@@ -16,6 +16,21 @@
 @interface AuthViewController : UIViewController
 
 /**
+ * Reference to the back button.
+ */
+@property (weak, nonatomic) IBOutlet UIBarButtonItem *backButton;
+
+/**
+ * Reference to the forward button.
+ */
+@property (weak, nonatomic) IBOutlet UIBarButtonItem *forwardButton;
+
+/**
+ * Reference to the refresh button.
+ */
+@property (weak, nonatomic) IBOutlet UIBarButtonItem *refreshButton;
+
+/**
  * Reference to the cancel button.
  */
 @property (weak, nonatomic) IBOutlet UIBarButtonItem *cancelButton;

@@ -67,7 +67,7 @@
 is a plugin that provides authentication and authorization functionality for
 cordova based mobile applications, supporting standard protocols for remote authentication
 such as Basic Auth, OAuth, OpenID Connect and webSSO / Federated auth.
-The plugin also supports local device level authentication such as PIN and fingerprint based.
+The plugin also supports local device level authentication such as PIN and biometric based.
 The plugin abstracts all aspects of authentication and authorization and enforces security best practices for mobile application developers.
 Typically an app will use a single remote authentication and possibly local authentication.
 But the plugin can handle multiple authentication flows in parallel, be it remote or local.
@@ -75,10 +75,10 @@ The APIs of this plugin are exposed through an object <code>IdmAuthFlows</code> 
 All objects in this documentation be it in &quot;Global&quot; or &quot;Classes&quot; are part of this object.
 They have to be accessed as <code>cordova.plugins.IdmAuthFlows.&lt;Class&gt;</code>
 or <code>cordova.plugins.IdmAuthFlows.&lt;Object&gt;</code>.</p>
-<p><p>Usage of this plugin:</p></p>
-<p><p>Create authentication properties object for the type of authentication to be performed.
-Use one of the builders for this:</p>
-<p><ul style="list-style: none;">
+<p>Usage of this plugin:</p>
+<p>Create authentication properties object for the type of authentication to be performed.
+Use one of the builders for this:
+<ul style="list-style: none;">
  <li><a href="HttpBasicAuthPropertiesBuilder.html">HttpBasicAuthPropertiesBuilder</a></li>
  <li><a href="FedAuthPropertiesBuilder.html">FedAuthPropertiesBuilder</a></li>
  <li><a href="OAuthPropertiesBuilder.html">OAuthPropertiesBuilder</a></li>
@@ -96,49 +96,43 @@ Use one of the builders for this:</p>
    <li><a href="HttpBasicAuthenticationFlow.html">HttpBasicAuthenticationFlow</a></li>
    <li><a href="LocalAuthenticationFlow.html">LocalAuthenticationFlow</a></li>
  </ul>
-</p></p>
-<p><p> Sample usage:</p></p>
+</p>
+<p> Sample usage:</p>
 <pre>
  // Preserve this authentication flow object to interact with the particular flow.
  var authFlow;
-
- // The plugin will be available in onDeviceReady or an equivalent callback
- // which is executed after the application is loaded by the device.
- document.addEventListener("deviceready", onDeviceReady);
- function onDeviceReady() {
-   // Create the authentication properties
-   var authProperties = cordova.plugins.IdmAuthFlows.newHttpBasicAuthPropertiesBuilder(...).build();
-
-   var authPromise = cordova.plugins.IdmAuthFlows.init(authProperties);
-   authPromise.then(function(flow) {
-     authFlow = flow;
-   });
- }
-
- // Do login.
- var loginPromise = authFlow.login();
- loginPromise.then(function(resp) {
-   // Perform after login tasks.
- })
-
- // Retrieve headers - If applicable for the auth type.
- var getHeadersPromise = authFlow.getHeaders(options);
- getHeadersPromise.then(function(headers) {
-   // Use headers for setting appropriate headers for performing an XHR request.
- });
-
- // Find our use's authentication status.
- var isAuthenticatedPromise = authFlow.isAuthenticated(options);
- isAuthenticatedPromise.then(function(authenticated) {
-   // Use headers for setting appropriate headers for performing an XHR request.
- });
-
- // Logout from a particular authentication flow.
- var logoutPromise = authFlow.logout();
- logoutPromise.then(function(resp) {
-   // Do after logout tasks
- });
-</pre></div>
+<p>// The plugin will be available in onDeviceReady or an equivalent callback
+// which is executed after the application is loaded by the device.
+document.addEventListener(&quot;deviceready&quot;, onDeviceReady);
+function onDeviceReady() {
+// Create the authentication properties
+var authProperties = cordova.plugins.IdmAuthFlows.newHttpBasicAuthPropertiesBuilder(...).build();</p>
+<p>var authPromise = cordova.plugins.IdmAuthFlows.init(authProperties);
+authPromise.then(function(flow) {
+authFlow = flow;
+});
+}</p>
+<p>// Do login.
+var loginPromise = authFlow.login();
+loginPromise.then(function(resp) {
+// Perform after login tasks.
+})</p>
+<p>// Retrieve headers - If applicable for the auth type.
+var getHeadersPromise = authFlow.getHeaders(options);
+getHeadersPromise.then(function(headers) {
+// Use headers for setting appropriate headers for performing an XHR request.
+});</p>
+<p>// Find our use's authentication status.
+var isAuthenticatedPromise = authFlow.isAuthenticated(options);
+isAuthenticatedPromise.then(function(authenticated) {
+// Use headers for setting appropriate headers for performing an XHR request.
+});</p>
+<p>// Logout from a particular authentication flow.
+var logoutPromise = authFlow.logout();
+logoutPromise.then(function(resp) {
+// Do after logout tasks
+});
+</pre></p></div>
         
 
         
@@ -224,7 +218,7 @@ Use one of the builders for this:</p>
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Wed Apr 24 2019 15:06:54 GMT+0530 (India Standard Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.2</a> on Fri Jun 21 2019 11:55:08 GMT+0530 (India Standard Time)
 </footer>
 
 <script> prettyPrint(); </script>

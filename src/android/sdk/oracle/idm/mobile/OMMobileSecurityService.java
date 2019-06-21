@@ -11,12 +11,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Build;
+import android.util.Log;
 
 import org.json.JSONException;
 
 import java.net.URL;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -27,6 +29,7 @@ import oracle.idm.mobile.auth.OMAuthenticationChallenge;
 import oracle.idm.mobile.auth.OMAuthenticationChallengeType;
 import oracle.idm.mobile.auth.OMAuthenticationCompletionHandler;
 import oracle.idm.mobile.auth.OMAuthenticationContext;
+import oracle.idm.mobile.auth.RCUtility;
 import oracle.idm.mobile.auth.TimeoutManager;
 import oracle.idm.mobile.auth.local.OMAuthData;
 import oracle.idm.mobile.auth.local.OMAuthenticationManagerException;
@@ -637,7 +640,6 @@ public class OMMobileSecurityService {
     /**
      * This lists down the authentication types supported by the SDK. This should be given as input against
      * OM_PROP_AUTHSERVER_TYPE in {@link OMMobileSecurityService} map-based constructor.
-     *
      */
     public enum AuthServerType {
         HTTPBasicAuth("HTTPBasicAuthentication"),
@@ -1131,11 +1133,28 @@ public class OMMobileSecurityService {
             // resetAuthServiceManager();
             // resetConnectionHandler();
         } else {
+            /* If logout(true)is called without logging in, it is expected that persisted
+             * credentials are removed.*/
+            if (isForgetDevice) {
+                removeCredentials();
+            }
             // no need to set logout in progress in this case.
             if (mCallback != null) {
                 mCallback.onLogoutCompleted(this, null);
             }
         }
+    }
+
+    private void removeCredentials() {
+        Map<String, Object> configProperties = new HashMap<>();
+        configProperties.put(OM_PROP_LOGIN_URL, getMobileSecurityConfig().getAuthenticationURL());
+        configProperties.put(OM_PROP_AUTH_KEY, getMobileSecurityConfig().getAuthenticationKey());
+        configProperties.put(OM_PROP_APPNAME, getMobileSecurityConfig().getApplicationId());
+        int deletedCredentialsCount = getCredentialStoreService().deleteCredentialForProperties(configProperties);
+        Log.d(TAG, "deletedCredentialsCount = " + deletedCredentialsCount);
+        RCUtility rcUtility = new RCUtility(getApplicationContext(), getMobileSecurityConfig(),
+                getCredentialStoreService());
+        rcUtility.removeAll();
     }
 
     /**

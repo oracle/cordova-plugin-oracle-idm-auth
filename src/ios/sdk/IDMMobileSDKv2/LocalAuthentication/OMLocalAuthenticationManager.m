@@ -23,6 +23,7 @@ static NSString *AuthIdList = @"authidlist";
 @property(nonatomic, strong) NSMutableDictionary *authenticatorIdInfo;
 @property(nonatomic, strong) NSMutableDictionary *authenticator;
 @property(nonatomic, strong) NSMutableArray *authIdList;
+@property(nonatomic, assign) BOOL useBioMetricAuth;
 
 @end
 @implementation OMLocalAuthenticationManager
@@ -103,6 +104,11 @@ static NSString *AuthIdList = @"authidlist";
     {
         self.authenticatorIdInfo = [NSMutableDictionary dictionary];
     }
+}
+
+-(void)useBiometricInsteadOfTouchID:(BOOL)useBiometric;
+{
+    self.useBioMetricAuth = useBiometric;
 }
 
 - (BOOL)registerAuthenticator:(NSString*)authenticatorName
@@ -402,6 +408,10 @@ static NSString *AuthIdList = @"authidlist";
                                     instanceId:(NSString*)instanceId
 {
     
+    if(self.useBioMetricAuth && NSOrderedSame ==  [@"OMTouchIDAuthenticator" caseInsensitiveCompare:type])
+    {
+        type = @"OMBiometricAuthenticator";
+    }
     OMAuthenticator *authenticator = [[NSClassFromString(type) alloc]
                                       initWithInstanceId:instanceId
                                                 error:nil];

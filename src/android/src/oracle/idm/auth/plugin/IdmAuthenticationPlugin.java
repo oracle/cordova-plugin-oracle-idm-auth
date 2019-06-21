@@ -105,9 +105,9 @@ public class IdmAuthenticationPlugin extends CordovaPlugin
       _localAuth.authenticatePin(args, callbackContext);
       return true;
     }
-    else if ("authenticateFingerPrint".equals(action))
+    else if ("authenticateBiometric".equals(action))
     {
-      _localAuth.authenticateFingerPrint(args, callbackContext);
+      _localAuth.authenticateBiometric(args, callbackContext);
       return true;
     }
     else if ("enableLocalAuth".equals(action))

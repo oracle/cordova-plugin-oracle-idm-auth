@@ -33,22 +33,22 @@
                                     <constraint firstAttribute="height" constant="44" id="w5Y-bw-kqh"/>
                                 </constraints>
                                 <items>
-                                    <barButtonItem title="Back" id="bP6-4c-TI3">
+                                    <barButtonItem enabled="NO" title="Back" id="bP6-4c-TI3">
                                         <connections>
                                             <action selector="goBack" destination="eiy-jb-63u" id="idR-nb-EcI"/>
                                         </connections>
                                     </barButtonItem>
-                                    <barButtonItem title="Forward" id="Rml-Xz-hi7">
+                                    <barButtonItem enabled="NO" title="Forward" id="Rml-Xz-hi7">
                                         <connections>
                                             <action selector="goForward" destination="eiy-jb-63u" id="TZ5-Bp-HLL"/>
                                         </connections>
                                     </barButtonItem>
-                                    <barButtonItem title="Refresh" id="th1-Zf-3Oq">
+                                    <barButtonItem enabled="NO" title="Refresh" id="th1-Zf-3Oq">
                                         <connections>
                                             <action selector="reload" destination="eiy-jb-63u" id="Vkd-I1-tGq"/>
                                         </connections>
                                     </barButtonItem>
-                                    <barButtonItem title="Cancel" id="kbI-2K-D09">
+                                    <barButtonItem enabled="NO" title="Cancel" id="kbI-2K-D09">
                                         <connections>
                                             <action selector="cancel:" destination="46V-Ge-UlT" id="Bsf-RP-9Ga"/>
                                         </connections>
@@ -67,7 +67,10 @@
                     <size key="freeformSize" width="600" height="600"/>
                     <connections>
                         <outlet property="authWebView" destination="eiy-jb-63u" id="Dch-JX-XuT"/>
+                        <outlet property="backButton" destination="bP6-4c-TI3" id="gBD-Rz-IWK"/>
                         <outlet property="cancelButton" destination="kbI-2K-D09" id="8p3-ei-ih4"/>
+                        <outlet property="forwardButton" destination="Rml-Xz-hi7" id="ZN7-GY-Icb"/>
+                        <outlet property="refreshButton" destination="th1-Zf-3Oq" id="DOe-jP-IbO"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="pNs-U5-nuf" userLabel="First Responder" sceneMemberID="firstResponder"/>

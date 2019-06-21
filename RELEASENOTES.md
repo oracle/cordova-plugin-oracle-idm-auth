@@ -1,5 +1,15 @@
 # Release Notes
 
+## 1.2.0 (TBD)
+* API to control buttons shown on webview for WebSSO usecase.
+* Improvements for OAuth and OpenID usecases where login page is opened in an external browser by using in-app browser.
+
+## 1.1.9 (21 Jun, 2019)
+* Face authentication support for iOS using new Biometric local authentication type.
+* Fix for wrong login attempt number in PIN challenge callback.
+* Fix for WebSSO usecase to disable buttons during page load and enable it afterwards.
+* Minor optimizations for Android webview and broadcast usage.
+
 ## 1.1.8 (29 Apr, 2019)
 * Removed "Temporary fix for basic auth to fall back to successful login irrespective of status returned by server" introduced in v1.1.4.
 * Authenticate user using PIN before disabling any local authentication.

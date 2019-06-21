@@ -37,21 +37,20 @@ This can be <a href="OAuthPropertiesBuilder.html#browserMode">configured</a>.
 <ul style="list-style:none">
 <li><a href="OAuthPropertiesBuilder.html#.BrowserMode">Using Embedded WebView</a>: Plugin brings up a WebView where OAuth login webpage is loaded.
 User has to provide credentials on this page and login. When login is successful, the WebView will be removed and user will be redirected back to the app.
-While showing the WebView, plugin provides basic operations such as &quot;Forward&quot;, &quot;Back&quot;, &quot;Reload&quot; and &quot;Cancel&quot; to deal with any issues the user faces on this page.
-For example, user may accidentally click a link on the login page. In this case, user can use &quot;Back&quot; button to come back to the login page.
+While showing the WebView, plugin provides basic operations such as "Forward", "Back", "Reload" and "Cancel" to deal with any issues the user faces on this page.
+For example, user may accidentally click a link on the login page. In this case, user can use "Back" button to come back to the login page.
 For example, if the login page is not loaded correctly, user may want to try reloading the page, before cancelling the login.
 If user cancels the login, the promise returned by <a href="AuthenticationFlow.html#login">AuthenticationFlow#login</a> will be rejected.</li>
 <li><a href="OAuthPropertiesBuilder.html#.BrowserMode">Using External Browser</a>: Plugin redirects user to the default browser in the device and loads the OAuth login webpage.
 User has to provide credentials on this page and login. When login is successful, user will be redirected back to the app.
-
-For using this feature there are three prerequisites:
+<p>For using this feature there are three prerequisites:</p>
 <ul>
-<li>App needs to configure a <a href="https://%3Ca%20href=%22http://www.npmjs.com/package/cordova-plugin-customurlscheme">custom">www.npmjs.com/package/cordova-plugin-customurlscheme|custom</a> URL scheme</a>.
+<li>App needs to configure a custom URL scheme.
 It has to be noted that once the external browser is launched and login page is loaded, app does not have any control.
 Custom URL scheme is the way for any redirects back to the app.</li>
 <li>OAuth server should have the capability to use the same custom URL scheme and redirect the user back to app after successful login or logout.
 This is typically part of OAuth server configuration.
-For example, &quot;Redirect URL&quot; should be configured from the admin console to point to app's custom URL scheme in case of IDCS server.</li>
+For example, "Redirect URL" should be configured from the admin console to point to app's custom URL scheme in case of IDCS server.</li>
 <li><a href="OAuthPropertiesBuilder.html#oAuthRedirectEndpoint">Redirect end point</a> in configuration should be provided as the URL scheme.</li>
 </ul>
 The advantage of using external browser is that it makes this login as a single sign on for all the apps in the device.
@@ -64,13 +63,13 @@ In case of OAuth, typically user does not logout when using external browser as 
 User will be challenged to login only if the OAuth token expires.
 Still, if the app wants to provide a logout option to the user, it can be done by calling <a href="AuthenticationFlow.html#logout">AuthenticationFlow#logout</a>.
 This step does not have any user interaction.
-OAuth logout page is loaded either in WebView or external browser as configured and then is dismissed once logout is complete.&lt;/p
+OAuth logout page is loaded either in WebView or external browser as configured and then is dismissed once logout is complete.</p
 <p>
 Some OAuth servers supports refresh token.
 Auth tokens generally are short lived and refresh tokens are long lived.
 When the auth token expires, the refresh token can be used to obtain a new auth token and there is no need to challenge the user.
 For obtaining the refresh token, some servers requires special scope to be passed.
-For e.g: IDCS needs &quot;offline_access&quot; scope to be used.
+For e.g: IDCS needs "offline_access" scope to be used.
 App needs to pass the relevant scope, if needed by the server, for this feature to work</p></div>
         
     
@@ -252,7 +251,7 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1275">line 1275</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1267">line 1267</a>
     </li></ul></dd>
     
 
@@ -262,6 +261,8 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
 
     
 </dl>
+
+
 
 
 
@@ -430,7 +431,7 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1513">line 1513</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1505">line 1505</a>
     </li></ul></dd>
     
 
@@ -613,7 +614,7 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1532">line 1532</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1524">line 1524</a>
     </li></ul></dd>
     
 
@@ -743,7 +744,7 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line529">line 529</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line521">line 521</a>
     </li></ul></dd>
     
 
@@ -753,6 +754,8 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
 
     
 </dl>
+
+
 
 
 
@@ -892,7 +895,7 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1436">line 1436</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1428">line 1428</a>
     </li></ul></dd>
     
 
@@ -902,6 +905,8 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
 
     
 </dl>
+
+
 
 
 
@@ -997,7 +1002,7 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1489">line 1489</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1481">line 1481</a>
     </li></ul></dd>
     
 
@@ -1007,6 +1012,8 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
 
     
 </dl>
+
+
 
 
 
@@ -1154,7 +1161,7 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1452">line 1452</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1444">line 1444</a>
     </li></ul></dd>
     
 
@@ -1164,6 +1171,8 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
 
     
 </dl>
+
+
 
 
 
@@ -1308,7 +1317,7 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line598">line 598</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line590">line 590</a>
     </li></ul></dd>
     
 
@@ -1318,6 +1327,8 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
 
     
 </dl>
+
+
 
 
 
@@ -1369,7 +1380,7 @@ App needs to pass the relevant scope, if needed by the server, for this feature 
 
 <div class="description">
     <p>This method can be used to enable PKCE for OAuth. PKCE is more secured way of using OAUTH for mobile apps.
-See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-service-mobile-clients-and-pkce-support">this">www.ateam-oracle.com/identity-cloud-service-mobile-clients-and-pkce-support|this</a> blog</a></p>
+See <a href="http://www.ateam-oracle.com/identity-cloud-service-mobile-clients-and-pkce-support">this blog</a></p>
 </div>
 
 
@@ -1462,7 +1473,7 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1466">line 1466</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1458">line 1458</a>
     </li></ul></dd>
     
 
@@ -1472,6 +1483,8 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
 
     
 </dl>
+
+
 
 
 
@@ -1622,7 +1635,7 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line541">line 541</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line533">line 533</a>
     </li></ul></dd>
     
 
@@ -1632,6 +1645,8 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
 
     
 </dl>
+
+
 
 
 
@@ -1776,7 +1791,7 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line586">line 586</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line578">line 578</a>
     </li></ul></dd>
     
 
@@ -1786,6 +1801,8 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
 
     
 </dl>
+
+
 
 
 
@@ -1925,7 +1942,7 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1423">line 1423</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1415">line 1415</a>
     </li></ul></dd>
     
 
@@ -1935,6 +1952,8 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
 
     
 </dl>
+
+
 
 
 
@@ -2074,7 +2093,7 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1371">line 1371</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1363">line 1363</a>
     </li></ul></dd>
     
 
@@ -2084,6 +2103,8 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
 
     
 </dl>
+
+
 
 
 
@@ -2223,7 +2244,7 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1331">line 1331</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1323">line 1323</a>
     </li></ul></dd>
     
 
@@ -2233,6 +2254,8 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
 
     
 </dl>
+
+
 
 
 
@@ -2372,7 +2395,7 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1359">line 1359</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1351">line 1351</a>
     </li></ul></dd>
     
 
@@ -2382,6 +2405,8 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
 
     
 </dl>
+
+
 
 
 
@@ -2521,7 +2546,7 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1397">line 1397</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1389">line 1389</a>
     </li></ul></dd>
     
 
@@ -2531,6 +2556,8 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
 
     
 </dl>
+
+
 
 
 
@@ -2670,7 +2697,7 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1384">line 1384</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1376">line 1376</a>
     </li></ul></dd>
     
 
@@ -2680,6 +2707,8 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
 
     
 </dl>
+
+
 
 
 
@@ -2819,7 +2848,7 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1410">line 1410</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1402">line 1402</a>
     </li></ul></dd>
     
 
@@ -2829,6 +2858,8 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
 
     
 </dl>
+
+
 
 
 
@@ -2968,7 +2999,7 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1347">line 1347</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1339">line 1339</a>
     </li></ul></dd>
     
 
@@ -2978,6 +3009,8 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
 
     
 </dl>
+
+
 
 
 
@@ -3128,7 +3161,7 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line555">line 555</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line547">line 547</a>
     </li></ul></dd>
     
 
@@ -3138,6 +3171,8 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
 
     
 </dl>
+
+
 
 
 
@@ -3309,7 +3344,7 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line374">line 374</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line366">line 366</a>
     </li></ul></dd>
     
 
@@ -3319,6 +3354,8 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
 
     
 </dl>
+
+
 
 
 
@@ -3469,7 +3506,7 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line572">line 572</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line564">line 564</a>
     </li></ul></dd>
     
 
@@ -3479,6 +3516,8 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
 
     
 </dl>
+
+
 
 
 
@@ -3537,7 +3576,7 @@ See <a href="http://%3Ca%20href=%22http://www.ateam-oracle.com/identity-cloud-se
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Wed Apr 24 2019 15:06:54 GMT+0530 (India Standard Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.2</a> on Fri Jun 21 2019 11:55:08 GMT+0530 (India Standard Time)
 </footer>
 
 <script> prettyPrint(); </script>

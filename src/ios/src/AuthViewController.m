@@ -43,8 +43,11 @@
 - (void) viewDidLoad {
   [super viewDidLoad];
 
-  if (!self.isLogin) {
-    [self.cancelButton setEnabled:NO];
+  if (self.isLogin) {
+    [self.backButton setEnabled:YES];
+    [self.forwardButton setEnabled:YES];
+    [self.refreshButton setEnabled:YES];
+    [self.cancelButton setEnabled:YES];
   }
 
   if (self.wkWebViewEnabled && self.wkWebView == nil) {

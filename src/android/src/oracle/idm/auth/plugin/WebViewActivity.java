@@ -7,6 +7,7 @@ package oracle.idm.auth.plugin;
 import java.util.HashMap;
 import java.util.Map;
 
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -50,7 +51,8 @@ public class WebViewActivity extends Activity
 
     _webViewClient = _createWebViewClient(challengeType, backBtn, forwardBtn, reloadBtn, cancelBtn);
     _broadcastReceiver = _createBroadcastReceiver();
-    registerReceiver(_broadcastReceiver, new IntentFilter(FINISH_WEB_VIEW_INTENT));
+    _localBroadcastManager = LocalBroadcastManager.getInstance(this);
+    _localBroadcastManager.registerReceiver(_broadcastReceiver, new IntentFilter(FINISH_WEB_VIEW_INTENT));
 
     _proceed(completionHandler);
     Log.d(TAG, "Created webview activity and passed on to IDM SDK.");
@@ -60,7 +62,7 @@ public class WebViewActivity extends Activity
   protected void onDestroy()
   {
     super.onDestroy();
-    unregisterReceiver(_broadcastReceiver);
+    _localBroadcastManager.unregisterReceiver(_broadcastReceiver);
     Log.d(TAG,"Destroyed webview activity.");
   }
 
@@ -83,7 +85,7 @@ public class WebViewActivity extends Activity
           if (FINISH_WEB_VIEW_INTENT.equals(action))
           {
             Log.d(TAG, "Finishing the activity.");
-            // TODO: Bug 26048182, Destroy the webview once we are done with it.
+            _webView.destroy();
             finish();
           }
         }
@@ -101,19 +103,14 @@ public class WebViewActivity extends Activity
       @Override
       public void onPageFinished(WebView view, String url)
       {
-        // TODO: Bug 26134480
-        // This is not getting invoked now. Ideally the buttons should be
-        // enabled after page is rendered.
-        Log.d(TAG, "WebView is loaded now. Enabling buttons...");
-        backBtn.setEnabled(true);
-        forwardBtn.setEnabled(true);
+        Log.d(TAG, "WebView is loaded now. Enabling buttons if its login flow...");
         if (challengeType == IdmAuthentication.CompletionHandler.CHALLENGE_TYPE.LOGIN)
         {
-          Log.d(TAG,"Enabling cancel button for LOGIN challenge.");
+          backBtn.setEnabled(true);
+          forwardBtn.setEnabled(true);
+          reloadBtn.setEnabled(true);
           cancelBtn.setEnabled(true);
         }
-
-        reloadBtn.setEnabled(true);
       }
     };
   }
@@ -131,18 +128,12 @@ public class WebViewActivity extends Activity
           @Override
           public void run()
           {
-            sendBroadcast(new Intent(CANCEL_WEB_VIEW_INTENT));
+            _localBroadcastManager.sendBroadcast(new Intent(CANCEL_WEB_VIEW_INTENT));
           }
         });
       }
     });
     cancelBtn.setEnabled(false);
-
-    if (challengeType == IdmAuthentication.CompletionHandler.CHALLENGE_TYPE.LOGIN)
-    {
-      Log.d(TAG,"Enabling cancel button for LOGIN challenge.");
-      cancelBtn.setEnabled(true);
-    }
     return cancelBtn;
   }
 
@@ -157,7 +148,7 @@ public class WebViewActivity extends Activity
         _webView.reload();
       }
     });
-//    reloadBtn.setEnabled(false);
+    reloadBtn.setEnabled(false);
     return reloadBtn;
   }
 
@@ -175,7 +166,7 @@ public class WebViewActivity extends Activity
         }
       }
     });
-//    forwardBtn.setEnabled(false);
+    forwardBtn.setEnabled(false);
     return forwardBtn;
   }
 
@@ -193,13 +184,14 @@ public class WebViewActivity extends Activity
         }
       }
     });
-//    backBtn.setEnabled(false);
+    backBtn.setEnabled(false);
     return backBtn;
   }
 
   private WebView _webView;
   private WebViewClient _webViewClient;
   private BroadcastReceiver _broadcastReceiver;
+  private LocalBroadcastManager _localBroadcastManager;
 
   private static final String TAG = WebViewActivity.class.getSimpleName();
   private static final ResourceHelper _R = ResourceHelper.INSTANCE;

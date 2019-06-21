@@ -1681,17 +1681,19 @@ using one of the <a href="PropertiesBuilder.html">builder</a> sub classes provid
 
 
 
+
+
 <h5>Returns:</h5>
 
         
 <div class="param-desc">
-    <p><p>Promise is resolved with a subclass of <a href="AuthenticationFlow.html">AuthenticationFlow</a> depending on the type of authentication being inited:</p></p>
-<p><ul style="list-style: none;">
+    <p>Promise is resolved with a subclass of <a href="AuthenticationFlow.html">AuthenticationFlow</a> depending on the type of authentication being inited:</p>
+<ul style="list-style: none;">
  <li>Using <a href="HttpBasicAuthPropertiesBuilder.html">HttpBasicAuthPropertiesBuilder</a> will receive <a href="HttpBasicAuthenticationFlow.html">HttpBasicAuthenticationFlow</a></li>
  <li>Using <a href="FedAuthPropertiesBuilder.html">FedAuthPropertiesBuilder</a> or <a href="OAuthPropertiesBuilder.html">OAuthPropertiesBuilder</a> or <a href="OpenIDConnectPropertiesBuilder.html">OpenIDConnectPropertiesBuilder</a> will receive <a href="RemoteAuthenticationFlow.html">RemoteAuthenticationFlow</a></li>
  <li>Using <a href="LocalAuthPropertiesBuilder.html">LocalAuthPropertiesBuilder</a> will receive <a href="LocalAuthenticationFlow.html">LocalAuthenticationFlow</a></li>
 </ul>
-If the promise is rejected, the callback will receive and object of type <a href="global.html#AuthError">AuthError</a></p>
+If the promise is rejected, the callback will receive and object of type <a href="global.html#AuthError">AuthError</a>
 </div>
 
 
@@ -1728,10 +1730,10 @@ If the promise is rejected, the callback will receive and object of type <a href
 
 
 <div class="description">
-    <p><p>Deprecated: Use new FedAuthPropertiesBuilder</p>
+    <p>Deprecated: Use new FedAuthPropertiesBuilder</p>
 The object returned is a builder which can be used to create the authentication props for FederatedAuthentication.
 Builder exposes methods to add properties relevant to FederatedAuthentication.
-Example usage:</p>
+Example usage:
 <pre><code>
   var authProps = IdmAuthFlows.newFedAuthPropertiesBuilder('appName', 'http://login/url', 'http://logout/url',
                                                            'http://login/success', 'http://logout/failed')
@@ -1791,7 +1793,7 @@ Example usage:</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2891">line 2891</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2889">line 2889</a>
     </li></ul></dd>
     
 
@@ -1801,6 +1803,8 @@ Example usage:</p>
 
     
 </dl>
+
+
 
 
 
@@ -1851,10 +1855,10 @@ Example usage:</p>
 
 
 <div class="description">
-    <p><p>Deprecated: Use new HttpBasicAuthPropertiesBuilder</p>
+    <p>Deprecated: Use new HttpBasicAuthPropertiesBuilder</p>
 The object returned is a builder which can be used to create the authentication props for HttpBasicAuthentication.
 Builder exposes methods to add properties relevant to HttpBasicAuthentication.
-Example usage:</p>
+Example usage:
 <pre><code>
    var authProps = IdmAuthFlows.newHttpBasicAuthPropertiesBuilder('appName',
                'http://loginUrl',
@@ -1921,7 +1925,7 @@ Example usage:</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2857">line 2857</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2855">line 2855</a>
     </li></ul></dd>
     
 
@@ -1931,6 +1935,8 @@ Example usage:</p>
 
     
 </dl>
+
+
 
 
 
@@ -1981,10 +1987,10 @@ Example usage:</p>
 
 
 <div class="description">
-    <p><p>Deprecated: Use new OAuthPropertiesBuilder</p>
+    <p>Deprecated: Use new OAuthPropertiesBuilder</p>
 The object returned is a builder which can be used to create the authentication props for OAuthAuthentication.
 Builder exposes methods to add properties relevant to OAuthAuthentication.
-Example usage:</p>
+Example usage:
 <pre><code>
   var authProps = IdmAuthFlows.newOAuthPropertiesBuilder('appName',
                                                          IdmAuthFlows.OAuthAuthorizationGrantType.OAuthResourceOwner,
@@ -2047,7 +2053,7 @@ Example usage:</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2918">line 2918</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2916">line 2916</a>
     </li></ul></dd>
     
 
@@ -2057,6 +2063,8 @@ Example usage:</p>
 
     
 </dl>
+
+
 
 
 
@@ -2107,10 +2115,10 @@ Example usage:</p>
 
 
 <div class="description">
-    <p><p>Deprecated: Use new OpenIDConnectPropertiesBuilder</p>
+    <p>Deprecated: Use new OpenIDConnectPropertiesBuilder</p>
 The object returned is a builder which can be used to create the authentication props for OpenIdConnect.
 Builder exposes methods to add properties relevant to OpenId Connect authentication.
-Example usage:</p>
+Example usage:
 <pre><code>
   var authProps = IdmAuthFlows.newOpenIDConnectPropertiesBuilder('appName',
                                                          IdmAuthFlows.OAuthAuthorizationGrantType.OAuthResourceOwner,
@@ -2170,7 +2178,7 @@ Example usage:</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2948">line 2948</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2946">line 2946</a>
     </li></ul></dd>
     
 
@@ -2180,6 +2188,8 @@ Example usage:</p>
 
     
 </dl>
+
+
 
 
 
@@ -2434,7 +2444,7 @@ Example usage:</p>
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Wed Apr 24 2019 15:06:54 GMT+0530 (India Standard Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.2</a> on Fri Jun 21 2019 11:55:08 GMT+0530 (India Standard Time)
 </footer>
 
 <script> prettyPrint(); </script>

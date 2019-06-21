@@ -14,6 +14,18 @@ typedef enum : NSUInteger
     OMAuthenticationPolicyPin
 } OMAuthenticationPolicy;
 
+typedef NS_ENUM(NSInteger, BiometryType)
+{
+    /// The device does not support biometry.
+    BiometryTypeNone,
+    
+    /// The device supports Touch ID.
+    BiometryTypeTouchID,
+    
+    /// The device supports Face ID.
+    BiometryTypeFaceID ,
+};
+
 @interface OMAuthenticator : NSObject
 
 @property (nonatomic, strong) OMKeyStore *keyStore;

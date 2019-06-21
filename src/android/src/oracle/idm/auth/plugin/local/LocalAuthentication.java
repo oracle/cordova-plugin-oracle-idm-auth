@@ -30,7 +30,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * This class handles device based local authentications such as PIN and Fingerprint based.
+ * This class handles device based local authentications such as PIN and biometric based.
  * Plugin support local authentication as objects where user can enable any of the supported local authentications.
  * Each such unit is identified by an ID provided by the application.
  * This ID is a mandatory information in this class to perform any operation.
@@ -80,25 +80,25 @@ public class LocalAuthentication {
       return;
     }
 
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M && type == LocalAuthType.FINGERPRINT) {
-      IdmAuthenticationPlugin.invokeCallbackError(callbackContext, PluginErrorCodes.FINGERPRINT_NOT_ENABLED);
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M && (type == LocalAuthType.BIOMETRIC || type == LocalAuthType.FINGERPRINT)) {
+      IdmAuthenticationPlugin.invokeCallbackError(callbackContext, PluginErrorCodes.BIOMETRIC_NOT_ENABLED);
       return;
     }
 
     try {
       String instanceId = type.getInstanceId(id);
-      _sharedManager.enableAuthentication(type.getName(), instanceId);
-      authenticator = _sharedManager.getAuthenticator(type.getName(), instanceId);
+      _sharedManager.enableAuthentication(type.getAuthenticatorName(), instanceId);
+      authenticator = _getAuthenticator(id, type);
       authenticator.initialize(_context, instanceId, null);
 
       if (type == LocalAuthType.PIN) {
         authenticator.setAuthData(authData);
         authenticator.copyKeysFrom(OMMobileSecurityService.getDefaultAuthenticator(_context).getKeyStore());
-      } else if (type == LocalAuthType.FINGERPRINT) {
+      } else if (type == LocalAuthType.BIOMETRIC || type == LocalAuthType.FINGERPRINT) {
         OMPinAuthenticator pinAuthenticator = (OMPinAuthenticator) _getAuthenticator(id, LocalAuthType.PIN);
         if (pinAuthenticator == null) {
           IdmAuthenticationPlugin.invokeCallbackError(callbackContext,
-                                                      PluginErrorCodes.ENABLE_FINGERPRINT_PIN_NOT_ENABLED);
+                                                      PluginErrorCodes.ENABLE_BIOMETRIC_PIN_NOT_ENABLED);
           return;
         }
 
@@ -132,8 +132,8 @@ public class LocalAuthentication {
       return;
     }
 
-    if (type == LocalAuthType.PIN && _getAuthenticator(id, LocalAuthType.FINGERPRINT) != null) {
-      IdmAuthenticationPlugin.invokeCallbackError(callbackContext, PluginErrorCodes.DISABLE_PIN_FINGERPRINT_ENABLED);
+    if (type == LocalAuthType.PIN && (_getAuthenticator(id, LocalAuthType.BIOMETRIC) != null || _getAuthenticator(id, LocalAuthType.FINGERPRINT) != null)) {
+      IdmAuthenticationPlugin.invokeCallbackError(callbackContext, PluginErrorCodes.DISABLE_PIN_BIOMETRIC_ENABLED);
       return;
     }
 
@@ -142,7 +142,7 @@ public class LocalAuthentication {
         authenticator.deleteAuthData();
 
       String instanceId = type.getInstanceId(id);
-      _sharedManager.disableAuthentication(type.getName(), instanceId);
+      _sharedManager.disableAuthentication(type.getAuthenticatorName(), instanceId);
 
       _sendSuccess(callbackContext, _getEnabledPrimary(id));
     } catch(BaseCheckedException e) {
@@ -151,23 +151,24 @@ public class LocalAuthentication {
   }
 
   /**
-   * Authenticates the user using fingerprint.
+   * Authenticates the user using biometric.
    * @param args
    * @param callbackContext
    */
-  public void authenticateFingerPrint(JSONArray args, CallbackContext callbackContext) {
+  public void authenticateBiometric(JSONArray args, CallbackContext callbackContext) {
     String id = args.optString(0);
-    OMFingerprintAuthenticator fingerprintAuthenticator = (OMFingerprintAuthenticator) _getAuthenticator(id, LocalAuthType.FINGERPRINT);
+    String type = args.optString(1);
+    OMFingerprintAuthenticator biometricAuthenticator = (OMFingerprintAuthenticator) _getAuthenticator(id, LocalAuthType.getLocalAuthType(type));
 
-    if (fingerprintAuthenticator == null) {
+    if (biometricAuthenticator == null) {
       IdmAuthenticationPlugin.invokeCallbackError(callbackContext, PluginErrorCodes.LOCAL_AUTHENTICATOR_NOT_FOUND);
       return;
     }
     try {
-      FingerprintManager.CryptoObject cryptoObject = fingerprintAuthenticator.getFingerprintManagerCryptoObject();
-      FingerprintPromptLocalizedStrings strings = createFingerprintPromptLocalizedStrings(args.optJSONObject(1));
+      FingerprintManager.CryptoObject cryptoObject = biometricAuthenticator.getFingerprintManagerCryptoObject();
+      FingerprintPromptLocalizedStrings strings = createFingerprintPromptLocalizedStrings(args.optJSONObject(2));
       FingerprintAuthenticationDialogFragment fragment = new FingerprintAuthenticationDialogFragment();
-      fragment.setData(new FingerprintCallback(fingerprintAuthenticator, callbackContext), cryptoObject, strings);
+      fragment.setData(new FingerprintCallback(biometricAuthenticator, callbackContext), cryptoObject, strings);
       fragment.show(_mainActivity.getFragmentManager(), "fingerprintDialogFragment");
     } catch (Exception e) {
       IdmAuthenticationPlugin.invokeCallbackError(callbackContext, PluginErrorCodes.AUTHENTICATION_FAILED);
@@ -202,17 +203,18 @@ public class LocalAuthentication {
    * @param id
    */
   private void _clearUnwantedFingerprintAuthenticator(String id) {
-    if (!_clearFingerprintAfterAuthentication)
+    if (!_clearFingerprintInstancesAfterAuthentication)
       return;
 
-    LocalAuthType type = LocalAuthType.FINGERPRINT;
-    String instanceId = type.getInstanceId(id);
     try {
-      _sharedManager.disableAuthentication(type.getName(), instanceId);
-      _clearFingerprintAfterAuthentication = false;
+      if (_getAuthenticator(id, LocalAuthType.FINGERPRINT) != null)
+        _sharedManager.disableAuthentication(LocalAuthType.FINGERPRINT.getAuthenticatorName(), LocalAuthType.FINGERPRINT.getInstanceId(id));
+      if (_getAuthenticator(id, LocalAuthType.BIOMETRIC) != null)
+        _sharedManager.disableAuthentication(LocalAuthType.BIOMETRIC.getAuthenticatorName(), LocalAuthType.BIOMETRIC.getInstanceId(id));
+      _clearFingerprintInstancesAfterAuthentication = false;
     } catch (OMAuthenticationManagerException e) {
       //  Nothing to do here, simply log.
-      Log.e(TAG, "Error while disabling fingerprint since device is not enrolled for it now.", e);
+      Log.e(TAG, "Error while disabling biometric since device is not enrolled for it now.", e);
     }
   }
 
@@ -240,7 +242,7 @@ public class LocalAuthentication {
     try {
       OMAuthData newAuthData = new OMAuthData(newPin);
       authenticator.updateAuthData(currAuthData, newAuthData);
-      OMAuthenticator fingerprintAuthenticator = _getAuthenticator(id, LocalAuthType.FINGERPRINT);
+      OMAuthenticator fingerprintAuthenticator = _getAuthenticator(id, LocalAuthType.BIOMETRIC);
       if (fingerprintAuthenticator != null)
         fingerprintAuthenticator.updateAuthData(currAuthData, newAuthData);
       _sendSuccess(callbackContext);
@@ -251,8 +253,10 @@ public class LocalAuthentication {
 
   public void getLocalAuthSupportInfo(JSONArray args, CallbackContext callbackContext) {
     Map<String, String> auths = new HashMap<>();
-    auths.put(LocalAuthType.PIN.getName(), FingerprintAvailability.Enrolled.name());
-    auths.put(LocalAuthType.FINGERPRINT.getName(), getFingerprintSupportOnDevice().name());
+    String fingerprintAvailability = getFingerprintSupportOnDevice().name();
+    auths.put(LocalAuthType.BIOMETRIC.getName(), fingerprintAvailability);
+    auths.put(LocalAuthType.FINGERPRINT.getName(), fingerprintAvailability);
+    auths.put(LocalAuthType.PIN.getName(), Availability.Enrolled.name());
     PluginResult result = new PluginResult(PluginResult.Status.OK, new JSONObject(auths));
     callbackContext.sendPluginResult(result);
   }
@@ -279,19 +283,19 @@ public class LocalAuthentication {
     }
   }
 
-  private FingerprintAvailability getFingerprintSupportOnDevice() {
+  private Availability getFingerprintSupportOnDevice() {
     // Check if we're running on Android 6.0 (M) or higher
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
-      return FingerprintAvailability.NotAvailable;
+      return Availability.NotAvailable;
 
     FingerprintManager fingerprintManager = (FingerprintManager) this._context.getSystemService(Context.FINGERPRINT_SERVICE);
     if (fingerprintManager.isHardwareDetected()) {
       if (fingerprintManager.hasEnrolledFingerprints())
-        return FingerprintAvailability.Enrolled;
+        return Availability.Enrolled;
       else
-        return FingerprintAvailability.NotEnrolled;
+        return Availability.NotEnrolled;
     } else {
-      return FingerprintAvailability.NotAvailable;
+      return Availability.NotAvailable;
     }
   }
 
@@ -303,42 +307,42 @@ public class LocalAuthentication {
    * So, we first register the base authenticators irrespectively.
    */
   private void _init() {
-    try {
-      _sharedManager.registerAuthenticator(LocalAuthType.PIN.getName(), LocalAuthType.PIN.getAuthClass());
-      _sharedManager.enableAuthentication(LocalAuthType.PIN.getName());
-    } catch (OMAuthenticationManagerException e) {
-      Log.d(TAG, "Base PIN authenticator is already registered.");
-    }
-    try {
-      _sharedManager.registerAuthenticator(LocalAuthType.FINGERPRINT.getName(), LocalAuthType.FINGERPRINT.getAuthClass());
-      _sharedManager.enableAuthentication(LocalAuthType.FINGERPRINT.getName());
-    } catch (OMAuthenticationManagerException e) {
-      Log.d(TAG, "Base FINGERPRINT authenticator is already registered.");
+
+    for (LocalAuthType type : LocalAuthType.values()) {
+      try {
+        _sharedManager.registerAuthenticator(type.getAuthenticatorName(),type.getAuthClass());
+        _sharedManager.enableAuthentication(type.getAuthenticatorName());
+      } catch (OMAuthenticationManagerException e) {
+        Log.d(TAG, type.getName() + " authenticator is already registered.");
+      }
     }
   }
 
   private OMAuthenticator _getAuthenticator(String id, LocalAuthType type) {
-    String instanceId = type.getInstanceId(id);
     Class authClass = type.getAuthClass();
+    String instanceId = type.getInstanceId(id);
 
     try {
       OMAuthenticator authenticator = this._sharedManager.getAuthenticator(authClass,
                                                                            instanceId);
-      if (!authenticator.isInitialized()) {
-        authenticator.initialize(_context,
-                                 instanceId,
-                                 null);
-        if (type == LocalAuthType.FINGERPRINT) {
-          OMFingerprintAuthenticator fingerprintAuthenticator = (OMFingerprintAuthenticator) authenticator;
-          OMPinAuthenticator pinAuthenticator = (OMPinAuthenticator) _getAuthenticator(id, LocalAuthType.PIN);
 
-          if (pinAuthenticator == null)
-            throw new IllegalStateException("Pin authenticator is not expected to be null here.");
+      if (authenticator.isInitialized())
+        return authenticator;
 
-          fingerprintAuthenticator.setBackupAuthenticator(pinAuthenticator);
-        }
-      }
+      authenticator.initialize(_context,
+                               instanceId,
+                               null);
 
+      if (type == LocalAuthType.PIN)
+        return authenticator;
+
+      OMFingerprintAuthenticator fingerprintAuthenticator = (OMFingerprintAuthenticator) authenticator;
+      OMPinAuthenticator pinAuthenticator = (OMPinAuthenticator) _getAuthenticator(id, LocalAuthType.PIN);
+
+      if (pinAuthenticator == null)
+        throw new IllegalStateException("Pin authenticator is not expected to be null here.");
+
+      fingerprintAuthenticator.setBackupAuthenticator(pinAuthenticator);
       return authenticator;
     } catch (OMAuthenticationManagerException ignore) {
       Log.d(TAG, String.format("Authenticator with instanceId %s and type %s is not registered. Returning null.", instanceId, authClass.getName()));
@@ -348,15 +352,19 @@ public class LocalAuthentication {
 
   private List<String> _getEnabled(String id) {
     OMAuthenticator pinAuthenticator = _getAuthenticator(id, LocalAuthType.PIN);
+    OMAuthenticator biometricAuthenticator = _getAuthenticator(id, LocalAuthType.BIOMETRIC);
     OMAuthenticator fingerprintAuthenticator = _getAuthenticator(id, LocalAuthType.FINGERPRINT);
-    FingerprintAvailability availability = getFingerprintSupportOnDevice();
+    Availability availability = getFingerprintSupportOnDevice();
 
     List<String> auths = new ArrayList<>();
-    if (fingerprintAuthenticator != null) {
-      if (availability == FingerprintAvailability.Enrolled)
+
+    if (availability != Availability.Enrolled) {
+      _clearFingerprintInstancesAfterAuthentication = true;
+    } else {
+      if (biometricAuthenticator != null)
+        auths.add(LocalAuthType.BIOMETRIC.getName());
+      if (fingerprintAuthenticator != null)
         auths.add(LocalAuthType.FINGERPRINT.getName());
-      else
-        _clearFingerprintAfterAuthentication = true;
     }
 
     if (pinAuthenticator != null)
@@ -437,13 +445,16 @@ public class LocalAuthentication {
   }
 
   private enum LocalAuthType {
-    FINGERPRINT(_FINGERPRINT_ID, OMFingerprintAuthenticator.class),
-    PIN(_PIN_ID, OMPinAuthenticator.class);
+    BIOMETRIC(_BIOMETRIC_ID, _FINGERPRINT_ID, OMFingerprintAuthenticator.class),
+    FINGERPRINT(_FINGERPRINT_ID, _FINGERPRINT_ID, OMFingerprintAuthenticator.class),
+    PIN(_PIN_ID, _PIN_ID, OMPinAuthenticator.class);
 
     private final String type;
+    private final String authenticatorName;
     private final Class authClass;
-    LocalAuthType(String type, Class authClass) {
+    LocalAuthType(String type, String authenticatorName, Class authClass) {
       this.type = type;
+      this.authenticatorName = authenticatorName;
       this.authClass = authClass;
     }
 
@@ -452,6 +463,8 @@ public class LocalAuthentication {
         return PIN;
       if (FINGERPRINT.type.equals(type))
         return FINGERPRINT;
+      if (BIOMETRIC.type.equals(type))
+        return BIOMETRIC;
 
       throw new IllegalArgumentException("Unknown local auth type: " + type);
     }
@@ -464,18 +477,22 @@ public class LocalAuthentication {
       return this.type;
     }
 
+    public String getAuthenticatorName() {
+      return authenticatorName;
+    }
+
     public String getInstanceId(String id) {
       return id + "." + this.type;
     }
   }
 
   // Availability states for local auth
-  private enum FingerprintAvailability { Enrolled, NotEnrolled, NotAvailable };
+  private enum Availability { Enrolled, NotEnrolled, NotAvailable };
 
   private final Activity _mainActivity;
   private final Context _context;
   private final OMAuthenticationManager _sharedManager;
-  private boolean _clearFingerprintAfterAuthentication;
+  private boolean _clearFingerprintInstancesAfterAuthentication;
 
   // Localized strings for fingerprint prompt
   private static final String PROMPT_MESSAGE = "promptMessage";
@@ -487,7 +504,9 @@ public class LocalAuthentication {
   private static final String HINT_TEXT = "hintText";
 
   private static final String _FALLBACK = "fallback";
+
   private static final String _FINGERPRINT_ID = "cordova.plugins.IdmAuthFlows.Fingerprint";
+  private static final String _BIOMETRIC_ID = "cordova.plugins.IdmAuthFlows.Biometric";
   private static final String _PIN_ID = "cordova.plugins.IdmAuthFlows.PIN";
   private static final String TAG = LocalAuthentication.class.getSimpleName();
 }

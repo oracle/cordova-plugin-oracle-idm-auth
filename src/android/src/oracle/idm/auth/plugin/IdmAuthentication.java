@@ -13,6 +13,7 @@ import android.content.Context;
 import android.content.IntentFilter;
 import android.net.Uri;
 import android.os.Looper;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.Toast;
 import oracle.idm.auth.plugin.util.PluginErrorCodes;
@@ -59,6 +60,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
     _handler = new Handler(Looper.getMainLooper());
     _isWebViewChallenge = false;
     _externalBrowserChallengeResponseExpected = false;
+    _localBroadcastManager = LocalBroadcastManager.getInstance(_mainActivity);
     _broadcastReceiver = new BroadcastReceiver() {
       @Override
       public void onReceive(Context context, Intent intent) {
@@ -597,7 +599,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
   {
     Log.d(TAG, "Launching webview activity");
     _mainActivity.runOnUiThread(() -> {
-      _mainActivity.registerReceiver(_broadcastReceiver, new IntentFilter(WebViewActivity.CANCEL_WEB_VIEW_INTENT));
+      _localBroadcastManager.registerReceiver(_broadcastReceiver, new IntentFilter(WebViewActivity.CANCEL_WEB_VIEW_INTENT));
       Intent intent = new Intent(_mainActivity, WebViewActivity.class);
       _mainActivity.startActivity(intent);
       _isWebViewChallenge = true;
@@ -614,8 +616,8 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
 
     Log.d(TAG, "Hide webview after successful authentication or logout.");
     _mainActivity.runOnUiThread(() -> {
-      _mainActivity.sendBroadcast(new Intent(WebViewActivity.FINISH_WEB_VIEW_INTENT));
-      _mainActivity.unregisterReceiver(_broadcastReceiver);
+      _localBroadcastManager.sendBroadcast(new Intent(WebViewActivity.FINISH_WEB_VIEW_INTENT));
+      _localBroadcastManager.unregisterReceiver(_broadcastReceiver);
       _isWebViewChallenge = false;
     });
   }
@@ -822,6 +824,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
   private final Activity _mainActivity;
   private final Map<String, Object> _props;
   private final BroadcastReceiver _broadcastReceiver;
+  private final LocalBroadcastManager _localBroadcastManager;
   private CallbackContext _loginCallback;
   private CallbackContext _logoutCallback;
   private CallbackContext _timeoutCallback;

@@ -7,6 +7,7 @@
 #import "IDMMobileSDKv2Library.h"
 @import LocalAuthentication;
 
+#define LOCAL_AUTH_BIOMETRIC @"cordova.plugins.IdmAuthFlows.Biometric"
 #define LOCAL_AUTH_FINGERPRINT @"cordova.plugins.IdmAuthFlows.Fingerprint"
 #define LOCAL_AUTH_PIN @"cordova.plugins.IdmAuthFlows.PIN"
 #define FALLBACK_RESULT @"fallback"
@@ -22,12 +23,11 @@
 // Error codes
 #define LOCAL_AUTHENTICATOR_NOT_FOUND @"70001" // Reuse existing code from IDM SDK
 #define AUTHENTICATION_FAILED @"10408" // Reuse existing code from IDM SDK
-#define FINGERPRINT_CANCELLED @"10029" // Reuse existing code from IDM SDK
 #define AUTHENTICATION_CANCELLED @"10029" // Reuse existing code from IDM SDK
 #define PIN_AUTHENTICATOR_NOT_ENABLED @"P1016"
-#define DISABLE_PIN_FINGERPRINT_ENABLED @"P1017"
+#define DISABLE_PIN_BIOMETRIC_ENABLED @"P1017"
 #define ERROR_ENABLING_AUTHENTICATOR @"P1018"
-#define FINGERPRINT_NOT_ENABLED @"P1019"
+#define BIOMETRIC_NOT_ENABLED @"P1019"
 
 #ifdef DEBUG
 #  define IdmLog(...) NSLog(__VA_ARGS__)
@@ -38,13 +38,13 @@
 static LocalAuthenticator *shared = nil;
 static OMLocalAuthenticationManager *sharedManager = nil;
 
-@interface LocalAuthenticator()<OMTouchIDFallbackDelgate>
+@interface LocalAuthenticator()<OMBiometricFallbackDelegate>
 
 @property (nonatomic, assign) Boolean authenticatedViaPin;
 @property (nonatomic, strong) OMFallbackAuthenticationCompletionBlock fallbackHandler;
 
-@property (nonatomic, strong, nullable) CDVCommandDelegateImpl* touchAuthDelegate;
-@property (nonatomic, copy, nullable) NSString* touchAuthCallbackId;
+@property (nonatomic, strong, nullable) CDVCommandDelegateImpl* biometricAuthDelegate;
+@property (nonatomic, copy, nullable) NSString* biometricAuthCallbackId;
 
 @end
 
@@ -54,6 +54,7 @@ static OMLocalAuthenticationManager *sharedManager = nil;
   static dispatch_once_t onceToken;
   dispatch_once(&onceToken, ^{
     sharedManager = [OMLocalAuthenticationManager sharedManager];
+    [sharedManager useBiometricInsteadOfTouchID:YES];
     shared = [[LocalAuthenticator alloc] init];
   });
 
@@ -81,21 +82,30 @@ static OMLocalAuthenticationManager *sharedManager = nil;
     return;
   }
 
+  if ([authenticatorName isEqualToString:LOCAL_AUTH_FINGERPRINT] && [OMBiometricAuthenticator biometricType] != BiometryTypeTouchID) {
+    IdmLog(@"Fingerprint cannot be enabled. Either the device does not support it or is not enrolled.");
+    [commandDelegate sendPluginResult:[IdmAuthenticationPlugin errorCodeToPluginResult:BIOMETRIC_NOT_ENABLED]
+                           callbackId:command.callbackId];
+    return;
+  }
+
+  if ([authenticatorName isEqualToString:LOCAL_AUTH_BIOMETRIC] && [OMBiometricAuthenticator biometricType] == BiometryTypeNone) {
+    IdmLog(@"Biometric cannot be enabled. Either the device does not support it or is not enrolled.");
+    [commandDelegate sendPluginResult:[IdmAuthenticationPlugin errorCodeToPluginResult:BIOMETRIC_NOT_ENABLED]
+                           callbackId:command.callbackId];
+    return;
+  }
+
   OMPinAuthenticator* pinAuthenticator = [self getPinAuthenticator:authId];
-  if ([authenticatorName isEqualToString:LOCAL_AUTH_FINGERPRINT]) {
+  if ([LOCAL_AUTH_BIOMETRIC isEqualToString:authenticatorName] || [LOCAL_AUTH_FINGERPRINT isEqualToString:authenticatorName]) {
     if (pinAuthenticator == nil) {
-      IdmLog(@"PIN authenticator should be enabled before fingerprint can be enabled.");
+      IdmLog(@"PIN authenticator should be enabled before biometric can be enabled.");
       [commandDelegate sendPluginResult:[IdmAuthenticationPlugin errorCodeToPluginResult:PIN_AUTHENTICATOR_NOT_ENABLED]
                              callbackId:command.callbackId];
       return;
     }
-    if (![OMTouchIDAuthenticator canEnableTouchID:nil]) {
-      IdmLog(@"Fingerprint cannot be enabled. Either the device does not support it or fingerprint is not enrolled.");
-      [commandDelegate sendPluginResult:[IdmAuthenticationPlugin errorCodeToPluginResult:FINGERPRINT_NOT_ENABLED]
-                             callbackId:command.callbackId];
-      return;
-    }
   }
+
   NSString* instanceId = [self getInstanceId:authId authenticatorName:authenticatorName];
   [self registerAuthenticatorIfNeeded:authenticatorName error:&enableError];
 
@@ -113,7 +123,7 @@ static OMLocalAuthenticationManager *sharedManager = nil;
       }
       [authenticator setAuthData:[self getAuthDataForPIN:pin] error:&enableError];
 
-      if ([LOCAL_AUTH_FINGERPRINT isEqualToString:authenticatorName])
+      if ([LOCAL_AUTH_BIOMETRIC isEqualToString:authenticatorName] || [LOCAL_AUTH_FINGERPRINT isEqualToString:authenticatorName])
         [authenticator copyKeysFromKeyStore:[pinAuthenticator keyStore]];
     }
   }
@@ -142,16 +152,16 @@ static OMLocalAuthenticationManager *sharedManager = nil;
     return;
   }
 
-  OMTouchIDAuthenticator* touchAuthenticator =  [self getTouchIdAuthenticator:authId];
-  if ([authenticatorName isEqualToString:LOCAL_AUTH_PIN] && touchAuthenticator != nil) {
-    IdmLog(@"Cannot disable PIN when fingerprint is enabled.");
-    [commandDelegate sendPluginResult:[IdmAuthenticationPlugin errorCodeToPluginResult:DISABLE_PIN_FINGERPRINT_ENABLED]
+  OMBiometricAuthenticator* biometricAuthenticator =  [self getBiometricAuthenticator:authId];
+  if ([authenticatorName isEqualToString:LOCAL_AUTH_PIN] && biometricAuthenticator != nil) {
+    IdmLog(@"Cannot disable PIN when biometric is enabled.");
+    [commandDelegate sendPluginResult:[IdmAuthenticationPlugin errorCodeToPluginResult:DISABLE_PIN_BIOMETRIC_ENABLED]
                            callbackId:command.callbackId];
     return;
   }
 
-  if ([authenticatorName isEqualToString:LOCAL_AUTH_FINGERPRINT])
-    [[self getPinAuthenticator:authId] copyKeysFromKeyStore: [touchAuthenticator keyStore]];
+  if ([LOCAL_AUTH_BIOMETRIC isEqualToString:authenticatorName] || [LOCAL_AUTH_FINGERPRINT isEqualToString:authenticatorName])
+    [[self getPinAuthenticator:authId] copyKeysFromKeyStore: [biometricAuthenticator keyStore]];
 
   NSString* instanceId = [self getInstanceId:authId authenticatorName:authenticatorName];
   [sharedManager disableAuthentication:instanceId error:&disableError];
@@ -167,14 +177,19 @@ static OMLocalAuthenticationManager *sharedManager = nil;
                          callbackId:command.callbackId];
 }
 
--(void) authenticateFingerPrint:(CDVInvokedUrlCommand*)command
+-(void) authenticateBiometric:(CDVInvokedUrlCommand*)command
             delegate:(CDVCommandDelegateImpl*)commandDelegate {
   NSString* authId = command.arguments[0];
-  NSDictionary* localizedStrings = command.arguments[1];
+  NSString* authType = command.arguments[1];
+  NSDictionary* localizedStrings = command.arguments[2];
+  OMBiometricAuthenticator* biometricAuthenticator;
 
-  OMTouchIDAuthenticator* touchIdAuthenticator = [self getTouchIdAuthenticator:authId];
+  if ([authType isEqualToString:LOCAL_AUTH_FINGERPRINT])
+    biometricAuthenticator = [self getFingerprintAuthenticator:authId];
+  else
+    biometricAuthenticator = [self getBiometricAuthenticator:authId];
 
-  if (touchIdAuthenticator == nil) {
+  if (biometricAuthenticator == nil) {
     [commandDelegate sendPluginResult:[IdmAuthenticationPlugin errorCodeToPluginResult:LOCAL_AUTHENTICATOR_NOT_FOUND]
                            callbackId:command.callbackId];
     return;
@@ -185,19 +200,19 @@ static OMLocalAuthenticationManager *sharedManager = nil;
   dispatch_async(dispatch_get_global_queue(0, 0), ^{
     NSError* authError = nil;
     BOOL isAuthenticated = NO;
-    self.touchAuthDelegate = commandDelegate;
-    self.touchAuthCallbackId = command.callbackId;
+    self.biometricAuthDelegate = commandDelegate;
+    self.biometricAuthCallbackId = command.callbackId;
     self.authenticatedViaPin = NO;
-    [touchIdAuthenticator setDelegate:self];
+    [biometricAuthenticator setDelegate:self];
 
     if (![localizedStrings isEqual:[NSNull null]]) {
       if (localizedStrings[PROMPT_MESSAGE])
-        touchIdAuthenticator.localizedTouchIdUsingReason = localizedStrings[PROMPT_MESSAGE];
+        biometricAuthenticator.localizedBiometricUsingReason = localizedStrings[PROMPT_MESSAGE];
       if (localizedStrings[PIN_FALLBACK_BUTTON_LABEL])
-        touchIdAuthenticator.localizedFallbackTitle = localizedStrings[PIN_FALLBACK_BUTTON_LABEL];
+        biometricAuthenticator.localizedFallbackTitle = localizedStrings[PIN_FALLBACK_BUTTON_LABEL];
     }
 
-    isAuthenticated = [touchIdAuthenticator authenticate:nil error:&authError];
+    isAuthenticated = [biometricAuthenticator authenticate:nil error:&authError];
 
     if (!self.authenticatedViaPin) {
       CDVPluginResult* result;
@@ -266,9 +281,9 @@ static OMLocalAuthenticationManager *sharedManager = nil;
                              error:&changePinError];
 
   if (!changePinError) {
-    OMAuthenticator* touchAuthenticator = [self getTouchIdAuthenticator:authId];
-    if (touchAuthenticator) {
-      [touchAuthenticator updateAuthData:[self getAuthDataForPIN:command.arguments[1]]
+    OMAuthenticator* biometricAuthenticator = [self getBiometricAuthenticator:authId];
+    if (biometricAuthenticator) {
+      [biometricAuthenticator updateAuthData:[self getAuthDataForPIN:command.arguments[1]]
                              newAuthData:[self getAuthDataForPIN:command.arguments[2]]
                                    error:&changePinError];
     }
@@ -287,41 +302,67 @@ static OMLocalAuthenticationManager *sharedManager = nil;
                        delegate:(CDVCommandDelegateImpl*)commandDelegate {
   NSMutableDictionary* auths = [[NSMutableDictionary alloc] init];
   auths[LOCAL_AUTH_PIN] = ENROLLED;
-  auths[LOCAL_AUTH_FINGERPRINT] = [self getTouchIdSupportOnDevice];
+  auths[LOCAL_AUTH_FINGERPRINT] = [self getFingerprintSupportOnDevice];
+  auths[LOCAL_AUTH_BIOMETRIC] = [self getBiometricSupportOnDevice];
+
   CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
                                           messageAsDictionary:auths];
   [commandDelegate sendPluginResult:result callbackId:command.callbackId];
 }
 
-- (NSString*) getTouchIdSupportOnDevice {
-  if (SYSTEM_VERSION_LESS_THAN(@"8.0"))
-    return NOT_AVAILABLE;
-
-  LAContext *context = [[LAContext alloc] init];
+- (NSString*) getBiometricSupportOnDevice {
   NSError* error = nil;
-  BOOL canEval = [context canEvaluatePolicy: LAPolicyDeviceOwnerAuthenticationWithBiometrics error:&error];
-  BOOL isTouchId = (SYSTEM_VERSION_LESS_THAN(@"11.0") || context.biometryType == LABiometryTypeTouchID);
+  BOOL available = [OMBiometricAuthenticator canEnableBiometricAuthentication:&error];
 
-  // If type is not touch, return not available.
-  if (!isTouchId)
-    return NOT_AVAILABLE;
-
-  if (canEval && isTouchId)
+  if (available)
     return ENROLLED;
 
-  // Deduce the reason why touchId is not evaluated using error returned.
+  if (!error)
+    return NOT_AVAILABLE;
+
+  // Deduce the reason why biometrics is not evaluated using error returned.
   switch (error.code) {
     case LAErrorBiometryLockout:
       return LOCKED_OUT;
     case LAErrorBiometryNotEnrolled:
       return NOT_ENROLLED;
+    default:
+      return NOT_AVAILABLE;
+  }
+}
+
+- (NSString*) getFingerprintSupportOnDevice {
+  NSError* error = nil;
+  BOOL available = [OMBiometricAuthenticator canEnableBiometricAuthentication:&error];
+
+  if (available) {
+    if ([OMBiometricAuthenticator biometricType] == BiometryTypeTouchID)
+      return ENROLLED;
+    return NOT_AVAILABLE;
   }
 
-  // If the error code is none of the above, then device simply does not support touchID
+  if (!error)
+    return NOT_AVAILABLE;
+
+  // FaceID support is 11.0+ and if OS is lesser, then error is about TouchID.
+  // In case of error when OS is >= 11.0, it could be either Face or Touch, so just return not available for touch.
+  if (SYSTEM_VERSION_LESS_THAN(@"11.0")) {
+    // Deduce the reason why biometrics is not evaluated using error returned.
+    switch (error.code) {
+      case LAErrorBiometryLockout:
+        return LOCKED_OUT;
+      case LAErrorBiometryNotEnrolled:
+        return NOT_ENROLLED;
+      default:
+        return NOT_AVAILABLE;
+    }
+  }
+
   return NOT_AVAILABLE;
 }
 
-// OMTouchIDFallbackDelgate touch ID fallback to PIN implementation
+
+// OMBiometricFallbackDelegate touch ID fallback to PIN implementation
 - (void)didSelectFallbackAuthentication:(NSError *)fallBackReason
                       completionHandler:(OMFallbackAuthenticationCompletionBlock)handler {
   self.fallbackHandler = handler;
@@ -332,9 +373,9 @@ static OMLocalAuthenticationManager *sharedManager = nil;
     result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:FALLBACK_RESULT];
   }
 
-  [self.touchAuthDelegate sendPluginResult:result callbackId:self.touchAuthCallbackId];
-  self.touchAuthDelegate = nil;
-  self.touchAuthCallbackId = nil;
+  [self.biometricAuthDelegate sendPluginResult:result callbackId:self.biometricAuthCallbackId];
+  self.biometricAuthDelegate = nil;
+  self.biometricAuthCallbackId = nil;
 }
 
 // Utility methods
@@ -351,8 +392,8 @@ static OMLocalAuthenticationManager *sharedManager = nil;
 
 - (NSString *)authenticatorClassForType:(NSString*)authenticatorName
 {
-  if ([LOCAL_AUTH_FINGERPRINT isEqualToString:authenticatorName])
-    return NSStringFromClass([OMTouchIDAuthenticator class]);
+  if ([LOCAL_AUTH_BIOMETRIC isEqualToString:authenticatorName] || [LOCAL_AUTH_FINGERPRINT isEqualToString:authenticatorName])
+    return NSStringFromClass([OMBiometricAuthenticator class]);
   if ([LOCAL_AUTH_PIN isEqualToString:authenticatorName])
     return NSStringFromClass([OMPinAuthenticator class]);
   return nil;
@@ -362,7 +403,9 @@ static OMLocalAuthenticationManager *sharedManager = nil;
   if ([LOCAL_AUTH_PIN isEqualToString:authenticatorName])
     return [self getPinAuthenticator:authId];
   else if ([LOCAL_AUTH_FINGERPRINT isEqualToString:authenticatorName])
-    return [self getTouchIdAuthenticator:authId];
+    return [self getFingerprintAuthenticator:authId];
+  else if ([LOCAL_AUTH_BIOMETRIC isEqualToString:authenticatorName])
+    return [self getBiometricAuthenticator:authId];
   return nil;
 }
 
@@ -378,15 +421,29 @@ static OMLocalAuthenticationManager *sharedManager = nil;
   return nil;
 }
 
--(OMTouchIDAuthenticator*) getTouchIdAuthenticator:(NSString*) authId {
+-(OMBiometricAuthenticator*) getFingerprintAuthenticator:(NSString*) authId {
   NSString* instanceId = [self getInstanceId:authId authenticatorName:LOCAL_AUTH_FINGERPRINT];
+
   if (![sharedManager isAuthenticatorRegistered:LOCAL_AUTH_FINGERPRINT])
     return nil;
 
   OMAuthenticator* auth = [sharedManager authenticatorForInstanceId:instanceId error:nil];
-  if (auth && [auth isKindOfClass:[OMTouchIDAuthenticator class]]) {
-    return (OMTouchIDAuthenticator*) auth;
-  }
+  if (auth && [auth isKindOfClass:[OMBiometricAuthenticator class]])
+    return (OMBiometricAuthenticator*) auth;
+
+  return nil;
+}
+
+-(OMBiometricAuthenticator*) getBiometricAuthenticator:(NSString*) authId {
+  NSString* instanceId = [self getInstanceId:authId authenticatorName:LOCAL_AUTH_BIOMETRIC];
+
+  if (![sharedManager isAuthenticatorRegistered:LOCAL_AUTH_BIOMETRIC])
+    return nil;
+
+  OMAuthenticator* auth = [sharedManager authenticatorForInstanceId:instanceId error:nil];
+  if (auth && [auth isKindOfClass:[OMBiometricAuthenticator class]])
+    return (OMBiometricAuthenticator*) auth;
+
   return nil;
 }
 
@@ -410,10 +467,13 @@ static OMLocalAuthenticationManager *sharedManager = nil;
 - (NSArray*) getEnabled: (NSString*) authId {
   NSMutableArray* auths = [[NSMutableArray alloc] init];
 
-  NSObject* touchIdAuthenticator = [self getTouchIdAuthenticator:authId];
+  NSObject* biometricAuthenticator = [self getBiometricAuthenticator:authId];
+  NSObject* fingerprintAuthenticator = [self getFingerprintAuthenticator:authId];
   NSObject* pinAuthenticator = [self getPinAuthenticator:authId];
 
-  if (touchIdAuthenticator != nil)
+  if (biometricAuthenticator != nil)
+    [auths addObject:LOCAL_AUTH_BIOMETRIC];
+  if (fingerprintAuthenticator != nil)
     [auths addObject:LOCAL_AUTH_FINGERPRINT];
   if (pinAuthenticator != nil)
     [auths addObject:LOCAL_AUTH_PIN];

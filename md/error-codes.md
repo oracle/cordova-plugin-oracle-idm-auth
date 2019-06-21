@@ -152,10 +152,10 @@ P1012 | Error while launching external browser.
 P1013 | No local authenticator enabled.
 P1014 | Unidentified local authenticator type.
 P1015 | Ongoing enable or disable task. Try after the current one is completed.
-P1016 | Attempt to enable fingerprint when PIN is not enabled.
-P1017 | Attempt to disable PIN when fingerprint is enabled.
+P1016 | Attempt to enable biometric when PIN is not enabled.
+P1017 | Attempt to disable PIN when biometric is enabled.
 P1018 | Error while enabling local authenticator.
-P1019 | Either the device does not support it or fingerprint is not enrolled.
+P1019 | Either the device does not support biometric or is not enrolled.
 P1020 | Attempt to change PIN when PIN is not enabled.
 P1021 | Error while getting enabled local authentications.
 P1022 | Unable to find the local authenticator required for the operation.

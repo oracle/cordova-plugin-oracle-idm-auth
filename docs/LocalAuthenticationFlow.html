@@ -40,8 +40,8 @@ App can provide a configuration area where user can enable / disable the local a
 App should use the <a href="LocalAuthenticationFlow.html#getManager">manager</a> instance for <a href="LocalAuthenticationFlowManager.html#enable">enabling</a>
 and <a href="LocalAuthenticationFlowManager.html#disable">disabling</a> local authentications.
 While enabling PIN authentication, <a href="LocalAuthPropertiesBuilder.html#pinChallengeCallback">pin challenge callback</a> will be invoked.
-Note that Fingerprint cannot be enabled unless PIN is already enabled.
-Also, PIN cannot be disabled when Fingerprint is enabled.
+Note that Fingerprint or Biometric cannot be enabled unless PIN is already enabled.
+Also, PIN cannot be disabled when Fingerprint or Biometric is enabled.
 App UI can take care of this in the UI by manipulating the UI controls.
 For PIN based authentication, app can provide an option for the user to change pin.
 App should invoke <a href="LocalAuthenticationFlow.html#getManager">manager</a> instance's
@@ -49,19 +49,19 @@ App should invoke <a href="LocalAuthenticationFlow.html#getManager">manager</a> 
 <a href="LocalAuthPropertiesBuilder.html#pinChallengeCallback">Pin challenge callback</a> will be invoked at this time.</p>
 <p>For a given <a href="LocalAuthenticationFlow.html">LocalAuthenticationFlow</a> there is always a primary authentication, the one that was enabled by the user last.
 So, if user enabled PIN, then that is the primary authentication.
-If user enabled Fingerprint, then that is the primary authentication. Even though PIN is still active, it becomes secondary authentication.
+If user enabled Fingerprint or Biometric, then that is the primary authentication. Even though PIN is still active, it becomes secondary authentication.
 Local authentication can be triggered by invoking <a href="LocalAuthenticationFlow.html#login">LocalAuthenticationFlow#login</a>. This will trigger the primary authentication.
 When PIN authentication is triggered, <a href="LocalAuthPropertiesBuilder.html#pinChallengeCallback">pin challenge callback</a> will be invoked.
-When Fingerprint authentication is triggered, then the device prompts the user to provide fingerprint.
+When Fingerprint or Biometric authentication is triggered, then the device prompts the user to provide the relevant biometric.
 User will have an option to fallback on the secondary authentication, which is PIN, as per the device's policies.
-This is a standard mechanism provided by devices to help user to access the app even when user is unable to provide fingerprint.
+This is a standard mechanism provided by devices to help user to access the app even when user is unable to provide biometric.
 </p>
 <p>There is no concept of logging out in case of local auth. So <a href="LocalAuthenticationFlow.html#logout">LocalAuthenticationFlow#logout</a> is a noop.</p>
 <p>Often local authentication is used in conjunction with a remote authentication. The objective is to have
 user log in once and not to prompt user for credentials, until needed due to session expiry or server policy.
 In this usecase, user logs in for the first time with the credentials and configures / authorizes
-app to use biometric login. This has to be implemented by the app as a setting or on the login screen.
-Once biometric authentication is allowed / enabled by the user, app should seek biometric whenever user login is needed.
+app to use fingerprint or biometric login. This has to be implemented by the app as a setting or on the login screen.
+Once fingerprint or biometric authentication is allowed / enabled by the user, app should seek fingerprint or biometric whenever user login is needed.
 App should perform remote login transparently in the background. This can be achieved by chaining local
 authentication with remote authentication.
 </p>
@@ -72,7 +72,7 @@ For this, <a href="RemoteAuthenticationFlow.html">RemoteAuthenticationFlow</a> s
 <a href="HttpBasicAuthPropertiesBuilder.html#autoLoginAllowed">auto login</a> as <a href="HttpBasicAuthPropertiesBuilder.html">HttpBasicAuthPropertiesBuilder</a> does
 or support refresh tokens as <a href="OAuthPropertiesBuilder.html">OAuthPropertiesBuilder</a> or <a href="OpenIDConnectPropertiesBuilder.html">OpenIDConnectPropertiesBuilder</a> does.
 </p>
-<p> Another common use case with local authentication is to prompt user to provide biometric when app
+<p> Another common use case with local authentication is to prompt user to provide fingerprint or biometric when app
 is relaunched or comes to foreground from background. This can be done by invoking <a href="LocalAuthenticationFlow.html#login">LocalAuthenticationFlow#login</a>
 in the resume listener / on startup as appropriate.
 <a href="LocalAuthenticationFlow.html#login">LocalAuthenticationFlow#login</a> can be invoked any time after <a href="LocalAuthenticationFlow.html">LocalAuthenticationFlow</a> is initialized
@@ -140,6 +140,8 @@ and any number of times as needed. Each time user will be challenged.
 
     
 </dl>
+
+
 
 
 
@@ -247,7 +249,7 @@ and any number of times as needed. Each time user will be challenged.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2231">line 2231</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2229">line 2229</a>
     </li></ul></dd>
     
 
@@ -257,6 +259,8 @@ and any number of times as needed. Each time user will be challenged.
 
     
 </dl>
+
+
 
 
 
@@ -356,7 +360,7 @@ and any number of times as needed. Each time user will be challenged.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2319">line 2319</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2324">line 2324</a>
     </li></ul></dd>
     
 
@@ -366,6 +370,8 @@ and any number of times as needed. Each time user will be challenged.
 
     
 </dl>
+
+
 
 
 
@@ -433,7 +439,7 @@ cordova.plugins.IdmAuthFlows.init(authProps).then(
  PIN challenge callback will be invoked.
 App should show UI for collecting PIN from the user and pass it back to the plugin via callback as explained in <a href="LocalAuthPropertiesBuilder.html">LocalAuthPropertiesBuilder</a> documentation.
 </p>
-<p>In case of fingerprint based local authentication, the device native UI for collecting fingerprint will be provided to the user.
+<p>In case of fingerprint or biometric based local authentication, the device native UI for collecting biometric will be provided to the user.
 This UI can be customized by the app as explained in <a href="LocalAuthPropertiesBuilder.html">LocalAuthPropertiesBuilder</a> documentation.
 User will have a way to fall back on to PIN based authentication as per device policies. In this case the PIN authentication flow will kick in.
 </p>
@@ -485,7 +491,7 @@ User will have a way to fall back on to PIN based authentication as per device p
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2241">line 2241</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2239">line 2239</a>
     </li></ul></dd>
     
 
@@ -495,6 +501,8 @@ User will have a way to fall back on to PIN based authentication as per device p
 
     
 </dl>
+
+
 
 
 
@@ -647,7 +655,7 @@ User will have a way to fall back on to PIN based authentication as per device p
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2308">line 2308</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line2313">line 2313</a>
     </li></ul></dd>
     
 
@@ -657,6 +665,8 @@ User will have a way to fall back on to PIN based authentication as per device p
 
     
 </dl>
+
+
 
 
 
@@ -715,7 +725,7 @@ User will have a way to fall back on to PIN based authentication as per device p
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Wed Apr 24 2019 15:06:54 GMT+0530 (India Standard Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.2</a> on Fri Jun 21 2019 11:55:08 GMT+0530 (India Standard Time)
 </footer>
 
 <script> prettyPrint(); </script>

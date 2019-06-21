@@ -31,6 +31,7 @@
 #import "OMDataSerializationHelper.h"
 #import "OMJailBrokenDetector.h"
 #import "OMReachability.h"
+#import "OMBiometricAuthenticator.h"
 
 @interface IDMMobileSDKv2Library : NSObject
 

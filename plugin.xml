@@ -6,7 +6,7 @@
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
         xmlns:android="http://schemas.android.com/apk/res/android"
         id="cordova-plugin-oracle-idm-auth"
-        version="1.1.8">
+        version="1.1.9">
   <name>cordova-plugin-oracle-idm-auth</name>
   <description>Provides authentication and authorization functionality using the Oracle IDM SDK, supporting standard protocols like Basic Auth, OAUTH, OpenID Connect and WebSSO</description>
   <keywords>cordova,idm,authentication,auth</keywords>
@@ -20,6 +20,7 @@
     <framework src="com.nimbusds:nimbus-jose-jwt:4.26@jar"/>
     <framework src="net.minidev:json-smart:2.3"/>
     <framework src="com.squareup.okhttp3:okhttp:3.8.0"/>
+    <framework src="com.android.support:support-v4:28.0.0"/>
 
     <framework src="src/android/build.gradle" custom="true" type="gradleReference" />
     <config-file target="res/xml/config.xml" parent="/*">
@@ -205,6 +206,11 @@
         <param name="ios-package" value="IdmAuthenticationPlugin"/>
       </feature>
     </config-file>
+
+    <config-file target="*-Info.plist" parent="NSFaceIDUsageDescription">
+      <string>To authenticate using FaceID.</string>
+    </config-file>
+
     <source-file src="src/ios/src/IdmAuthenticationPlugin.m"/>
     <header-file src="src/ios/src/IdmAuthenticationPlugin.h"/>
     <source-file src="src/ios/src/IdmAuthentication.m"/>
@@ -247,6 +253,7 @@
     <header-file src="src/ios/sdk/IDMMobileSDKv2/LocalAuthentication/OMLocalAuthenticationManager.h"/>
     <header-file src="src/ios/sdk/IDMMobileSDKv2/LocalAuthentication/OMPinAuthenticator.h"/>
     <header-file src="src/ios/sdk/IDMMobileSDKv2/LocalAuthentication/OMTouchIDAuthenticator.h"/>
+    <header-file src="src/ios/sdk/IDMMobileSDKv2/LocalAuthentication/OMBiometricAuthenticator.h"/>
     <header-file src="src/ios/sdk/IDMMobileSDKv2/OMAssertionGrant.h"/>
     <header-file src="src/ios/sdk/IDMMobileSDKv2/OMAuthenticationChallenge.h"/>
     <header-file src="src/ios/sdk/IDMMobileSDKv2/OMAuthenticationContext.h"/>
@@ -329,6 +336,7 @@
     <source-file src="src/ios/sdk/IDMMobileSDKv2/LocalAuthentication/OMLocalAuthenticationManager.m"/>
     <source-file src="src/ios/sdk/IDMMobileSDKv2/LocalAuthentication/OMPinAuthenticator.m"/>
     <source-file src="src/ios/sdk/IDMMobileSDKv2/LocalAuthentication/OMTouchIDAuthenticator.m"/>
+    <source-file src="src/ios/sdk/IDMMobileSDKv2/LocalAuthentication/OMBiometricAuthenticator.m"/>
     <source-file src="src/ios/sdk/IDMMobileSDKv2/OMAssertionGrant.m"/>
     <source-file src="src/ios/sdk/IDMMobileSDKv2/OMAuthenticationChallenge.m"/>
     <source-file src="src/ios/sdk/IDMMobileSDKv2/OMAuthenticationContext.m"/>

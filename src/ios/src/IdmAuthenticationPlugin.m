@@ -285,9 +285,9 @@ NSMutableDictionary<NSString *, IdmAuthentication *>  *AUTH_CACHE;
   [[LocalAuthenticator sharedInstance] authenticatePin:command
                                               delegate:self.commandDelegate];
 }
-- (void) authenticateFingerPrint:(CDVInvokedUrlCommand *) command {
-  [[LocalAuthenticator sharedInstance] authenticateFingerPrint:command
-                                                      delegate:self.commandDelegate];
+- (void) authenticateBiometric:(CDVInvokedUrlCommand *) command {
+  [[LocalAuthenticator sharedInstance] authenticateBiometric:command
+                                                    delegate:self.commandDelegate];
 }
 - (void) changePin:(CDVInvokedUrlCommand *) command {
   [[LocalAuthenticator sharedInstance] changePin:command

@@ -34,12 +34,12 @@
 Using this builder to <a href="global.html#init">init</a> an authentication flow will return <a href="RemoteAuthenticationFlow.html">RemoteAuthenticationFlow</a> in the init promise.</p>
 <p>In this type of authentication, while logging in, the plugin brings up a WebView and loads the <a href="FedAuthPropertiesBuilder.html#loginUrl">login page</a> provided in the configuration.
 User has credentials on this page. When login is successful, the WebView will be removed and user will be redirected back to the app.
-While showing the WebView, plugin provides basic operations such as &quot;Forward&quot;, &quot;Back&quot;, &quot;Reload&quot; and &quot;Cancel&quot; to deal with any issues the user faces on this page.
-For example, user may accidentally click a link on the login page. In this case, user can use &quot;Back&quot; button to come back to the login page.
+While showing the WebView, plugin provides basic operations such as "Forward", "Back", "Reload" and "Cancel" to deal with any issues the user faces on this page.
+For example, user may accidentally click a link on the login page. In this case, user can use "Back" button to come back to the login page.
 For example, if the login page is not loaded correctly, user may want to try reloading the page, before cancelling the login.
 If user cancels the login, the promise returned by <a href="AuthenticationFlow.html#login">AuthenticationFlow#login</a> will be rejected.
-For iOS, <a href="https://developer.apple.com/documentation/uikit/uiwebview">UIWebView</a> will be used by default.
-App can choose to use <a href="https://developer.apple.com/documentation/webkit/wkwebview">WKWebView</a> through <a href="FedAuthPropertiesBuilder.html#enableWkWebView">configuration</a>.
+For iOS, UIWebView will be used by default.
+App can choose to use WKWebView through <a href="FedAuthPropertiesBuilder.html#enableWkWebView">configuration</a>.
 </p>
 <p>
 While logging out, the plugin brings up a WebView and loads the <a href="FedAuthPropertiesBuilder.html#logoutUrl">logout page</a> provided in the configuration.
@@ -254,7 +254,7 @@ Note: Irrespective of whether user cancels the logout or accepts the logout in t
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1023">line 1023</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1015">line 1015</a>
     </li></ul></dd>
     
 
@@ -264,6 +264,8 @@ Note: Irrespective of whether user cancels the logout or accepts the logout in t
 
     
 </dl>
+
+
 
 
 
@@ -421,7 +423,7 @@ Note: Irrespective of whether user cancels the logout or accepts the logout in t
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line529">line 529</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line521">line 521</a>
     </li></ul></dd>
     
 
@@ -431,6 +433,8 @@ Note: Irrespective of whether user cancels the logout or accepts the logout in t
 
     
 </dl>
+
+
 
 
 
@@ -526,7 +530,7 @@ Note: Irrespective of whether user cancels the logout or accepts the logout in t
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1247">line 1247</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1239">line 1239</a>
     </li></ul></dd>
     
 
@@ -536,6 +540,8 @@ Note: Irrespective of whether user cancels the logout or accepts the logout in t
 
     
 </dl>
+
+
 
 
 
@@ -679,7 +685,7 @@ Note: Irrespective of whether user cancels the logout or accepts the logout in t
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1138">line 1138</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1130">line 1130</a>
     </li></ul></dd>
     
 
@@ -689,6 +695,8 @@ Note: Irrespective of whether user cancels the logout or accepts the logout in t
 
     
 </dl>
+
+
 
 
 
@@ -828,7 +836,7 @@ Note: Irrespective of whether user cancels the logout or accepts the logout in t
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1151">line 1151</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1143">line 1143</a>
     </li></ul></dd>
     
 
@@ -838,6 +846,8 @@ Note: Irrespective of whether user cancels the logout or accepts the logout in t
 
     
 </dl>
+
+
 
 
 
@@ -982,7 +992,7 @@ Note: Irrespective of whether user cancels the logout or accepts the logout in t
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line598">line 598</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line590">line 590</a>
     </li></ul></dd>
     
 
@@ -992,6 +1002,8 @@ Note: Irrespective of whether user cancels the logout or accepts the logout in t
 
     
 </dl>
+
+
 
 
 
@@ -1132,7 +1144,7 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</p></t
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1124">line 1124</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1116">line 1116</a>
     </li></ul></dd>
     
 
@@ -1142,6 +1154,8 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</p></t
 
     
 </dl>
+
+
 
 
 
@@ -1292,7 +1306,7 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</p></t
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line541">line 541</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line533">line 533</a>
     </li></ul></dd>
     
 
@@ -1302,6 +1316,8 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</p></t
 
     
 </dl>
+
+
 
 
 
@@ -1441,7 +1457,7 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</p></t
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1099">line 1099</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1091">line 1091</a>
     </li></ul></dd>
     
 
@@ -1451,6 +1467,8 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</p></t
 
     
 </dl>
+
+
 
 
 
@@ -1590,7 +1608,7 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</p></t
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1087">line 1087</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1079">line 1079</a>
     </li></ul></dd>
     
 
@@ -1600,6 +1618,8 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</p></t
 
     
 </dl>
+
+
 
 
 
@@ -1739,7 +1759,7 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</p></t
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1063">line 1063</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1055">line 1055</a>
     </li></ul></dd>
     
 
@@ -1749,6 +1769,8 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</p></t
 
     
 </dl>
+
+
 
 
 
@@ -1888,7 +1910,7 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</p></t
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1177">line 1177</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1169">line 1169</a>
     </li></ul></dd>
     
 
@@ -1898,6 +1920,8 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</p></t
 
     
 </dl>
+
+
 
 
 
@@ -2037,7 +2061,7 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</p></t
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1164">line 1164</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1156">line 1156</a>
     </li></ul></dd>
     
 
@@ -2047,6 +2071,8 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</p></t
 
     
 </dl>
+
+
 
 
 
@@ -2191,7 +2217,7 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</p></t
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line586">line 586</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line578">line 578</a>
     </li></ul></dd>
     
 
@@ -2201,6 +2227,8 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</p></t
 
     
 </dl>
+
+
 
 
 
@@ -2340,7 +2368,7 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</p></t
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1075">line 1075</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1067">line 1067</a>
     </li></ul></dd>
     
 
@@ -2350,6 +2378,8 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</p></t
 
     
 </dl>
+
+
 
 
 
@@ -2489,7 +2519,7 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</p></t
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1111">line 1111</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1103">line 1103</a>
     </li></ul></dd>
     
 
@@ -2499,6 +2529,8 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</p></t
 
     
 </dl>
+
+
 
 
 
@@ -2649,7 +2681,7 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</p></t
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line555">line 555</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line547">line 547</a>
     </li></ul></dd>
     
 
@@ -2659,6 +2691,8 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</p></t
 
     
 </dl>
+
+
 
 
 
@@ -2830,7 +2864,7 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</p></t
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line374">line 374</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line366">line 366</a>
     </li></ul></dd>
     
 
@@ -2840,6 +2874,8 @@ Note: App should install cordova-plugin-wkwebview-engine when using this.</p></t
 
     
 </dl>
+
+
 
 
 
@@ -2987,7 +3023,7 @@ credentials, if there is a valid JWT token.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1219">line 1219</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1211">line 1211</a>
     </li></ul></dd>
     
 
@@ -2997,6 +3033,8 @@ credentials, if there is a valid JWT token.</p>
 
     
 </dl>
+
+
 
 
 
@@ -3144,7 +3182,7 @@ The effect of setting this is only to remove cookies after such time when server
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1190">line 1190</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1182">line 1182</a>
     </li></ul></dd>
     
 
@@ -3154,6 +3192,8 @@ The effect of setting this is only to remove cookies after such time when server
 
     
 </dl>
+
+
 
 
 
@@ -3293,7 +3333,7 @@ The effect of setting this is only to remove cookies after such time when server
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1206">line 1206</a>
+        <a href="IdmAuthFlows.js.html">IdmAuthFlows.js</a>, <a href="IdmAuthFlows.js.html#line1198">line 1198</a>
     </li></ul></dd>
     
 
@@ -3303,6 +3343,8 @@ The effect of setting this is only to remove cookies after such time when server
 
     
 </dl>
+
+
 
 
 
@@ -3361,7 +3403,7 @@ The effect of setting this is only to remove cookies after such time when server
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Wed Apr 24 2019 15:06:54 GMT+0530 (India Standard Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.2</a> on Fri Jun 21 2019 11:55:08 GMT+0530 (India Standard Time)
 </footer>
 
 <script> prettyPrint(); </script>

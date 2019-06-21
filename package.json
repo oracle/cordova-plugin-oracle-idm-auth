@@ -1,6 +1,6 @@
 {
   "name": "cordova-plugin-oracle-idm-auth",
-  "version": "1.1.8",
+  "version": "1.1.9",
   "description": "Provides authentication and authorization functionality using the Oracle IDM SDK, supporting standard protocols like Basic Auth, OAUTH, OpenID Connect and WebSSO.",
   "cordova": {
     "id": "cordova-plugin-oracle-idm-auth",

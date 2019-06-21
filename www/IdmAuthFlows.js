@@ -9,7 +9,7 @@
  * is a plugin that provides authentication and authorization functionality for
  * cordova based mobile applications, supporting standard protocols for remote authentication
  * such as Basic Auth, OAuth, OpenID Connect and webSSO / Federated auth.
- * The plugin also supports local device level authentication such as PIN and fingerprint based.
+ * The plugin also supports local device level authentication such as PIN and biometric based.
  * The plugin abstracts all aspects of authentication and authorization and enforces security best practices for mobile application developers.
  * Typically an app will use a single remote authentication and possibly local authentication.
  * But the plugin can handle multiple authentication flows in parallel, be it remote or local.
@@ -95,8 +95,8 @@ var IdmAuthFlows = function() {
   var errorCodes = {
     NoLocalAuthEnabled: 'P1013',
     UnknownLocalAuthenticatorType: 'P1014',
-    DisablePinWhenFingerprintEnabled: 'P1017',
-    EnableFingerprintWhenPinDisabled: 'P1016',
+    DisablePinWhenBiometricEnabled: 'P1017',
+    EnableBiometricWhenPinDisabled: 'P1016',
     UserCancelledAuthentication: '10029', // Reuse existing code from IDM SDK
     ChangePinWhenPinNotEnabled: 'P1020',
     GetEnabledAuthsError: 'P1021',
@@ -215,7 +215,7 @@ var IdmAuthFlows = function() {
     LocalAuthFlowId: 'LocalAuthFlowId',
     // function to be invoked when there is a challenge for user credentials or PIN
     PinChallengeCallback: "PinChallengeCallback",
-    // Object containing localized strings for fingerprint prompt.
+    // Object containing localized strings for biometric prompt.
     Translations: "Translations"
  };
 
@@ -308,14 +308,6 @@ var IdmAuthFlows = function() {
     if (typeof input !== 'function') {
       throw new Error('Invalid value ' + input + ' passed for ' + field + '. A valid function should be passed.');
     }
-  };
-
-  var initializeLocalFlow = function(authProps, resolve, reject) {
-    var instanceId = authProps[authPropertyKeys.LocalAuthFlowId];
-
-    exec(function(enabledAuthsPrimaryFirst){
-      resolve(new LocalAuthenticationFlow(instanceId, authProps, enabledAuthsPrimaryFirst));
-    }, reject, TAG, 'enabledLocalAuthsPrimaryFirst', [instanceId]);
   };
 
   var initializeRemoteFlow = function(authProps, timeoutCb, resolve, reject) {
@@ -1605,13 +1597,13 @@ var IdmAuthFlows = function() {
    * @classdesc This is the builder for Local auth. This can be used for for device level authentication.
    * Using this builder to {@link init} an authentication flow will return {@link LocalAuthenticationFlow} in the init promise.
    * Multiple types of {@link LocalAuthPropertiesBuilder.LocalAuthenticatorType|local authentications} are supported.
-   * <p>For fingerprint based local auth, fingerprint is collected by the device using native UI. This UI is provided by each device OS.
+   * <p>For biometric based local auth, biometric is collected by the device using native UI. This UI is provided by each device OS.
    * Device OS allows certain customizations to this UI, such as labels and titles.
    * App can optionally set
-   * {@link LocalAuthPropertiesBuilder~Translations| localized strings for fingerprint prompt}
+   * {@link LocalAuthPropertiesBuilder~Translations| localized strings for biometric prompt}
    * using {@link LocalAuthPropertiesBuilder#translations} method. If these strings are not provided,
    * default, english strings will be shown to the user.
-   * In addition, app can control the look and feel of the fingerprint dialog by providing appropriate theme for the MainActivity in AndroidManifest.xml.
+   * In addition, app can control the look and feel of the biometric dialog by providing appropriate theme for the MainActivity in AndroidManifest.xml.
    * </p>
    * <p>For PIN based local authentication, the UI for collecting PIN from the user should be provided by the app.
    * App provides this through {@link LocalAuthPropertiesBuilder#pinChallengeCallback}.
@@ -1669,13 +1661,13 @@ var IdmAuthFlows = function() {
      */
 
     /**
-     * Localized strings for fingerprint authentication dialog prompt.
+     * Localized strings for biometric authentication dialog prompt.
      * @typedef {Object} LocalAuthPropertiesBuilder~Translations
      * @property {String=} promptMessage - Text to be shown to the user on the dialog.
      * @property {String=} pinFallbackButtonLabel - Label for the PIN fallback button in the dialog.
      * @property {String=} cancelButtonLabel - Label for the cancel button in the dialog.
-     * @property {String=} successMessage - Text to be shown when fingerprint authentication is successful. Applicable to Android only.
-     * @property {String=} errorMessage - Text to be shown when fingerprint authentication is unsuccessful. Applicable to Android only.
+     * @property {String=} successMessage - Text to be shown when biometric authentication is successful. Applicable to Android only.
+     * @property {String=} errorMessage - Text to be shown when biometric authentication is unsuccessful. Applicable to Android only.
      * @property {String=} promptTitle - Title for the dialog. Applicable to Android only.
      * @property {String=} hintText - Hint text to be shown to the user. Applicable to Android only.
      */
@@ -1825,7 +1817,15 @@ var IdmAuthFlows = function() {
      * Local authentication type is Fingerprint.
      * @type {string}
      */
-    Fingerprint: 'cordova.plugins.IdmAuthFlows.Fingerprint'
+    Fingerprint: 'cordova.plugins.IdmAuthFlows.Fingerprint',
+    /**
+     * Local authentication type can be any Biometric.
+     * Currently supports:
+     * FaceID OR TouchID in iOS
+     * Fingerprint in Android
+     * @type {string}
+     */
+    Biometric: 'cordova.plugins.IdmAuthFlows.Biometric'
   };
   // End: Builders
 
@@ -2143,8 +2143,8 @@ var IdmAuthFlows = function() {
    * App should use the {@link LocalAuthenticationFlow#getManager|manager} instance for {@link LocalAuthenticationFlowManager#enable|enabling}
    * and {@link LocalAuthenticationFlowManager#disable|disabling} local authentications.
    * While enabling PIN authentication, {@link LocalAuthPropertiesBuilder#pinChallengeCallback|pin challenge callback} will be invoked.
-   * Note that Fingerprint cannot be enabled unless PIN is already enabled.
-   * Also, PIN cannot be disabled when Fingerprint is enabled.
+   * Note that Fingerprint or Biometric cannot be enabled unless PIN is already enabled.
+   * Also, PIN cannot be disabled when Fingerprint or Biometric is enabled.
    * App UI can take care of this in the UI by manipulating the UI controls.
    * For PIN based authentication, app can provide an option for the user to change pin.
    * App should invoke {@link LocalAuthenticationFlow#getManager|manager} instance's
@@ -2152,19 +2152,19 @@ var IdmAuthFlows = function() {
    * {@link LocalAuthPropertiesBuilder#pinChallengeCallback|Pin challenge callback} will be invoked at this time.</p>
    * <p>For a given {@link LocalAuthenticationFlow} there is always a primary authentication, the one that was enabled by the user last.
    * So, if user enabled PIN, then that is the primary authentication.
-   * If user enabled Fingerprint, then that is the primary authentication. Even though PIN is still active, it becomes secondary authentication.
+   * If user enabled Fingerprint or Biometric, then that is the primary authentication. Even though PIN is still active, it becomes secondary authentication.
    * Local authentication can be triggered by invoking {@link LocalAuthenticationFlow#login}. This will trigger the primary authentication.
    * When PIN authentication is triggered, {@link LocalAuthPropertiesBuilder#pinChallengeCallback|pin challenge callback} will be invoked.
-   * When Fingerprint authentication is triggered, then the device prompts the user to provide fingerprint.
+   * When Fingerprint or Biometric authentication is triggered, then the device prompts the user to provide the relevant biometric.
    * User will have an option to fallback on the secondary authentication, which is PIN, as per the device's policies.
-   * This is a standard mechanism provided by devices to help user to access the app even when user is unable to provide fingerprint.
+   * This is a standard mechanism provided by devices to help user to access the app even when user is unable to provide biometric.
    * </p>
    * <p>There is no concept of logging out in case of local auth. So {@link LocalAuthenticationFlow#logout} is a noop.</p>
    * <p>Often local authentication is used in conjunction with a remote authentication. The objective is to have
    * user log in once and not to prompt user for credentials, until needed due to session expiry or server policy.
    * In this usecase, user logs in for the first time with the credentials and configures / authorizes
-   * app to use biometric login. This has to be implemented by the app as a setting or on the login screen.
-   * Once biometric authentication is allowed / enabled by the user, app should seek biometric whenever user login is needed.
+   * app to use fingerprint or biometric login. This has to be implemented by the app as a setting or on the login screen.
+   * Once fingerprint or biometric authentication is allowed / enabled by the user, app should seek fingerprint or biometric whenever user login is needed.
    * App should perform remote login transparently in the background. This can be achieved by chaining local
    * authentication with remote authentication.
    * </p>
@@ -2175,7 +2175,7 @@ var IdmAuthFlows = function() {
    * {@link HttpBasicAuthPropertiesBuilder#autoLoginAllowed|auto login} as {@link HttpBasicAuthPropertiesBuilder} does
    * or support refresh tokens as {@link OAuthPropertiesBuilder} or {@link OpenIDConnectPropertiesBuilder} does.
    * </p>
-   * <p> Another common use case with local authentication is to prompt user to provide biometric when app
+   * <p> Another common use case with local authentication is to prompt user to provide fingerprint or biometric when app
    * is relaunched or comes to foreground from background. This can be done by invoking {@link LocalAuthenticationFlow#login}
    * in the resume listener / on startup as appropriate.
    * {@link LocalAuthenticationFlow#login} can be invoked any time after {@link LocalAuthenticationFlow} is initialized
@@ -2183,13 +2183,11 @@ var IdmAuthFlows = function() {
    * </p>
    * @hideconstructor
    * @extends AuthenticationFlow
-   * @param {string} authFlowKey - Unique key for identifying an auth flow.
    * @param {Object} authProps - properties object obtained from {@link Builder#build}
-   * @param {Array.<LocalAuthPropertiesBuilder.LocalAuthenticatorType>} enabledAuths - enabled local auths, in primary first order.
    */
-  var LocalAuthenticationFlow = function(authFlowKey, authProps, enabledAuths) {
-    AuthenticationFlow.call(this, authFlowKey, authProps);
+  var LocalAuthenticationFlow = function(authProps) {
     var id = authProps[authPropertyKeys.LocalAuthFlowId];
+    AuthenticationFlow.call(this, id, authProps);
     var maxAttempts = authProps[authPropertyKeys.MaxLoginAttempts];
     var currentAttempt;
     var pinCallback = authProps[authPropertyKeys.PinChallengeCallback];
@@ -2226,7 +2224,7 @@ var IdmAuthFlows = function() {
       });
     };
 
-    var manager = new LocalAuthenticationFlowManager(authProps, enabledAuths, loginUsingPinWithRetry);
+    var manager = new LocalAuthenticationFlowManager(authProps, loginUsingPinWithRetry);
 
     /**
      * Returns the local auth manager associated with this flow.
@@ -2256,7 +2254,7 @@ var IdmAuthFlows = function() {
      * {@link LocalAuthPropertiesBuilder~localAuthPinChallengeCallback | PIN challenge callback} will be invoked.
      * App should show UI for collecting PIN from the user and pass it back to the plugin via callback as explained in {@link LocalAuthPropertiesBuilder} documentation.
      * </p>
-     * <p>In case of fingerprint based local authentication, the device native UI for collecting fingerprint will be provided to the user.
+     * <p>In case of fingerprint or biometric based local authentication, the device native UI for collecting biometric will be provided to the user.
      * This UI can be customized by the app as explained in {@link LocalAuthPropertiesBuilder} documentation.
      * User will have a way to fall back on to PIN based authentication as per device policies. In this case the PIN authentication flow will kick in.
      * </p>
@@ -2289,15 +2287,22 @@ var IdmAuthFlows = function() {
               .catch(function(err) {
                 reject(err);
               });
-          } else if (primaryAuth === LocalAuthPropertiesBuilder.LocalAuthenticatorType.Fingerprint) {
+          } else if (primaryAuth === LocalAuthPropertiesBuilder.LocalAuthenticatorType.Biometric ||
+                      primaryAuth === LocalAuthPropertiesBuilder.LocalAuthenticatorType.Fingerprint) {
             exec(function(resp){
               if (resp === "fallback") {
-                loginUsingPin(resolve, reject, primaryAuth);
+                loginUsingPinWithRetry(primaryAuth)
+                  .then(function(result) {
+                    resolve(result.flow);
+                  })
+                  .catch(function(err) {
+                    reject(err);
+                  });
               } else {
                 lastAuthenticated = primaryAuth;
                 resolve(self);
               }
-            }, reject, TAG, 'authenticateFingerPrint', [id, authProps[authPropertyKeys.Translations]]);
+            }, reject, TAG, 'authenticateBiometric', [id, primaryAuth, authProps[authPropertyKeys.Translations]]);
           }
         }).catch(function(err) {
           reject(getError(errorCodes.GetEnabledAuthsError));
@@ -2351,20 +2356,20 @@ var IdmAuthFlows = function() {
    * @class LocalAuthenticationFlowManager
    * @hideconstructor
    * @param {Object} authProps - properties object obtained from {@link Builder#build}
-   * @param {Array.<LocalAuthPropertiesBuilder.LocalAuthenticatorType>} enabledAuths - enabled local auths, in primary first order.
    * @param {Function} loginUsingPinWithRetry - method that can be used to have user login using PIN.
    */
-  var LocalAuthenticationFlowManager = function(authProps, enabledAuths, loginUsingPinWithRetry) {
+  var LocalAuthenticationFlowManager = function(authProps, loginUsingPinWithRetry) {
     var id = authProps[authPropertyKeys.LocalAuthFlowId];
     var maxAttempts = authProps[authPropertyKeys.MaxLoginAttempts];
     var pinCallback = authProps[authPropertyKeys.PinChallengeCallback];
     var enablePromise, disablePromise;
+    var self = this;
 
     /**
      * Get all enabled local authenticator types, in primary first order.
      * This means that if {@link LocalAuthenticationFlow#login} is triggered on the corresponding {@link LocalAuthenticationFlow},
      * it will trigger the first authentication type returned.
-     * Note: PIN is always allowed. Fingerprint is allowed based on device capabilities.
+     * Note: PIN is always allowed. Fingerprint or Biometric is allowed based on device capabilities.
      * @function getEnabled
      * @memberof LocalAuthenticationFlowManager.prototype
      * @return {Promise.<Array.<LocalAuthPropertiesBuilder.LocalAuthenticatorType>>} Enabled local auths, in primary first order.
@@ -2379,13 +2384,17 @@ var IdmAuthFlows = function() {
 
       return Promise.all(promises)
         .then(function() {
-          return enabledAuths.slice();
+          return new Promise(function(resolve, reject) {
+            exec(function(enabledAuthsPrimaryFirst){
+              resolve(enabledAuthsPrimaryFirst);
+            }, reject, TAG, 'enabledLocalAuthsPrimaryFirst', [id]);
+          })
         });
     };
 
     /**
      * Enable authenticator denoted by localAuthenticationType.
-     * Note: PIN has to be enabled before fingerprint is enabled.
+     * Note: PIN has to be enabled before fingerprint or biometric is enabled.
      * @function enable
      * @memberof LocalAuthenticationFlowManager.prototype
      * @param {LocalAuthPropertiesBuilder.LocalAuthenticatorType} type - local auth type to be enabled.
@@ -2402,43 +2411,42 @@ var IdmAuthFlows = function() {
           return;
         }
 
-        if (enabledAuths.indexOf(localAuthenticationType) != -1) {
-          resolve();
-          return;
-        }
-
-        if (localAuthenticationType === LocalAuthPropertiesBuilder.LocalAuthenticatorType.Fingerprint) {
-          if (enabledAuths.indexOf(LocalAuthPropertiesBuilder.LocalAuthenticatorType.PIN) == -1) {
-            reject(getError(errorCodes.EnableFingerprintWhenPinDisabled));
+        self.getEnabled().then(function(enabledAuths) {
+          if (enabledAuths.indexOf(localAuthenticationType) != -1) {
+            resolve();
             return;
           }
 
-          pinCallback(LocalAuthPropertiesBuilder.PinChallengeReason.Login, {
+          if (localAuthenticationType === LocalAuthPropertiesBuilder.LocalAuthenticatorType.Biometric ||
+                localAuthenticationType === LocalAuthPropertiesBuilder.LocalAuthenticatorType.Fingerprint) {
+            if (enabledAuths.indexOf(LocalAuthPropertiesBuilder.LocalAuthenticatorType.PIN) == -1) {
+              reject(getError(errorCodes.EnableBiometricWhenPinDisabled));
+              return;
+            }
+
+            pinCallback(LocalAuthPropertiesBuilder.PinChallengeReason.Login, {
+                cancel: function() {
+                  reject(getError(errorCodes.UserCancelledAuthentication));
+                },
+                submit: function(currentPin, newPin) {
+                  exec(function() {
+                    exec(function() {
+                      resolve();
+                    }, reject, TAG, 'enableLocalAuth', [id, localAuthenticationType, currentPin]);
+                  }, reject, TAG, 'authenticatePin', [id, currentPin]);
+                }
+              });
+          } else if (localAuthenticationType === LocalAuthPropertiesBuilder.LocalAuthenticatorType.PIN) {
+            pinCallback(LocalAuthPropertiesBuilder.PinChallengeReason.SetPin, {
               cancel: function() {
                 reject(getError(errorCodes.UserCancelledAuthentication));
               },
               submit: function(currentPin, newPin) {
-                exec(function() {
-                  exec(function() {
-                    enabledAuths.unshift(localAuthenticationType);
-                    resolve();
-                  }, reject, TAG, 'enableLocalAuth', [id, localAuthenticationType, currentPin]);
-                }, reject, TAG, 'authenticatePin', [id, currentPin]);
+                exec(resolve, reject, TAG, 'enableLocalAuth', [id, localAuthenticationType, newPin]);
               }
             });
-        } else if (localAuthenticationType === LocalAuthPropertiesBuilder.LocalAuthenticatorType.PIN) {
-          pinCallback(LocalAuthPropertiesBuilder.PinChallengeReason.SetPin, {
-            cancel: function() {
-              reject(getError(errorCodes.UserCancelledAuthentication));
-            },
-            submit: function(currentPin, newPin) {
-              exec(function(resp) {
-                enabledAuths.unshift(localAuthenticationType);
-                resolve();
-              }, reject, TAG, 'enableLocalAuth', [id, localAuthenticationType, newPin]);
-            }
-          });
-        }
+          }
+        });
       });
 
       var clearPromise = function() {
@@ -2452,7 +2460,7 @@ var IdmAuthFlows = function() {
 
     /**
      * Disable local authenticator denoted by localAuthenticationType.
-     * Note: User can disable PIN only after disabling Fingerprint.
+     * Note: User can disable PIN only after disabling fingerprint or biometric.
      *
      * @function disable
      * @memberof LocalAuthenticationFlowManager.prototype
@@ -2469,38 +2477,27 @@ var IdmAuthFlows = function() {
           return;
         }
 
-        var primaryAuth = enabledAuths[0];
-        if (enabledAuths.indexOf(localAuthenticationType) == -1 || primaryAuth === undefined) {
-          resolve();
-          return;
-        }
-
-        if (localAuthenticationType === LocalAuthPropertiesBuilder.LocalAuthenticatorType.PIN &&
-            primaryAuth === LocalAuthPropertiesBuilder.LocalAuthenticatorType.Fingerprint) {
-          reject(getError(errorCodes.DisablePinWhenFingerprintEnabled));
-          return;
-        }
-
-        loginUsingPinWithRetry(LocalAuthPropertiesBuilder.LocalAuthenticatorType.PIN)
-        .then(function() {
-          exec(function(primaryAuth) {
-            var disabledAuthIndex = enabledAuths.indexOf(localAuthenticationType);
-            if (disabledAuthIndex > -1)
-              enabledAuths.splice(disabledAuthIndex, 1);
-
-            if (primaryAuth !== '') {
-              var primaryAuthIndex = enabledAuths.indexOf(primaryAuth);
-              if (primaryAuthIndex > -1)
-                enabledAuths.splice(primaryAuthIndex, 1);
-
-              enabledAuths.unshift(primaryAuth);
-            }
-
+        self.getEnabled().then(function(enabledAuths) {
+          var primaryAuth = enabledAuths[0];
+          if (enabledAuths.indexOf(localAuthenticationType) == -1 || primaryAuth === undefined) {
             resolve();
-          }, reject, TAG, 'disableLocalAuth', [id, localAuthenticationType]);
-        })
-        .catch(function(err) {
-          reject(err);
+            return;
+          }
+
+          if (localAuthenticationType === LocalAuthPropertiesBuilder.LocalAuthenticatorType.PIN &&
+              (primaryAuth === LocalAuthPropertiesBuilder.LocalAuthenticatorType.Biometric ||
+                primaryAuth === LocalAuthPropertiesBuilder.LocalAuthenticatorType.Fingerprint)) {
+            reject(getError(errorCodes.DisablePinWhenBiometricEnabled));
+            return;
+          }
+
+          loginUsingPinWithRetry(LocalAuthPropertiesBuilder.LocalAuthenticatorType.PIN)
+          .then(function() {
+            exec(resolve, reject, TAG, 'disableLocalAuth', [id, localAuthenticationType]);
+          })
+          .catch(function(err) {
+            reject(err);
+          });
         });
       });
 
@@ -2523,7 +2520,12 @@ var IdmAuthFlows = function() {
      */
     this.changePin = function() {
       var changePinPromise = new Promise(function(resolve, reject) {
-        if (enabledAuths.indexOf(LocalAuthPropertiesBuilder.LocalAuthenticatorType.PIN) > -1) {
+        self.getEnabled().then(function(enabledAuths) {
+          if (enabledAuths.indexOf(LocalAuthPropertiesBuilder.LocalAuthenticatorType.PIN) == -1) {
+            reject(getError(errorCodes.ChangePinWhenPinNotEnabled));
+            return;
+          }
+
           loginUsingPinWithRetry(LocalAuthPropertiesBuilder.LocalAuthenticatorType.PIN)
           .then(function(result) {
             pinCallback(LocalAuthPropertiesBuilder.PinChallengeReason.ChangePin, {
@@ -2537,9 +2539,7 @@ var IdmAuthFlows = function() {
           }).catch(function(err) {
             reject(err);
           });
-        } else {
-          reject(getError(errorCodes.ChangePinWhenPinNotEnabled));
-        }
+        });
       });
 
       return changePinPromise;
@@ -2835,9 +2835,7 @@ var IdmAuthFlows = function() {
         return Promise.reject(getError("P1005"));
 
       if (authProps[authPropertyKeys.AuthServerType] === authServerTypes.LocalAuthenticator) {
-        return new Promise(function(resolve, reject){
-          initializeLocalFlow(authProps, resolve, reject);
-        });
+        return Promise.resolve(new LocalAuthenticationFlow(authProps));
       }
 
       // Backwards compatibility
