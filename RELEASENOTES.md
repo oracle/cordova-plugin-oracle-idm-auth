@@ -1,6 +1,6 @@
 # Release Notes
 
-## 1.2.0 (TBD)
+## 1.2.0 (7 Aug, 2019)
 * API to control buttons shown on webview for WebSSO usecase.
 * Improvements for OAuth and OpenID usecases where login page is opened in an external browser by using in-app browser.
 
