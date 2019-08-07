@@ -13,10 +13,13 @@ import android.content.Context;
 import android.content.IntentFilter;
 import android.net.Uri;
 import android.os.Looper;
+import android.support.customtabs.CustomTabsIntent;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.Toast;
+
 import oracle.idm.auth.plugin.util.PluginErrorCodes;
+import oracle.idm.auth.plugin.customtabs.CustomTabActivityHelper;
 import oracle.idm.mobile.OMErrorCode;
 import oracle.idm.mobile.OMMobileSecurityException;
 import oracle.idm.mobile.OMMobileSecurityService;
@@ -36,6 +39,7 @@ import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.json.JSONException;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -52,7 +56,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
    * @param mainActivity
    * @param props
    */
-  IdmAuthentication(Activity mainActivity, JSONObject props)
+  IdmAuthentication(Activity mainActivity, JSONObject props) 
   {
     _mainActivity = mainActivity;
     _props = _convertToAuthConfigProperties(props);
@@ -61,6 +65,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
     _isWebViewChallenge = false;
     _externalBrowserChallengeResponseExpected = false;
     _localBroadcastManager = LocalBroadcastManager.getInstance(_mainActivity);
+    _webViewButtonsArray = getWebViewButtonsArray(props.optJSONArray(PROP_ENABLE_WEB_VIEW_BUTTONS));
     _broadcastReceiver = new BroadcastReceiver() {
       @Override
       public void onReceive(Context context, Intent intent) {
@@ -409,19 +414,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
         _startWebView();
         break;
       case EXTERNAL_BROWSER_INVOCATION_REQUIRED:
-        String externalBrowserURL = (String) fields.get(OMSecurityConstants.Challenge.EXTERNAL_BROWSER_LOAD_URL);
-        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(externalBrowserURL)).addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
-        if (intent.resolveActivity(_mainActivity.getPackageManager()) != null)
-        {
-          _mainActivity.startActivity(intent);
-          _externalBrowserChallengeResponseExpected = true;
-        }
-        else
-        {
-          Log.e(TAG, "Error while handling external browser challenge. Cannot launch external browser. Cancelling login.");
-          IdmAuthenticationPlugin.invokeCallbackError(_loginCallback, PluginErrorCodes.EXTERNAL_BROWSER_LAUNCH_FAILED);
-          _completionHandler.cancel();
-        }
+        handleExternalBrowserChallenge(fields);
         break;
       case INVALID_REDIRECT_ENCOUNTERED:
         // The google way of redirecting to app via http://localhost
@@ -477,8 +470,24 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
     }
     else if (challenge.getChallengeType() == OMAuthenticationChallengeType.EXTERNAL_BROWSER_INVOCATION_REQUIRED)
     {
-      String externalBrowserURL = (String) fields.get(OMSecurityConstants.Challenge.EXTERNAL_BROWSER_LOAD_URL);
-      Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(externalBrowserURL)).addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
+      handleExternalBrowserChallenge(fields);
+    }
+  }
+
+  private void handleExternalBrowserChallenge(Map<String, Object> fields) {
+    bindChromeTabs();
+    Uri externalBrowserURL = Uri.parse((String) fields.get(OMSecurityConstants.Challenge.EXTERNAL_BROWSER_LOAD_URL));
+    _customCustomTabActivityHelper.mayLaunchUrl(externalBrowserURL, null, null);
+    CustomTabsIntent.Builder intentBuilder = new CustomTabsIntent.Builder(_customCustomTabActivityHelper.getSession());
+    intentBuilder.setShowTitle(true);
+    intentBuilder.enableUrlBarHiding();
+    CustomTabActivityHelper.openCustomTab(_mainActivity, intentBuilder.build(), externalBrowserURL, new ExternalBrowserFallback());
+  }
+
+  private class ExternalBrowserFallback implements CustomTabActivityHelper.CustomTabFallback {
+    @Override
+    public void openUri(Activity activity, Uri uri) {
+      Intent intent = new Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
       if (intent.resolveActivity(_mainActivity.getPackageManager()) != null)
       {
         _mainActivity.startActivity(intent);
@@ -487,7 +496,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
       else
       {
         Log.e(TAG, "Error while handling external browser challenge. Cannot launch external browser. Cancelling login.");
-        IdmAuthenticationPlugin.invokeCallbackError(_logoutCallback, PluginErrorCodes.EXTERNAL_BROWSER_LAUNCH_FAILED);
+        IdmAuthenticationPlugin.invokeCallbackError(_loginCallback, PluginErrorCodes.EXTERNAL_BROWSER_LAUNCH_FAILED);
         _completionHandler.cancel();
       }
     }
@@ -515,6 +524,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
       // during login, because the purpose of the activity is served either ways.
       //
       _finishWebView();
+      unbindChromeTabs();
 
       if (securityEx != null)
       {
@@ -538,6 +548,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
     try
     {
       _finishWebView();
+      unbindChromeTabs();
 
       if (securityEx != null)
       {
@@ -601,6 +612,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
     _mainActivity.runOnUiThread(() -> {
       _localBroadcastManager.registerReceiver(_broadcastReceiver, new IntentFilter(WebViewActivity.CANCEL_WEB_VIEW_INTENT));
       Intent intent = new Intent(_mainActivity, WebViewActivity.class);
+      intent.putStringArrayListExtra(WebViewActivity.BUTTONS_WEB_VIEW_PROP, _webViewButtonsArray);
       _mainActivity.startActivity(intent);
       _isWebViewChallenge = true;
     });
@@ -803,6 +815,29 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
     return tokenRelayResp != null && (Boolean) tokenRelayResp;
   }
 
+  private void bindChromeTabs() {
+    if (_customCustomTabActivityHelper == null)
+      _customCustomTabActivityHelper = new CustomTabActivityHelper();
+
+    _customCustomTabActivityHelper.bindCustomTabsService(_mainActivity);
+    _customCustomTabActivityHelper.setConnectionCallback(new CustomTabActivityHelper.ConnectionCallback() {
+      @Override
+      public void onCustomTabsConnected() {
+        _externalBrowserChallengeResponseExpected = true;
+      }
+
+      @Override
+      public void onCustomTabsDisconnected() {}
+    });
+  }
+
+  private void unbindChromeTabs() {
+    if (_customCustomTabActivityHelper == null)
+      return;
+
+    _customCustomTabActivityHelper.unbindCustomTabsService(_mainActivity);
+  }
+
   private static final String TAG = IdmAuthentication.class.getSimpleName();
   private static final String _AUTHORIZATION = "Authorization";
   private static final String _TOKEN_FORMAT = "%s %s";
@@ -811,7 +846,25 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
   private static final String _CHALLENGE_ERROR = "error";
   private static final String _REFRESH_EXPIRED_TOKENS = "refreshExpiredTokens";
   private static final String _IS_AUTHENTICATED_KEY = "isAuthenticated";
+  private static final String PROP_ENABLE_WEB_VIEW_BUTTONS = "EnableWebViewButtons";
 
+  /**
+   * Creates list of strings from JSON object used to identify buttons on web view.
+   * @param buttonArray of buttons
+   * @return list containing buttons to be displayed on web view.
+   */
+  private ArrayList<String> getWebViewButtonsArray(JSONArray buttonArray) {
+    ArrayList<String> availableButtons = new ArrayList<String>();
+    if (buttonArray == null || buttonArray.length() == 0) {
+      return availableButtons;
+    }
+
+    for (int i = 0; i < buttonArray.length(); i++) {
+      availableButtons.add(buttonArray.optString(i));
+    }
+
+    return availableButtons;
+  }
 
   /**
    * Static because this is shared with the WebViewActivity. This cannot be sent to the activity via putExtra
@@ -825,6 +878,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
   private final Map<String, Object> _props;
   private final BroadcastReceiver _broadcastReceiver;
   private final LocalBroadcastManager _localBroadcastManager;
+  private final ArrayList<String> _webViewButtonsArray;
   private CallbackContext _loginCallback;
   private CallbackContext _logoutCallback;
   private CallbackContext _timeoutCallback;
@@ -832,6 +886,7 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
   private OMAuthenticationChallengeType _challengeType;
   private OMMobileSecurityService _ommss;
   private boolean _isWebViewChallenge;
+  private CustomTabActivityHelper _customCustomTabActivityHelper;
   private boolean _externalBrowserChallengeResponseExpected;
   private CountDownLatch _setupLatch = new CountDownLatch(1);
   private OMMobileSecurityException _setupException;

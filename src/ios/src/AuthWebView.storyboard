@@ -71,6 +71,7 @@
                         <outlet property="cancelButton" destination="kbI-2K-D09" id="8p3-ei-ih4"/>
                         <outlet property="forwardButton" destination="Rml-Xz-hi7" id="ZN7-GY-Icb"/>
                         <outlet property="refreshButton" destination="th1-Zf-3Oq" id="DOe-jP-IbO"/>
+                        <outlet property="toolbar" destination="zFm-FP-CCd" id="fdJ-JZ-EQM"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="pNs-U5-nuf" userLabel="First Responder" sceneMemberID="firstResponder"/>

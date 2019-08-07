@@ -12,6 +12,7 @@ exports.defineAutoTests = function() {
       .logoutUrl(window.TestConfig.websso.logoutUrl)
       .loginSuccessUrl(window.TestConfig.websso.loginSuccessUrl)
       .loginFailureUrl(window.TestConfig.websso.loginFailureUrl)
+      .enableWebViewButtons(window.TestConfig.websso.enableWebViewButtons)
       .build();
   var samlProps = new idmAuthFlowPlugin.FedAuthPropertiesBuilder()
       .appName('samlTest')
@@ -21,6 +22,7 @@ exports.defineAutoTests = function() {
       .loginFailureUrl(window.TestConfig.saml.loginFailureUrl)
       .logoutSuccessUrl(window.TestConfig.saml.logoutSuccessUrl)
       .logoutFailureUrl(window.TestConfig.saml.logoutFailureUrl)
+      .enableWebViewButtons(window.TestConfig.websso.enableWebViewButtons)
       .parseTokenRelayResponse(true)
       .build();
 

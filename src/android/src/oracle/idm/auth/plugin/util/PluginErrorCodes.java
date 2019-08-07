@@ -1,5 +1,7 @@
 package oracle.idm.auth.plugin.util;
 
+import oracle.idm.mobile.OMErrorCode;
+
 public interface PluginErrorCodes {
   String INVALID_REDIRECT_CHALLENGE = "P1001";
   String UNTRUSTED_CHALLENGE = "P1002";
@@ -14,9 +16,10 @@ public interface PluginErrorCodes {
   String UNUSED_AND_DEPRECATED_ERR_CODE = "P1011";
   String EXTERNAL_BROWSER_LAUNCH_FAILED = "P1012";
   String SETUP_ERROR = "10015"; // Reuse existing code from IDM SDK
-  String AUTHENTICATION_FAILED = "10408"; // Reuse existing code from IDM SDK
-  String AUTHENTICATION_CANCELLED = "10029"; // Reuse existing code from IDM SDK
+  String AUTHENTICATION_FAILED = OMErrorCode.AUTHENTICATION_FAILED.getErrorCode(); // Reuse existing code from IDM SDK
+  String AUTHENTICATION_CANCELLED = OMErrorCode.USER_CANCELED_AUTHENTICATION.getErrorCode(); // Reuse existing code from IDM SDK
   String INCORRECT_CURRENT_AUTHDATA = "70009"; // Reuse code from iOS SDK
+  String INTERNAL_ERROR = OMErrorCode.INTERNAL_ERROR.getErrorCode(); // Reuse code from iOS SDK
 
   // Local auth related
   String LOCAL_AUTHENTICATOR_NOT_FOUND = "70001";

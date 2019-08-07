@@ -7,6 +7,7 @@
 
 @interface AuthViewController ()
 @property (weak, nonatomic) OMMobileSecurityService* ommssInstance;
+@property (weak, nonatomic) NSMutableArray* availableButtonList;
 @property (nonatomic) BOOL isLogin;
 @property (strong, nonatomic) WKProcessPool *processPool;
 @property (nonatomic) BOOL wkWebViewEnabled;
@@ -19,6 +20,7 @@
 #endif
 
 @implementation AuthViewController
+@synthesize toolbar;
 
 - (IBAction)cancel:(id)sender {
   IdmLog(@"Cancel invoked.");
@@ -32,6 +34,10 @@
   self.ommssInstance = ommss;
 }
 
+- (void) setAvailableWebButtonList:(NSMutableArray*) availableButtons {
+  self.availableButtonList = availableButtons;
+}
+
 - (void) setIsLoginChallenge:(BOOL) isLoginChallenge {
   self.isLogin = isLoginChallenge;
 }
@@ -42,6 +48,7 @@
 
 - (void) viewDidLoad {
   [super viewDidLoad];
+  [self createToolbar];
 
   if (self.isLogin) {
     [self.backButton setEnabled:YES];
@@ -52,6 +59,28 @@
 
   if (self.wkWebViewEnabled && self.wkWebView == nil) {
     [self createWKWebview];
+  }
+}
+- (void)createToolbar {
+  NSMutableArray *buttonItems = [[NSMutableArray alloc] init];
+  BOOL hasAllButtons = [self.availableButtonList containsObject:@"ALL"];
+
+  if ([self.availableButtonList containsObject:@"NONE"]) {
+    toolbar.hidden = true;
+  } else {
+    if (hasAllButtons || [self.availableButtonList containsObject:@"BACK"]) {
+      [buttonItems addObject:self.backButton];
+    }
+    if (hasAllButtons || [self.availableButtonList containsObject:@"FORWARD"]) {
+      [buttonItems addObject:self.forwardButton];
+    }
+    if (hasAllButtons || [self.availableButtonList containsObject:@"REFRESH"]) {
+      [buttonItems addObject:self.refreshButton];
+    }
+    if (hasAllButtons || [self.availableButtonList containsObject:@"CANCEL"]) {
+      [buttonItems addObject:self.cancelButton];
+    }
+    [toolbar setItems:buttonItems];
   }
 }
 

@@ -3,28 +3,6 @@
  * The Universal Permissive License (UPL), Version 1.0
  */
 
-/*BEGIN HISTORY----
- NAME
- OMBiometricAuthenticator - Oracle mobile Biometric Authenticator class
- 
- DESCRIPTION
- OMBiometricAuthenticator - Oracle mobile Biometric Authenticator class
- 
- RELATED DOCUMENTS
- None
- 
- PROTOCOLS
- OMBiometricFallbackDelegate
- 
- EXAMPLES
- None
- 
- NOTES
- None
- 
- MODIFIED   (MM/DD/YY)
- shivap      04/29/19 - Creation
- ----END HISTORY*/
 
 #import "OMBiometricAuthenticator.h"
 #import "OMAuthData.h"

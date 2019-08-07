@@ -30,19 +30,6 @@ exports.defineAutoTests = function() {
       .logoutURL(window.TestConfig.oauthIdcsAuthCode.logoutUrl)
       .browserMode(idmAuthFlowPlugin.OAuthPropertiesBuilder.BrowserMode.External)
       .build();
-  var oauthMcsResOwnerProps = new idmAuthFlowPlugin.OAuthPropertiesBuilder()
-      .appName('oauthMcsResOwnerTest')
-      .oAuthAuthorizationGrantType(window.TestConfig.oauthMcsResOwner.grantType)
-      .oAuthTokenEndpoint(window.TestConfig.oauthMcsResOwner.tokenUrl)
-      .oAuthClientID(window.TestConfig.oauthMcsResOwner.clientId)
-      .oAuthClientSecret(window.TestConfig.oauthMcsResOwner.secret)
-      .challengeCallback(function(fields, proceed) {
-        fields.username_key = window.TestConfig.oauthMcsResOwner.userName;
-        fields.password_key = window.TestConfig.oauthMcsResOwner.password;
-        proceed(fields);
-      })
-      .customAuthHeaders({'X-User-Identity-Domain-Name': 'yoda'})
-      .build();
   var oauthIdcsResOwnerProps = new idmAuthFlowPlugin.OAuthPropertiesBuilder()
       .appName('oauthIdcsResOwnerTest')
       .oAuthAuthorizationGrantType(window.TestConfig.oauthIdcsResOwner.grantType)
@@ -55,7 +42,6 @@ exports.defineAutoTests = function() {
         proceed(fields);
       })
       .build();
-
   var oauthIdcsClientCredProps = new idmAuthFlowPlugin.OAuthPropertiesBuilder()
       .appName('oauthIdcsClientCredTest')
       .oAuthAuthorizationGrantType(window.TestConfig.oauthIdcsClientCred.grantType)

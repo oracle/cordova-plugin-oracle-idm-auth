@@ -5,6 +5,7 @@
 #import "IdmAuthentication.h"
 #import "AuthViewController.h"
 #import "IDMMobileSDKv2Library.h"
+#import <SafariServices/SafariServices.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -12,6 +13,8 @@ NS_ASSUME_NONNULL_BEGIN
 #define UNSUPPORTED_CHALLENGE_ERR_CODE @"P1003"
 #define UNTRUSTED_SERVER_ERR_CODE @"P1002"
 #define INVALID_REDIRECT_ERR_CODE @"P1001"
+#define EXTERNAL_BROWSER_LAUNCH_FAILED @"P1012"
+#define AUTHENTICATION_FAILED @"10408" // Reuse existing code from IDM SDK
 #define SESSION_TIMEOUT @"SESSION_TIMEOUT"
 #define IDLE_TIMEOUT @"IDLE_TIMEOUT"
 #define OK @"OK"
@@ -20,6 +23,7 @@ NS_ASSUME_NONNULL_BEGIN
 #define AUTH_VIEW @"AuthView"
 #define AUTH_WEB_VIEW @"AuthWebView"
 #define CHALLENGE_ERROR @"error"
+#define PROP_ENABLE_WEB_VIEW_BUTTONS @"EnableWebViewButtons"
 
 
 #ifdef DEBUG
@@ -28,7 +32,7 @@ NS_ASSUME_NONNULL_BEGIN
 #  define IdmLog(...)
 #endif
 
-@interface IdmAuthentication()
+@interface IdmAuthentication()<SFSafariViewControllerDelegate>
 
 /**
  * Authentication properties used for creating the OMMSS instance.
@@ -79,14 +83,14 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign) BOOL                                 isWkWebViewEnabled;
 
 /**
- * Boolean to indicate if app is expecting response from external browser.
- */
-@property (nonatomic, assign) BOOL                                 isExpectingExternalBrowserResponse;
-
-/**
  * Error when setup is completed.
  */
 @property (nonatomic, nullable) NSError*                           setupError;
+
+/**
+ * List of buttons to be displayed.
+ */
+@property (nonatomic, strong, nullable) NSMutableArray*            availableButtons;
 
 /**
  * Callback method reference to proceed when setup is completed.
@@ -96,6 +100,12 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 
 @implementation IdmAuthentication
+
+BOOL _isExpectingExternalBrowserResponse;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+SFSafariViewController *_safariVC;
+#pragma clang diagnostic pop
 
 /**
  * Create a new instance of IdmAuthentication using the specified configuration properties.
@@ -113,6 +123,8 @@ NS_ASSUME_NONNULL_BEGIN
     self.properties = properties;
     self.baseViewController = baseVc;
 
+    self.availableButtons = (NSMutableArray*) [properties valueForKey:PROP_ENABLE_WEB_VIEW_BUTTONS];
+
     NSMutableDictionary* authProps = [NSMutableDictionary dictionaryWithDictionary:properties];
     NSSet* scopeSet = [self extractScopeSet:properties];
 
@@ -122,7 +134,7 @@ NS_ASSUME_NONNULL_BEGIN
 
     self.isWkWebViewEnabled = (BOOL) authProps[OM_PROP_ENABLE_WKWEBVIEW];
     self.isWebViewLaunched = NO;
-    self.isExpectingExternalBrowserResponse = NO;
+    _isExpectingExternalBrowserResponse = NO;
     NSError* error;
     self.ommss = [[OMMobileSecurityService alloc] initWithProperties:authProps delegate:self error:&error];
 
@@ -354,8 +366,9 @@ withForgetOption:(BOOL) forget {
 }
 
 - (void) submitExternalBrowserChallengeResponse: (NSURL*) incomingUrl {
-  if (self.isExpectingExternalBrowserResponse) {
-    self.isExpectingExternalBrowserResponse = NO;
+  if (_isExpectingExternalBrowserResponse) {
+    // Reset the value of _isExpectingExternalBrowserResponse after didFinishAuthentication or didFinishLogout
+    // in the cleanup activity.
     NSMutableDictionary* fields = [[NSMutableDictionary alloc] init];
     fields[@"frontChannelResponse"] = incomingUrl;
     self.challenge.authChallengeHandler(fields, OMProceed);
@@ -413,21 +426,18 @@ completedSetupWithConfiguration:(OMMobileSecurityConfiguration *)configuration
       }
     } else {
       IdmLog(@"Invalid redirect challenge received. Throwing error to callback");
-      [self dismissAuthWebViewIfNeeded];
+      [self dismissAuthView];
       [self throwErrorCodeToLoginCallback:INVALID_REDIRECT_ERR_CODE];
     }
   } else if (challenge.challengeType == OMChallengeExternalBrowser) {
-    IdmLog(@"Handling external browser challenge");
-    NSURL *url = [fields valueForKey:@"frontChannelURL"];
-    [[UIApplication sharedApplication] openURL:url];
-    self.isExpectingExternalBrowserResponse = YES;
+    [self handleExternalBrowserChallenge: [fields valueForKey:@"frontChannelURL"]];
   } else if (challenge.challengeType == OMChallengeServerTrust) {
     IdmLog(@"Untrusted server challenge received. Throwing error to callback");
-    [self dismissAuthWebViewIfNeeded];
+    [self dismissAuthView];
     [self throwErrorCodeToLoginCallback:UNTRUSTED_SERVER_ERR_CODE];
   } else {
     IdmLog(@"Unsupported challenge %lu.", (unsigned long)challenge.challengeType);
-    [self dismissAuthWebViewIfNeeded];
+    [self dismissAuthView];
     [self throwErrorCodeToLoginCallback:UNSUPPORTED_CHALLENGE_ERR_CODE];
   }
 }
@@ -438,7 +448,7 @@ completedSetupWithConfiguration:(OMMobileSecurityConfiguration *)configuration
 -(void) mobileSecurityService:(OMMobileSecurityService *)mss
         didFinishAuthentication:(OMAuthenticationContext *)context
         error:(NSError *)error {
-  [self dismissAuthWebViewIfNeeded];
+  [self dismissAuthView];
 
   if (error) {
     IdmLog(@"didFinishAuthentication error %@", error);
@@ -474,10 +484,7 @@ completedSetupWithConfiguration:(OMMobileSecurityConfiguration *)configuration
     }
                loginChallenge:NO];
   } else if (challenge.challengeType == OMChallengeExternalBrowser) {
-    IdmLog(@"Handling logout external browser challenge");
-    NSURL *url = [fields valueForKey:@"LogoutURL"];
-    [[UIApplication sharedApplication] openURL:url];
-    self.isExpectingExternalBrowserResponse = YES;
+    [self handleExternalBrowserChallenge: [fields valueForKey:@"LogoutURL"]];
   }
   IdmLog(@"didReceiveLogoutAuthenticationChallenge complete..");
 }
@@ -487,7 +494,7 @@ completedSetupWithConfiguration:(OMMobileSecurityConfiguration *)configuration
  */
 -(void) mobileSecurityService:(OMMobileSecurityService *)mss
         didFinishLogout:(NSError *)error {
-  [self dismissAuthWebViewIfNeeded];
+  [self dismissAuthView];
 
   if (error) {
     IdmLog(@"didFinishLogout error %@", error);
@@ -549,6 +556,7 @@ completedSetupWithConfiguration:(OMMobileSecurityConfiguration *)configuration
     UIStoryboard *mainStoryboard = [UIStoryboard storyboardWithName:AUTH_WEB_VIEW bundle:nil];
     self.authViewController = (AuthViewController*) [mainStoryboard instantiateViewControllerWithIdentifier:AUTH_VIEW];
     [self.authViewController setAuthenticationInstance:self.ommss];
+    [self.authViewController setAvailableWebButtonList:self.availableButtons];
     [self.authViewController isWkWebViewEnabled:self.isWkWebViewEnabled];
     [self.authViewController setIsLoginChallenge:isLogin];
     [self.baseViewController presentViewController:self.authViewController animated:YES completion:^{
@@ -571,14 +579,49 @@ completedSetupWithConfiguration:(OMMobileSecurityConfiguration *)configuration
   });
 }
 
+/**
+ * Method to handle case when app is using EXTERNAL browser.
+ * Uses SFSafariViewController for iOS9 and later, Safari browser for older
+ * Official support for the plugin is only from iOS 10.3, but this is a cheap
+ * fallback for older devices.
+ */
+- (void) handleExternalBrowserChallenge:(NSURL *) url {
+  IdmLog(@"Handling external browser challenge");
+  BOOL urlLaunched = NO;
+  if (@available(iOS 9.0, *)) {
+    SFSafariViewController *safariVC =
+    [[SFSafariViewController alloc] initWithURL:url];
+    safariVC.delegate = self;
+    _safariVC = safariVC;
+    [self.baseViewController presentViewController:safariVC animated:YES completion:nil];
+    urlLaunched = YES;
+  } else {
+    // Older iOS, use mobile Safari
+    urlLaunched = [[UIApplication sharedApplication] openURL:url];
+  }
+
+  if (!urlLaunched) {
+    [self cleanUpExternalAuthViewState];
+    [self throwErrorCodeToLoginCallback:EXTERNAL_BROWSER_LAUNCH_FAILED];
+  } else {
+    _isExpectingExternalBrowserResponse = YES;
+  }
+}
 
 /**
- * Method to dismiss the webview view controller.
+ * Method to dismiss any auth view that is open.
  */
-- (void) dismissAuthWebViewIfNeeded {
-  if (!self.isWebViewLaunched) {
+- (void) dismissAuthView {
+  [self dismissInAppBrowser];
+  [self dismissAuthWebView];
+}
+
+/**
+ * Method to dismiss auth web view used in case of EMBEDDED browser.
+ */
+- (void) dismissAuthWebView {
+  if (!self.isWebViewLaunched)
     return;
-  }
 
   IdmLog(@"dismissAuthWebView invoked");
 
@@ -590,6 +633,36 @@ completedSetupWithConfiguration:(OMMobileSecurityConfiguration *)configuration
 
   IdmLog(@"dismissAuthWebView completed");
 }
+
+/**
+ * Dismisses the appropriate external view that was launched in case of EXTERNAL browser.
+ */
+- (void)dismissInAppBrowser {
+  if (!_isExpectingExternalBrowserResponse)
+    return;
+
+  IdmLog(@"dismissInAppBrowser invoked");
+
+  dispatch_async(dispatch_get_main_queue(), ^{
+    if (@available(iOS 9.0, *)) {
+      if (_safariVC)
+        [_safariVC dismissViewControllerAnimated:YES completion:nil];
+    }
+
+    [self cleanUpExternalAuthViewState];
+  });
+
+  IdmLog(@"dismissInAppBrowser completed");
+}
+
+/**
+ * Cleans up external view state.
+ */
+- (void) cleanUpExternalAuthViewState {
+  _safariVC = nil;
+  _isExpectingExternalBrowserResponse = NO;
+}
+
 
 /**
  * Method used to clear the login / logout callback and the challenge references.
@@ -653,6 +726,24 @@ completedSetupWithConfiguration:(OMMobileSecurityConfiguration *)configuration
   }
 
   return headers;
+}
+
+
+#pragma mark - SFSafariViewControllerDelegate
+
+- (void)safariViewControllerDidFinish:(SFSafariViewController *)controller NS_AVAILABLE_IOS(9.0) {
+  // Ignore this call if the safari view controller do not match.
+  if (controller != _safariVC)
+    return;
+
+  // Ignore this call if there is no authorization flow in progress.
+  if (!_isExpectingExternalBrowserResponse)
+    return;
+
+  [self cleanUpExternalAuthViewState];
+
+  // If we reach here, that means the login process was not completed successfully.
+  [self throwErrorCodeToLoginCallback:AUTHENTICATION_FAILED];
 }
 
 @end

@@ -145,6 +145,42 @@ exports.defineAutoTests = function() {
     });
   };
 
+  var enumArrayValidator = function(Builder, property, enumObj) {
+    for (var e in enumObj) {
+      if (enumObj.hasOwnProperty(e)) {
+        it('should allow array with input ' + enumObj[e], function() {
+          expect(function() {
+            var b = new Builder();
+            b[property].call(b, [enumObj[e]]);
+          }).not.toThrow();
+        });
+        it('should not allow ' + enumObj[e] + ' alongwith invalid input', function() {
+          expect(function() {
+            var b = new Builder();
+            b[property].call(b, [enumObj[e],"INVALID"]);
+          }).toThrow();
+        });
+      }
+    }
+    it('should allow empty array', function() {
+      expect(function() {
+        var b = new Builder();
+        b[property].call(b, []);
+      }).not.toThrow();
+    });
+    it('should not allow array with null input', function() {
+      expect(function() {
+        var b = new Builder();
+        b[property].call(b, [null]);
+      }).toThrow();
+    });
+    it('should not allow array with undefined input', function() {
+      expect(function() {
+        var b = new Builder();
+        b[property].call(b, [undefined]);
+      }).toThrow();
+    });
+  };
 
   window.TestUtil = {
     validator: function(Builder, property, type, enumObj) {
@@ -154,8 +190,10 @@ exports.defineAutoTests = function() {
         randomStringValidator(Builder, property, type === 'string');
         if (type === 'enum')
           enumStringValidator(Builder, property, enumObj);
-        if (type === 'url')
+        else if (type === 'url')
           urlValidator(Builder, property);
+        else if (type === 'enumArray')
+          enumArrayValidator(Builder, property, enumObj);
         fnValidator(Builder, property, type === 'function');
         objectValidator(Builder, property, type === 'object');
         numberValidator(Builder, property, type === 'number');

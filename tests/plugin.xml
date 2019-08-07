@@ -3,7 +3,7 @@
   xmlns:rim="http://www.blackberry.com/ns/widgets"
   xmlns:android="http://schemas.android.com/apk/res/android"
   id="cordova-plugin-oracle-idm-auth-tests"
-  version="1.1.9">
+  version="1.2.0">
   <name>cordova-plugin-oracle-idm-auth-tests</name>
   <description>JasmineJS tests written for cordova-plugin-oracle-idm-auth plugin</description>
 
@@ -38,8 +38,6 @@
   </js-module>
   <js-module src="pin-auth-tests.js" name="pin.auth.tests">
   </js-module>
-
-  <!-- Bad env -->
   <js-module src="mcs-http-basic-auth-flow-tests.js" name="mcs.http.basic.auth.flow.tests">
   </js-module>
 

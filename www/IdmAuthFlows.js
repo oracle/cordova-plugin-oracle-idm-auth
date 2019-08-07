@@ -172,6 +172,8 @@ var IdmAuthFlows = function() {
     LoginFailureURL:'LoginFailureURL',
     // boolean
     ParseTokenRelayResponse: 'ParseTokenRelayResponse',
+    // Array
+    EnableWebViewButtons: 'EnableWebViewButtons',
     // string - url
     LogoutSuccessURL:'LogoutSuccessURL',
     // string - url
@@ -307,6 +309,36 @@ var IdmAuthFlows = function() {
   {
     if (typeof input !== 'function') {
       throw new Error('Invalid value ' + input + ' passed for ' + field + '. A valid function should be passed.');
+    }
+  };
+
+  /**
+   * Utility method to validate buttons array
+   */
+  var assertButtonsArray = function(input, field)
+  {
+    if (input.constructor !== Array) {
+      throw new Error('Invalid value ' + input + ' passed for ' + field + '. A valid array should be passed.');
+    }
+    else {
+      var buttons = [];
+      input.forEach(function(webViewButton) {
+        if (!FedAuthPropertiesBuilder.Buttons.hasOwnProperty(webViewButton)) {
+          throw new Error('Invalid value ' + input + ' passed for ' + field + '. Should be one from FedAuthPropertiesBuilder.Buttons.');
+        }
+        else {
+          if(buttons.includes(webViewButton)) {
+            throw new Error('Duplicate value ' + webViewButton + ' passed for ' + field + '. Value already present.');
+          }
+          else {
+            buttons.push(webViewButton);
+            if(buttons.includes(FedAuthPropertiesBuilder.Buttons.ALL) && buttons.length > 1)
+              throw new Error('Invalid value ' + input + ' passed for ' + field + '. ALL cannot be present with other button types');
+            if(buttons.includes(FedAuthPropertiesBuilder.Buttons.NONE) && buttons.length > 1)
+              throw new Error('Invalid value ' + input + ' passed for ' + field + '. NONE cannot be present with other button types');
+          }
+        }
+      })
     }
   };
 
@@ -1114,6 +1146,19 @@ var IdmAuthFlows = function() {
     };
 
     /**
+     * @function enableWebViewButtons
+     * @memberof FedAuthPropertiesBuilder.prototype
+     * @param {Array.<string>} actionButtonList - List of buttons to be enabled in web view. Defaults to ['ALL'].
+     * @return {FedAuthPropertiesBuilder}
+     */
+    this.enableWebViewButtons = function(actionButtonList)
+    {
+      assertButtonsArray(actionButtonList, authPropertyKeys.EnableWebViewButtons);
+      this.put(authPropertyKeys.EnableWebViewButtons, actionButtonList);
+      return this;
+    };
+
+    /**
      * @function enableWkWebView
      * @memberof FedAuthPropertiesBuilder.prototype
      * @param {boolean} enable - if WKWebView should be enabled. Applicable only for iOS.
@@ -1264,6 +1309,48 @@ var IdmAuthFlows = function() {
   });
   FedAuthPropertiesBuilder.prototype.constructor = FedAuthPropertiesBuilder;
 
+  /**
+   * Enum values for types of button supported.
+   * @enum
+   * @readonly
+   * @memberof FedAuthPropertiesBuilder
+   */
+  FedAuthPropertiesBuilder.Buttons = {
+    /**
+     * Button type is BACK. This button on the webview can be used by the user to
+     * navigate back if they navigate away from the login page and wants to come back.
+     * @type {string}
+     */
+    BACK: 'BACK',
+    /**
+     * Button type is FORWARD. This button on the webview can be used by the user to
+     * navigate to the next from login page.
+     * @type {string}
+     */
+    FORWARD: 'FORWARD',
+    /**
+     * Button type is REFRESH. This button on the webview can be used by the user to
+     * refresh the current login screen.
+     * @type {string}
+     */
+    REFRESH: 'REFRESH',
+    /**
+     * Button type is CANCEL. This button on the webview can be used by the user to
+     * cancel the current flow of navigation to login screen and go back to home screen.
+     * @type {string}
+     */
+    CANCEL: 'CANCEL',
+    /**
+     * Button type is ALL. Represents scenario where all the buttons are to be displayed
+     * @type {string}
+     */
+    ALL: 'ALL',
+    /**
+     * Button type is NONE. Represents scenario where none of the button is to be displayed
+     * @type {string}
+     */
+    NONE: 'NONE'
+  };
   /**
    * @class OAuthPropertiesBuilder
    * @classdesc This is the builder for OAuth.

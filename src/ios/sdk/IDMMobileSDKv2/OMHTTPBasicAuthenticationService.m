@@ -22,7 +22,7 @@
 @implementation OMHTTPBasicAuthenticationService
 -(void)performAuthentication:(NSMutableDictionary *)authData
                        error:(NSError *__autoreleasing *)error
-{
+{    
     self.requestPauseSemaphore = dispatch_semaphore_create(0);
     self.usePreviousCredential = NO;
     self.configuration = (OMHTTPBasicConfiguration *)self.mss.configuration;
@@ -36,7 +36,7 @@
 {
     self.authData = authData;
     [self retrieveRememberCredentials:self.authData];
-
+    
     if (![self shouldPerformAutoLogin:self.authData])
  {
      NSString *masked  = [self maskPassword:
@@ -46,12 +46,12 @@
          [self.authData setObject:masked forKey:OM_PASSWORD];
      }
 }
-
+    
     if (self.configuration.offlineAuthAllowed &&
         [self performOfflineAuthentication])
     {
         NSError *error = nil;
-
+        
         if (self.maxRetryError)
         {
             error = [OMObject createErrorWithCode:OMERR_MAX_RETRIES_REACHED];
@@ -90,7 +90,7 @@
             if ((![OMObject checkConnectivityToHost:self.configuration.loginURL]))
                 offlineAuth = true;
     }
-
+    
     if (!offlineAuth)
     {
         OMAuthenticationContext *localContext = [self.mss.cacheDict
@@ -99,7 +99,7 @@
         {
             NSURLResponse *response= nil;
             NSError *error = nil;
-
+            
             NSMutableURLRequest *urlRequest = [[NSMutableURLRequest alloc]
                                         initWithURL:self.configuration.loginURL];
             [urlRequest setCachePolicy:
@@ -107,12 +107,12 @@
             [urlRequest setAllHTTPHeaderFields:[self requestHeaders]];
             [urlRequest setHTTPMethod:@"GET"];
             [urlRequest setTimeoutInterval:20];
-
+            
             [OMHTTPBasicAuthenticationService
                                         sendSynchronousRequest:urlRequest
                                         returningResponse:&response
                                         error:&error];
-
+            
             /* If cookies are valid do offline auth */
             if(([(NSHTTPURLResponse*)response statusCode] / 100) == 2)
             {
@@ -120,7 +120,7 @@
             }
 
         }
-
+        
     }
 
     if (offlineAuth)
@@ -146,7 +146,7 @@
             {
                 [self.authData setValue:[NSNull null] forKey:OM_USERNAME];
             }
-
+            
             if (![self.password length])
             {
                 [self.authData setValue:[NSNull null] forKey:OM_PASSWORD];
@@ -156,7 +156,7 @@
                 [self.authData setValue:[self maskPassword:
                                          [self.authData valueForKey:OM_PASSWORD]]
                                  forKey:OM_PASSWORD];
-
+                
             }
             if (![self.identityDomain length] &&
                 self.configuration.collectIdentityDomain)
@@ -174,7 +174,7 @@
                                         DISPATCH_TIME_FOREVER);
 
             }
-
+            
         }
         if (![self.mss.authManager isAuthRequestInProgress])
         {
@@ -212,6 +212,7 @@
             self.context = localContext;
             self.context.userName = self.userName;
             self.context.authMode = OMLocal;
+            self.context.offlineCredentialKey = key;
             [self.mss.cacheDict setObject:self.context
                                    forKey:self.mss.authKey];
             [self storeRememberCredentials:self.authData];
@@ -232,6 +233,10 @@
         }
         else
         {
+            NSError *error = [self invalidCredsError];
+            [self.authData setObject:error
+                              forKey:OM_MOBILESECURITY_EXCEPTION];
+            [self.authData setValue:@"" forKey:OM_PASSWORD];
             return [self performOfflineAuthentication];
         }
     }
@@ -247,10 +252,38 @@
 
     NSURLSessionConfiguration *sessionConfig = [NSURLSessionConfiguration
                                                 defaultSessionConfiguration];
+    sessionConfig.requestCachePolicy = NSURLRequestReloadIgnoringCacheData;
 
-    if ([self requestHeaders])
+    NSDictionary *headersDict = [self requestHeaders];
+    if (headersDict)
     {
-        [sessionConfig setHTTPAdditionalHeaders:[self requestHeaders]];
+        [sessionConfig setHTTPAdditionalHeaders:headersDict];
+    }
+    
+    if (self.configuration.identityDomainInHeader
+        && self.identityDomain == nil)
+    {
+        self.usePreviousCredential = YES;
+        [self performSelector:@selector(sendChallenge:)
+                     onThread:self.callerThread
+                   withObject:nil
+                waitUntilDone:false];
+        dispatch_semaphore_wait(self.requestPauseSemaphore,
+                                DISPATCH_TIME_FOREVER);
+        NSString *identityDomain = [self.authData valueForKey:OM_IDENTITY_DOMAIN];
+
+        if (identityDomain)
+        {
+            NSMutableDictionary *dict = [NSMutableDictionary dictionaryWithDictionary:sessionConfig.HTTPAdditionalHeaders];
+            
+            NSString *headerName = (self.configuration.identityDomainHeaderName)
+            ? self.configuration.identityDomainHeaderName :
+            OM_DEFAULT_IDENTITY_DOMAIN_HEADER;
+            
+            [dict setObject:identityDomain forKey:headerName];
+            [sessionConfig setHTTPAdditionalHeaders:dict];
+
+        }
 
     }
     NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfig
@@ -262,7 +295,7 @@
                                              objectForKey:self.mss.authKey];
 
     [localContext stopTimers];
-
+    
    self.sessionDataTask = [session dataTaskWithURL:self.configuration.loginURL
             completionHandler:^(NSData * _Nullable data,
                                 NSURLResponse * _Nullable response,
@@ -281,7 +314,7 @@
                                    OMERR_MAX_RETRIES_REACHED];
             if ([self shouldPerformAutoLogin:self.authData])
             {
-
+                
                 [[NSUserDefaults standardUserDefaults] setObject:[NSNumber numberWithBool:false]
                              forKey:[NSString stringWithFormat:@"%@_%@",
                                      self.mss.rememberCredKey,OM_AUTH_SUCCESS]];
@@ -303,20 +336,9 @@
         }
         else if(([(NSHTTPURLResponse*)response statusCode] / 100) != 2)
         {
-            if (self.configuration.collectIdentityDomain)
-            {
-                authError = [OMObject createErrorWithCode:
-                         OMERR_INVALID_USERNAME_PASSWORD_IDENTITY];
-            }
-            else
-            {
-                authError = [OMObject createErrorWithCode:
-                         OMERR_INVALID_USERNAME_PASSWORD];
-
-            }
-
+            authError = [self invalidCredsError];
         }
-
+        
         if (authError)
         {
             self.context = nil;
@@ -351,7 +373,7 @@
                 [[OMCredentialStore sharedCredentialStore]
                  saveCredential:credential
                 forKey:key];
-
+                
             }
         }
         [self performSelector:@selector(sendFinishAuthentication:)
@@ -361,7 +383,7 @@
     }];
     [self.sessionDataTask resume];
     [session finishTasksAndInvalidate];
-
+    
 }
 
 
@@ -426,6 +448,7 @@ completionHandler:(void (^)(NSURLRequest * _Nullable))completionHandler
     }
     [self.context setIsLogoutFalseCalled:NO];
     [self.context startTimers];
+    self.context.identityDomain = self.identityDomain;
     [self.delegate didFinishCurrentStep:self
                                nextStep:OM_NEXT_AUTH_STEP_NONE
                            authResponse:nil
@@ -464,7 +487,7 @@ completionHandler:(void (^)(NSURLRequest * _Nullable))completionHandler
                 id username = [weakSelf.authData valueForKey:OM_USERNAME];
                 id password = [weakSelf.authData valueForKey:OM_PASSWORD];
                 id tenant = [weakSelf.authData valueForKey:OM_IDENTITY_DOMAIN];
-
+                
                 if(![weakSelf.configuration isValidString:username] ||
                    ![weakSelf.configuration isValidString:password])
                 {
@@ -474,7 +497,7 @@ completionHandler:(void (^)(NSURLRequest * _Nullable))completionHandler
                                       OMERR_INVALID_USERNAME_PASSWORD];
                     [weakSelf.authData setObject:error
                                           forKey:OM_MOBILESECURITY_EXCEPTION];
-
+                    
                     [weakSelf sendChallenge:nil];
                     return;
                 }
@@ -487,7 +510,7 @@ completionHandler:(void (^)(NSURLRequest * _Nullable))completionHandler
 
                     [weakSelf.authData setObject:error
                                           forKey:OM_MOBILESECURITY_EXCEPTION];
-
+                    
                     [weakSelf sendChallenge:nil];
                     return;
 
@@ -499,7 +522,7 @@ completionHandler:(void (^)(NSURLRequest * _Nullable))completionHandler
                         [weakSelf.authData removeObjectForKey:OM_ERROR];
                     }
                 }
-
+      
             if (tenant == [NSNull null])
             {
                 [weakSelf.authData removeObjectForKey:OM_IDENTITY_DOMAIN];
@@ -516,7 +539,7 @@ completionHandler:(void (^)(NSURLRequest * _Nullable))completionHandler
         dispatch_semaphore_signal(blockSemaphore);
 
     };
-
+    
     [self.delegate didFinishCurrentStep:self
                                nextStep:OM_NEXT_AUTH_STEP_CHALLENGE
                            authResponse:nil
@@ -533,29 +556,18 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
         [challengeType isEqual:NSURLAuthenticationMethodDefault])
     {
         self.authChallengeReceived = true;
-
+        
         if (challenge.previousFailureCount > 0 &&
             challenge.previousFailureCount <
             self.configuration.authenticationRetryCount)
         {
-            NSError *error = nil;
-
-            if (self.configuration.collectIdentityDomain)
-            {
-                error = [OMObject createErrorWithCode:
-                         OMERR_INVALID_USERNAME_PASSWORD_IDENTITY];
-            }
-            else
-            {
-                error = [OMObject createErrorWithCode:
-                         OMERR_INVALID_USERNAME_PASSWORD];
-            }
+            NSError *error = [self invalidCredsError];
             [self.authData setObject:error
                               forKey:OM_MOBILESECURITY_EXCEPTION];
             [self.authData setObject:[NSNumber numberWithInteger:
                                       challenge.previousFailureCount]
                               forKey:OM_RETRY_COUNT];
-
+            
         }
         else if (challenge.previousFailureCount >=
                  self.configuration.authenticationRetryCount)
@@ -571,25 +583,25 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
             {
                 [self.authData setValue:[NSNull null] forKey:OM_USERNAME];
             }
-
+            
             if (![[self.authData valueForKey:OM_PASSWORD] length])
             {
                 [self.authData setValue:[NSNull null] forKey:OM_PASSWORD];
             }
-
+            
             if (![[self.authData valueForKey:OM_IDENTITY_DOMAIN] length] &&
                 self.configuration.collectIdentityDomain)
             {
                 [self.authData setValue:[NSNull null] forKey:OM_IDENTITY_DOMAIN];
             }
-
+        
             if (!self.usePreviousCredential)
             {
                 [self performSelector:@selector(sendChallenge:)
                              onThread:self.callerThread
                            withObject:nil
                         waitUntilDone:false];
-
+                
                 dispatch_semaphore_wait(self.requestPauseSemaphore,
                                         DISPATCH_TIME_FOREVER);
             }
@@ -604,39 +616,39 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
             self.password = [self unMaskPassword:[self.authData
                                                   valueForKey:OM_PASSWORD]];
             [self.authData setObject:self.password forKey:OM_PASSWORD];
-
+            
         }
-
+        
         NSString *userName = [self.authData
                               valueForKey:OM_USERNAME];
         self.password = [self.authData valueForKey:OM_PASSWORD];
-
+        
         if (self.configuration.collectIdentityDomain && !
-            self.configuration.provideIdentityDomainToMobileAgent)
+            self.configuration.identityDomainInHeader)
         {
             NSString *idDomain = [self.authData valueForKey:OM_IDENTITY_DOMAIN];
-
+            
             if (idDomain)
             {
                 userName =  [NSString stringWithFormat:@"%@.%@",
                              idDomain,userName];
             }
-
+            
         }
-
+        
         NSURLCredential *credential = [NSURLCredential
                                        credentialWithUser:userName
                                        password:self.password
                                        persistence:NSURLCredentialPersistenceNone];
         completionHandler(NSURLSessionAuthChallengeUseCredential, credential);
-
+        
     }
     else if ([challengeType isEqualToString:NSURLAuthenticationMethodClientCertificate ])
     {
         [[OMClientCertChallangeHandler sharedHandler]
          doClientTrustForAuthenticationChallenge:challenge
          challengeReciver:self completionHandler:completionHandler];
-
+        
     }
     else if ([challengeType isEqualToString:NSURLAuthenticationMethodServerTrust ])
     {
@@ -650,7 +662,7 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
                           nil);
     }
 
-
+    
 }
 
 + (NSData *)sendSynchronousRequest:(NSURLRequest *)request
@@ -658,11 +670,11 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
                              error:(__autoreleasing NSError **)errorPtr {
     dispatch_semaphore_t    sem;
     __block NSData *        result;
-
+    
     result = nil;
-
+    
     sem = dispatch_semaphore_create(0);
-
+    
     [[[NSURLSession sharedSession] dataTaskWithRequest:request
                                      completionHandler:^(NSData *data,
                                                          NSURLResponse *response,
@@ -677,17 +689,17 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
                      {
                          *responsePtr = response;
                      }
-
+        
                      if (error == nil)
                      {
-                         result = data;
-                     }
+                         result = data;  
+                     }  
                     dispatch_semaphore_signal(sem);
     }] resume];
-
-    dispatch_semaphore_wait(sem, DISPATCH_TIME_FOREVER);
-
-    return result;
+    
+    dispatch_semaphore_wait(sem, DISPATCH_TIME_FOREVER);  
+    
+    return result;  
 }
 
 - (NSDictionary *)requestHeaders
@@ -695,8 +707,8 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
     NSMutableDictionary *headerDict = [NSMutableDictionary
                                        dictionaryWithDictionary:
                                        self.configuration.customHeaders];
-
-    if (self.configuration.provideIdentityDomainToMobileAgent &&
+   
+    if (self.configuration.identityDomainInHeader &&
         self.configuration.identityDomain)
     {
         NSString *headerName = (self.configuration.identityDomainHeaderName)
@@ -704,7 +716,7 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
         OM_DEFAULT_IDENTITY_DOMAIN_HEADER;
         [headerDict setObject:self.configuration.identityDomain forKey:headerName];
     }
-
+    
     return headerDict;
 }
 
@@ -718,7 +730,7 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
     {
         NSError *error = [OMObject
                           createErrorWithCode:OMERR_USER_CANCELED_AUTHENTICATION];
-
+        
         [self performSelector:@selector(sendFinishAuthentication:)
                      onThread:self.callerThread
                    withObject:error
@@ -728,4 +740,21 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
 
 }
 
+- (NSError *)invalidCredsError
+{
+    NSError *error = nil;
+    
+    if (self.configuration.collectIdentityDomain)
+    {
+        error = [OMObject createErrorWithCode:
+                 OMERR_INVALID_USERNAME_PASSWORD_IDENTITY];
+    }
+    else
+    {
+        error = [OMObject createErrorWithCode:
+                 OMERR_INVALID_USERNAME_PASSWORD];
+    }
+    
+    return error;
+}
 @end

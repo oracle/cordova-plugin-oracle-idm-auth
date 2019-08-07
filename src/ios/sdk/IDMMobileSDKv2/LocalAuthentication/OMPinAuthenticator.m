@@ -195,6 +195,11 @@
         self.isAuthenticated = NO;
         self.kek = nil;
     }
+    else
+    {
+        *error = [OMObject createErrorWithCode:
+                  OMERR_LOCAL_AUTH_NOT_AUTHENTICATED];
+    }
     
 }
 - (BOOL)authenticate:(OMAuthData*)authData error:(NSError**)error

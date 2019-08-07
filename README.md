@@ -1,4 +1,4 @@
-# cordova-plugin-oracle-idm-auth 1.1.9
+# cordova-plugin-oracle-idm-auth 1.2.0
 
 ## About the cordova-plugin-oracle-idm-auth
 The plugin provides authentication and authorization functionality for cordova based mobile applications,
@@ -9,7 +9,7 @@ The plugin is designed to handle multiple authentication flows in parallel.
 ## Supported platforms
 * Android 5.0 or later with Android System WebView v39.0.0.0.0 minimum.
   * Compatible with compile and target SDK versions of 27 and min SDK version of 21
-* iOS 8.4 and above.
+* iOS 10.3 and above.
 
 ### Installation
 Execute this command to install cordova-plugin-oracle-idm-auth into your cordova application.
