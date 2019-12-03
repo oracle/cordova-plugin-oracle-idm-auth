@@ -37,6 +37,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (void) authenticateBiometric:(CDVInvokedUrlCommand *) command;
 - (void) changePin:(CDVInvokedUrlCommand *) command;
 - (void) getLocalAuthSupportInfo:(CDVInvokedUrlCommand *) command;
+- (void) getPreference:(CDVInvokedUrlCommand *) command;
+- (void) setPreference:(CDVInvokedUrlCommand *) command;
 @end
 
 

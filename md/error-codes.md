@@ -158,4 +158,7 @@ P1018 | Error while enabling local authenticator.
 P1019 | Either the device does not support biometric or is not enrolled.
 P1020 | Attempt to change PIN when PIN is not enabled.
 P1021 | Error while getting enabled local authentications.
-P1022 | Unable to find the local authenticator required for the operation.
+P1022 | Saving value to secured storage failed.
+P1023 | Saving value to default storage failed.
+P1024 | Getting value from secured storage failed.
+P1025 | Getting value from default storage failed.

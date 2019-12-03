@@ -304,8 +304,10 @@ exports.defineAutoTests = function() {
       if (options.securedUrlResult)
         expect(results.securedUrlResult).toContain(options.securedUrlResult);
 
-      if (options.authHeader)
-        expect(result.headers.Authorization).toBe(options.authHeader);
+      if (options.authHeader) {
+        expect(results.headers.Authorization).toBeDefined();
+        expect(results.headers.ExpiryTime).toBeDefined();
+      }
 
       if (!options.noLogout)
         expect(results.authAfterLogout).not.toBeTruthy();

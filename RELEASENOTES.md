@@ -1,5 +1,9 @@
 # Release Notes
 
+## 1.3.0 (3 Dec, 2019)
+* API to control buttons shown on webview for OAuth usecase.
+* Ability to store data into local authenticator secure keystore.
+
 ## 1.2.0 (7 Aug, 2019)
 * API to control buttons shown on webview for WebSSO usecase.
 * Improvements for OAuth and OpenID usecases where login page is opened in an external browser by using in-app browser.

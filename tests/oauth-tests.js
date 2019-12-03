@@ -19,7 +19,7 @@ exports.defineAutoTests = function() {
       .logoutURL(window.TestConfig.oauthGoogleAuthCode.logoutUrl)
       .browserMode(idmAuthFlowPlugin.OAuthPropertiesBuilder.BrowserMode.External)
       .build();
-  var oauthIdcsAuthCodeProps = new idmAuthFlowPlugin.OAuthPropertiesBuilder()
+  var oauthIdcsAuthCodePropsExternal = new idmAuthFlowPlugin.OAuthPropertiesBuilder()
       .appName('oauthIdcsAuthCodeTest')
       .oAuthAuthorizationGrantType(window.TestConfig.oauthIdcsAuthCode.grantType)
       .oAuthTokenEndpoint(window.TestConfig.oauthIdcsAuthCode.tokenUrl)
@@ -29,7 +29,22 @@ exports.defineAutoTests = function() {
       .oAuthScope([window.TestConfig.oauthIdcsAuthCode.scope1])
       .logoutURL(window.TestConfig.oauthIdcsAuthCode.logoutUrl)
       .browserMode(idmAuthFlowPlugin.OAuthPropertiesBuilder.BrowserMode.External)
+      .enableWebViewButtons(window.TestConfig.oauthIdcsAuthCode.enableWebViewButtons)
       .build();
+
+  var oauthIdcsAuthCodePropsEmbedded = new idmAuthFlowPlugin.OAuthPropertiesBuilder()
+      .appName('oauthIdcsAuthCodeTest')
+      .oAuthAuthorizationGrantType(window.TestConfig.oauthIdcsAuthCode.grantType)
+      .oAuthTokenEndpoint(window.TestConfig.oauthIdcsAuthCode.tokenUrl)
+      .oAuthClientID(window.TestConfig.oauthIdcsAuthCode.clientId)
+      .oAuthAuthorizationEndpoint(window.TestConfig.oauthIdcsAuthCode.authUrl)
+      .oAuthRedirectEndpoint(window.TestConfig.oauthIdcsAuthCode.redirectUrl)
+      .oAuthScope([window.TestConfig.oauthIdcsAuthCode.scope1])
+      .logoutURL(window.TestConfig.oauthIdcsAuthCode.logoutUrl)
+      .browserMode(idmAuthFlowPlugin.OAuthPropertiesBuilder.BrowserMode.Embedded)
+      .enableWebViewButtons(window.TestConfig.oauthIdcsAuthCode.enableWebViewButtons)
+      .build();
+
   var oauthIdcsResOwnerProps = new idmAuthFlowPlugin.OAuthPropertiesBuilder()
       .appName('oauthIdcsResOwnerTest')
       .oAuthAuthorizationGrantType(window.TestConfig.oauthIdcsResOwner.grantType)
@@ -141,17 +156,29 @@ exports.defineAutoTests = function() {
       });
     });
 */
-    describe('idcs auth code', function() {
+    describe('idcs auth code - External browser', function() {
       beforeEach(function(done) {
         resetTest();
         // TODO: Redirect to app after logout is not happening. Could be a bug.
-        perform(oauthIdcsAuthCodeProps, window.TestConfig.oauthIdcsAuthCode.securedUrl, done, false);
+        perform(oauthIdcsAuthCodePropsExternal, window.TestConfig.oauthIdcsAuthCode.securedUrl, done, false);
       });
       it('is able to login and access secured resource.', function(done) {
         verify('admin@oracle.com', true);
         done();
       });
     });
+
+    describe('idcs auth code - Embedded browser', function() {
+      beforeEach(function(done) {
+        resetTest();
+        perform(oauthIdcsAuthCodePropsEmbedded, window.TestConfig.oauthIdcsAuthCode.securedUrl, done, false);
+      });
+      it('is able to login and access secured resource.', function(done) {
+        verify('admin@oracle.com', true);
+        done();
+      });
+    });
+
     describe('google auth code', function() {
       beforeEach(function(done) {
         resetTest();

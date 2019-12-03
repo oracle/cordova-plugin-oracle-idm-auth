@@ -298,6 +298,16 @@ NSMutableDictionary<NSString *, IdmAuthentication *>  *AUTH_CACHE;
                                                       delegate:self.commandDelegate];
 }
 
+- (void) getPreference:(CDVInvokedUrlCommand *) command {
+  [[LocalAuthenticator sharedInstance] getPreference:command
+                                                      delegate:self.commandDelegate];
+}
+
+- (void) setPreference:(CDVInvokedUrlCommand *) command {
+  [[LocalAuthenticator sharedInstance] setPreference:command
+                                                      delegate:self.commandDelegate];
+}
+
 /**
  * Validates the arguments passed from javascript layer.
  */

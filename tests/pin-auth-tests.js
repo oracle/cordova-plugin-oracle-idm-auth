@@ -8,18 +8,23 @@ exports.defineAutoTests = function() {
   var pinChallengeReason = idmAuthFlowPlugin.LocalAuthPropertiesBuilder.PinChallengeReason;
   var localAuthTypes = idmAuthFlowPlugin.LocalAuthPropertiesBuilder.LocalAuthenticatorType;
   var pinAuthFlow, isCancelFlow, currPin, newPin, challengeReasons, challengeErrors, challengeCount;
-  var enabledStates, loginResults, disableSuccess;
+  var enabledStates, loginResults, disableSuccess, storedKey, storedValue;
+  var setSuccessResults, getSuccessResults;
 
   var resetTest = function() {
     challengeReasons = [];
     challengeErrors = [];
     challengeCount = [];
     enabledStates = [];
+    setSuccessResults = []; 
+    getSuccessResults = [];
     isCancelFlow = undefined;
     currPin = undefined;
     newPin = undefined;
     loginResults = [];
     disableSuccess = false;
+    storedKey = undefined;
+    storedValue = undefined;
   };
 
   var pinChallenge = function (challengeReason, completionHandler, err, options) {
@@ -692,6 +697,350 @@ exports.defineAutoTests = function() {
         expect(loginResults[0]).toBeTruthy();
         expect(loginResults[1]).toBeTruthy();
 
+        done();
+      });
+    });
+
+    // Test Cases for Secure/Default Key Storage
+    describe('set preference (non secure)', function() {
+      beforeEach(function(done) {
+        resetTest();
+        storedKey = "language";
+        storedValue = "german";
+        pinAuthFlow.getManager().setPreference(storedKey, storedValue, false)
+          .then(function() {
+            setSuccessResults.push(true);
+            pinAuthFlow.getManager().setPreference(storedKey, null, false); //Deletes the stored value
+            done();
+          }).catch(done);
+      });
+      it('works as expected.', function(done) {
+        expect(setSuccessResults.length).toBe(1);
+        expect(setSuccessResults[0]).toBeTruthy();
+        done();
+      });
+    });
+
+    describe('set preference (secure)', function() {
+      var setPreferenceError;
+      beforeEach(function(done) {
+        resetTest();
+        storedKey = "language";
+        storedValue = "german";
+        pinAuthFlow.getManager().setPreference(storedKey, storedValue, true)
+          .then(function() {
+            setSuccessResults.push(true);
+            done();
+          }).catch(function(err) {
+            setPreferenceError = err;
+            done();
+          });
+      });
+      it('throws expected error code.', function(done) {
+        expect(setSuccessResults.length).toBe(0);
+        expect(setPreferenceError).toBeDefined();
+        window.TestUtil.verifyPluginError(setPreferenceError, "P1016");
+        done();
+      });
+    });
+
+    describe('get preference', function() {
+      var getPreferenceError, fetchedValue;
+      beforeEach(function(done) {
+        resetTest();
+        storedKey = "language";
+        storedValue = "german";
+        pinAuthFlow.getManager().getPreference(storedKey)
+          .then(function(value) {
+            getSuccessResults.push(true);
+            fetchedValue = value;
+            done();
+          }).catch(function(err) {
+            getPreferenceError = err;
+            done();
+          });
+      });
+      it('works as expected.', function(done) {
+        expect(getSuccessResults.length).toBe(1);
+        expect(getSuccessResults[0]).toBeTruthy();
+        expect(fetchedValue).toBeNull();
+        expect(getPreferenceError).not.toBeDefined();
+        done();
+      });
+    });
+
+    describe('set preference (non secure), get preference', function() {
+      beforeEach(function(done) {
+        resetTest();
+        storedKey = "language";
+        storedValue = "german";
+        pinAuthFlow.getManager().setPreference(storedKey, storedValue, false)
+          .then(function() {
+            setSuccessResults.push(true);
+            return pinAuthFlow.getManager().getPreference(storedKey)
+          }).then(function() {
+            getSuccessResults.push(true);
+            done();
+          }).catch(done);
+      });
+      it('works as expected.', function(done) {
+        expect(setSuccessResults.length).toBe(1);
+        expect(setSuccessResults[0]).toBeTruthy();
+        expect(getSuccessResults.length).toBe(1);
+        expect(getSuccessResults[0]).toBeTruthy();
+        done();
+      });
+    });
+
+    describe('set preference (non secure), get preference, delete preference(non secure), get preference', function() {
+      var fetchedValues = [];
+      beforeEach(function(done) {
+        resetTest();
+        storedKey = "language";
+        storedValue = "german";
+        pinAuthFlow.getManager().setPreference(storedKey, storedValue, false)
+          .then(function() {
+            setSuccessResults.push(true);
+            return pinAuthFlow.getManager().getPreference(storedKey)
+          }).then(function(value) {
+            getSuccessResults.push(true);
+            fetchedValues.push(value);
+            return pinAuthFlow.getManager().setPreference(storedKey, null, false) // Deletion
+          }).then(function() {
+            setSuccessResults.push(true);
+            return pinAuthFlow.getManager().getPreference(storedKey)
+          }).then(function(value) {
+            getSuccessResults.push(true);
+            fetchedValues.push(value);
+            done();
+          }).catch(done);
+      });
+      it('works as expected.', function(done) {
+        expect(setSuccessResults.length).toBe(2);
+        expect(setSuccessResults[0]).toBeTruthy();
+        expect(setSuccessResults[1]).toBeTruthy();
+        expect(getSuccessResults.length).toBe(2);
+        expect(getSuccessResults[0]).toBeTruthy();
+        expect(getSuccessResults[1]).toBeTruthy();
+        expect(fetchedValues.length).toBe(2);
+        expect(fetchedValues[0]).toBe(storedValue);
+        expect(fetchedValues[1]).toBeNull();
+        done();
+      });
+    });    
+
+    xdescribe('enable, set preference (secure), login, set preference (secure), get preference', function() {
+      var loginErr;
+      beforeEach(function(done) {
+        resetTest();
+        currPin = undefined;
+        newPin = "1234";
+        storedKey = "language";
+        storedValue = "german";
+
+        pinAuthFlow.getManager().enable(localAuthTypes.PIN)
+          .then(function() {
+            return pinAuthFlow.getManager().setPreference(storedKey, storedValue, true)
+          }).catch(function(err) {
+            loginErr = err;
+            currPin = "1234";
+            newPin = undefined;
+            return pinAuthFlow.login();
+          }).then(function() {
+            return pinAuthFlow.getManager().setPreference(storedKey, storedValue, true)
+          }).then(function() {
+            setSuccessResults.push(true);
+            return pinAuthFlow.getManager().getPreference(storedKey)
+          }).then(function() {
+            getSuccessResults.push(true);
+            done();
+          }).catch(done);
+      });
+      it('works as expected.', function(done) {
+        expect(setSuccessResults.length).toBe(1);
+        expect(setSuccessResults[0]).toBeTruthy();
+        expect(getSuccessResults.length).toBe(1);
+        expect(getSuccessResults[0]).toBeTruthy();
+        expect(loginErr).toBeDefined();
+        done();
+      });
+    });
+
+    describe('set preference (secure), enable, login, set preference (secure), get preference', function() {
+      var setPreferenceError;
+      beforeEach(function(done) {
+        resetTest();
+        currPin = undefined;
+        newPin = "1234";
+        storedKey = "language";
+        storedValue = "german";
+
+        pinAuthFlow.getManager().setPreference(storedKey, "german", true)
+          .catch(function(err) {
+            setPreferenceError = err;
+            setSuccessResults.push(false);
+            return pinAuthFlow.getManager().enable(localAuthTypes.PIN)
+          }).then(function() {
+            currPin = "1234";
+            newPin = undefined;
+            return pinAuthFlow.login()
+          }).then(function() {
+            return pinAuthFlow.getManager().setPreference(storedKey, storedValue, true)
+          }).then(function() {
+            setSuccessResults.push(true);
+            return pinAuthFlow.getManager().getPreference(storedKey)
+          }).then(function() {
+            getSuccessResults.push(true);
+            done();
+          }).catch(done);
+      });
+      it('works as expected.', function(done) {
+        expect(setSuccessResults.length).toBe(2);
+        expect(setSuccessResults[0]).not.toBeTruthy();
+        expect(setSuccessResults[1]).toBeTruthy();
+        expect(getSuccessResults.length).toBe(1);
+        expect(getSuccessResults[0]).toBeTruthy();
+        expect(setPreferenceError).toBeDefined();
+        window.TestUtil.verifyPluginError(setPreferenceError, "P1016");
+        done();
+      });
+    });
+
+    describe('set preference (non secure), enable, login, set preference (secure), get preference', function() {
+      beforeEach(function(done) {
+        resetTest();
+        currPin = undefined;
+        newPin = "1234";
+        storedKey = "language";
+        storedValue = "german";
+
+        pinAuthFlow.getManager().setPreference(storedKey, "german", false)
+          .then(function() {
+            setSuccessResults.push(true);
+            return pinAuthFlow.getManager().enable(localAuthTypes.PIN)
+          }).then(function() {
+            currPin = "1234";
+            newPin = undefined;
+            return pinAuthFlow.login()
+          }).then(function() {
+            return pinAuthFlow.getManager().setPreference(storedKey, storedValue, true)
+          }).then(function() {
+            setSuccessResults.push(true);
+            return pinAuthFlow.getManager().getPreference(storedKey)
+          }).then(function() {
+            getSuccessResults.push(true);
+            done();
+          }).catch(done);
+      });
+      it('works as expected.', function(done) {
+        expect(setSuccessResults.length).toBe(2);
+        expect(setSuccessResults[0]).toBeTruthy();
+        expect(setSuccessResults[1]).toBeTruthy();
+        expect(getSuccessResults.length).toBe(1);
+        expect(getSuccessResults[0]).toBeTruthy();
+        done();
+      });
+    });
+  
+    describe('enable, login, set preference (secure), get preference', function() {
+      beforeEach(function(done) {
+        resetTest();
+        currPin = undefined;
+        newPin = "1234";
+        storedKey = "language";
+        storedValue = "german";
+
+        pinAuthFlow.getManager().enable(localAuthTypes.PIN)
+          .then(function() {
+            currPin = "1234";
+            newPin = undefined;
+            return pinAuthFlow.login()
+          }).then(function() {
+            return pinAuthFlow.getManager().setPreference(storedKey, storedValue, true)
+          }).then(function() {
+            setSuccessResults.push(true);
+            return pinAuthFlow.getManager().getPreference(storedKey)
+          }).then(function() {
+            getSuccessResults.push(true);
+            done();
+          }).catch(done);
+      });
+      it('works as expected.', function(done) {
+        expect(setSuccessResults.length).toBe(1);
+        expect(setSuccessResults[0]).toBeTruthy();
+        expect(getSuccessResults.length).toBe(1);
+        expect(getSuccessResults[0]).toBeTruthy();
+        done();
+      });
+    });
+
+    describe('enable, login, set preference (secure), get preference - unavailable key', function() {
+      var fetchedValue,
+          unavailableKey = "country";
+      beforeEach(function(done) {
+        resetTest();
+        currPin = undefined;
+        newPin = "1234";
+        storedKey = "language";
+        storedValue = "german";
+
+        pinAuthFlow.getManager().enable(localAuthTypes.PIN)
+          .then(function() {
+            currPin = "1234";
+            newPin = undefined;
+            return pinAuthFlow.login()
+          }).then(function() {
+            return pinAuthFlow.getManager().setPreference(storedKey, storedValue, true)
+          }).then(function() {
+            setSuccessResults.push(true);
+            return pinAuthFlow.getManager().getPreference(unavailableKey)
+          }).then(function(value) {
+            getSuccessResults.push(true);
+            fetchedValue = value;
+            done();
+          }).catch(done);
+      });
+      it('works as expected.', function(done) {
+        expect(setSuccessResults.length).toBe(1);
+        expect(setSuccessResults[0]).toBeTruthy();
+        expect(getSuccessResults.length).toBe(1);
+        expect(getSuccessResults[0]).toBeTruthy();
+        expect(fetchedValue).toBeNull();
+        done();
+      });
+    });
+
+    describe('set preference (non secure), enable, login, get preference', function() {
+      var fetchedValue;
+      beforeEach(function(done) {
+        resetTest();
+        currPin = undefined;
+        newPin = "1234";
+        storedKey = "language";
+        storedValue = "german";
+
+        pinAuthFlow.getManager().setPreference(storedKey, storedValue, false)
+          .then(function() {
+            setSuccessResults.push(true);
+            return pinAuthFlow.getManager().enable(localAuthTypes.PIN)
+          }).then(function() {
+            currPin = "1234";
+            newPin = undefined;
+            return pinAuthFlow.login()
+          }).then(function() {
+            return pinAuthFlow.getManager().getPreference(storedKey)
+          }).then(function(value) {
+            getSuccessResults.push(true);
+            fetchedValue = value;
+            done();
+          }).catch(done);
+      });
+      it('works as expected.', function(done) {
+        expect(setSuccessResults.length).toBe(1);
+        expect(setSuccessResults[0]).toBeTruthy();
+        expect(getSuccessResults.length).toBe(1);
+        expect(getSuccessResults[0]).toBeTruthy();
+        expect(fetchedValue).not.toBeNull();
         done();
       });
     });

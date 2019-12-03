@@ -18,4 +18,6 @@
 -(void) authenticatePin:(CDVInvokedUrlCommand*)command delegate:(CDVCommandDelegateImpl*) commandDelegate;
 -(void) changePin:(CDVInvokedUrlCommand*)command delegate:(CDVCommandDelegateImpl*) commandDelegate;
 -(void) getLocalAuthSupportInfo:(CDVInvokedUrlCommand*)command delegate:(CDVCommandDelegateImpl*) commandDelegate;
+-(void) getPreference:(CDVInvokedUrlCommand*)command delegate:(CDVCommandDelegateImpl*) commandDelegate;
+-(void) setPreference:(CDVInvokedUrlCommand*)command delegate:(CDVCommandDelegateImpl*) commandDelegate;
 @end

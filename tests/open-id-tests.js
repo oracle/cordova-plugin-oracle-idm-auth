@@ -25,7 +25,14 @@ exports.defineAutoTests = function() {
 
       it('is able to login and access secured resource.', function(done) {
         var options = {};
-        options.securedUrlResult = 'admin@oracle.com'
+        options.securedUrlResult = window.TestConfig.openid.username;
+        window.TestUtil.verifyResults(results, options);
+        done();
+      });
+
+      it('is able to login and accessible secured resource contains required headers.', function(done) {
+        var options = {};
+        options.securedUrlResult = window.TestConfig.openid.username;
         window.TestUtil.verifyResults(results, options);
         done();
       });

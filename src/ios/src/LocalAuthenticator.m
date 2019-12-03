@@ -5,11 +5,15 @@
 #import "LocalAuthenticator.h"
 #import "IdmAuthenticationPlugin.h"
 #import "IDMMobileSDKv2Library.h"
+#import "OMSecureStorage.h"
+
 @import LocalAuthentication;
 
 #define LOCAL_AUTH_BIOMETRIC @"cordova.plugins.IdmAuthFlows.Biometric"
 #define LOCAL_AUTH_FINGERPRINT @"cordova.plugins.IdmAuthFlows.Fingerprint"
 #define LOCAL_AUTH_PIN @"cordova.plugins.IdmAuthFlows.PIN"
+#define LOCAL_AUTH_DEFAULT @"cordova.plugins.IdmAuthFlows.Default"
+#define DEFAULT_AUTH_ID @"DefaultAuthInstance"
 #define FALLBACK_RESULT @"fallback"
 #define PROMPT_MESSAGE @"promptMessage"
 #define PIN_FALLBACK_BUTTON_LABEL @"pinFallbackButtonLabel"
@@ -28,6 +32,10 @@
 #define DISABLE_PIN_BIOMETRIC_ENABLED @"P1017"
 #define ERROR_ENABLING_AUTHENTICATOR @"P1018"
 #define BIOMETRIC_NOT_ENABLED @"P1019"
+#define SAVING_VALUE_TO_SECURED_STORAGE_FAILED @"P1022"
+#define SAVING_VALUE_TO_DEFAULT_STORAGE_FAILED @"P1023"
+#define GETTING_VALUE_FROM_SECURED_STORAGE_FAILED @"P1024"
+#define GETTING_VALUE_FROM_DEFAULT_STORAGE_FAILED @"P1025"
 
 #ifdef DEBUG
 #  define IdmLog(...) NSLog(__VA_ARGS__)
@@ -41,6 +49,8 @@ static OMLocalAuthenticationManager *sharedManager = nil;
 @interface LocalAuthenticator()<OMBiometricFallbackDelegate>
 
 @property (nonatomic, assign) Boolean authenticatedViaPin;
+@property (nonatomic, assign) Boolean defaultAuthenticationEnabled;
+
 @property (nonatomic, strong) OMFallbackAuthenticationCompletionBlock fallbackHandler;
 
 @property (nonatomic, strong, nullable) CDVCommandDelegateImpl* biometricAuthDelegate;
@@ -56,6 +66,7 @@ static OMLocalAuthenticationManager *sharedManager = nil;
     sharedManager = [OMLocalAuthenticationManager sharedManager];
     [sharedManager useBiometricInsteadOfTouchID:YES];
     shared = [[LocalAuthenticator alloc] init];
+    shared.defaultAuthenticationEnabled = [shared enableDefaultAuthenticator];
   });
 
   return shared;
@@ -66,6 +77,37 @@ static OMLocalAuthenticationManager *sharedManager = nil;
   CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
                                                messageAsArray:[self getEnabled:authId]];
   [commandDelegate sendPluginResult:result callbackId:command.callbackId];
+}
+
+- (BOOL) enableDefaultAuthenticator {
+  NSString* authId = DEFAULT_AUTH_ID;
+  NSError* enableError = nil;
+  NSString* authenticatorName = LOCAL_AUTH_DEFAULT;
+    
+  OMAuthenticator* authenticator = [self getAuthenticator:authId authenticatorName:authenticatorName];
+  if (authenticator != nil) {
+    IdmLog(@"Authenticator is already enabled for type %@", authenticatorName);
+    return YES;
+  }
+  
+  NSString* instanceId = [self getInstanceId:authId authenticatorName:authenticatorName];
+  [self registerAuthenticatorIfNeeded:authenticatorName error:&enableError];
+
+  if (!enableError) {
+    if ([sharedManager enableAuthentication:authenticatorName instanceId:instanceId error:&enableError]) {
+      OMAuthenticator* authenticator = [self getAuthenticator:authId authenticatorName:authenticatorName];
+      [authenticator authenticate:nil error:&enableError];
+      if (authenticator == nil) {
+        IdmLog(@"Something went wrong while enabling Default Authenticator.");
+        return NO;
+      }
+    }
+  }
+  if (enableError) {
+    IdmLog(@"Error Registering Default Authenticator");
+    return NO;
+  }
+  return YES;
 }
 
 -(void) enable:(CDVInvokedUrlCommand*)command delegate:(CDVCommandDelegateImpl*) commandDelegate {
@@ -175,6 +217,86 @@ static OMLocalAuthenticationManager *sharedManager = nil;
   [commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK
                                                       messageAsString:[self getEnabledPrimary:authId]]
                          callbackId:command.callbackId];
+}
+
+-(void) getPreference:(CDVInvokedUrlCommand*)command delegate:(CDVCommandDelegateImpl*) commandDelegate {
+    NSString* authId = command.arguments[0];
+    NSString* key = command.arguments[1];
+    NSString* result;
+    NSError* getDefaultPreferenceError = nil;
+    NSError* getSecuredPreferenceError = nil;
+
+    //Attempt fetching data
+    OMPinAuthenticator* pinAuthenticator = [self getPinAuthenticator:authId];
+    if (pinAuthenticator == nil) {
+      OMDefaultAuthenticator *defAuth = [self getDefaultAuthenticator:DEFAULT_AUTH_ID];
+      result = [defAuth.secureStorage dataForId:key error:&getDefaultPreferenceError];
+    }
+    else {
+      result = [pinAuthenticator.secureStorage dataForId:key error:&getSecuredPreferenceError];
+      if(result == nil) {
+        OMDefaultAuthenticator *defAuth = [self getDefaultAuthenticator:DEFAULT_AUTH_ID];
+        result = [defAuth.secureStorage dataForId:key error:&getDefaultPreferenceError];
+      }
+    }
+    [commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:result] callbackId:command.callbackId];
+}
+
+-(void) setPreference:(CDVInvokedUrlCommand*)command delegate:(CDVCommandDelegateImpl*) commandDelegate {
+    NSString* authId = command.arguments[0];
+    NSString* key = command.arguments[1];
+    NSString* value = command.arguments[2];
+    Boolean secure = [command.arguments[3] boolValue];
+    NSError* setPreferenceError = nil;
+
+    if(!secure) {
+      //Check if Default Authenticator is Enabled
+      if(!self.defaultAuthenticationEnabled) {
+          [commandDelegate sendPluginResult:[IdmAuthenticationPlugin errorCodeToPluginResult:ERROR_ENABLING_AUTHENTICATOR]
+                                 callbackId:command.callbackId];
+      }
+
+      //Attempt storing in default storage
+      IdmLog(@"Storing in default storage");
+      OMDefaultAuthenticator *defAuth = [self getDefaultAuthenticator:DEFAULT_AUTH_ID];
+      if(value == nil)
+        [defAuth.secureStorage deleteDataForId:key error:&setPreferenceError];
+      else
+        [defAuth.secureStorage saveDataForId:key data:value error:&setPreferenceError];
+
+      //Verify error and send result to plugin
+      if(setPreferenceError) {
+        [commandDelegate sendPluginResult:[IdmAuthenticationPlugin errorCodeToPluginResult:SAVING_VALUE_TO_DEFAULT_STORAGE_FAILED]
+                              callbackId:command.callbackId];
+      }
+      else {
+        [commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"Default Storage operation Successfull!!"] callbackId:command.callbackId];
+      }
+
+      return;
+    }
+    //Check if PIN Authenticator is Enabled
+    OMPinAuthenticator* pinAuthenticator = [self getPinAuthenticator:authId];
+    if (pinAuthenticator == nil) {
+      IdmLog(@"No enabled authenticators");
+      [commandDelegate sendPluginResult:[IdmAuthenticationPlugin errorCodeToPluginResult:PIN_AUTHENTICATOR_NOT_ENABLED]
+                              callbackId:command.callbackId];
+      return;
+    }
+    //Attempt storing in secured storage
+    if (value == nil) 
+      [pinAuthenticator.secureStorage deleteDataForId:key error:&setPreferenceError];
+    else
+      [pinAuthenticator.secureStorage saveDataForId:key data:value error:&setPreferenceError];
+
+    //Verify error and send result to plugin
+    if(setPreferenceError) {
+      [commandDelegate sendPluginResult:[IdmAuthenticationPlugin errorCodeToPluginResult:SAVING_VALUE_TO_SECURED_STORAGE_FAILED]
+                            callbackId:command.callbackId];
+    }
+    else {
+      [commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"Secure Storage operation Successfull!!"] callbackId:command.callbackId];
+    }
 }
 
 -(void) authenticateBiometric:(CDVInvokedUrlCommand*)command
@@ -396,6 +518,8 @@ static OMLocalAuthenticationManager *sharedManager = nil;
     return NSStringFromClass([OMBiometricAuthenticator class]);
   if ([LOCAL_AUTH_PIN isEqualToString:authenticatorName])
     return NSStringFromClass([OMPinAuthenticator class]);
+  if ([LOCAL_AUTH_DEFAULT isEqualToString:authenticatorName])
+    return NSStringFromClass([OMDefaultAuthenticator class]);
   return nil;
 }
 
@@ -406,6 +530,8 @@ static OMLocalAuthenticationManager *sharedManager = nil;
     return [self getFingerprintAuthenticator:authId];
   else if ([LOCAL_AUTH_BIOMETRIC isEqualToString:authenticatorName])
     return [self getBiometricAuthenticator:authId];
+  else if ([LOCAL_AUTH_DEFAULT isEqualToString:authenticatorName])
+    return [self getDefaultAuthenticator:authId];
   return nil;
 }
 
@@ -417,6 +543,18 @@ static OMLocalAuthenticationManager *sharedManager = nil;
   OMAuthenticator* auth = [sharedManager authenticatorForInstanceId:instanceId error:nil];
   if (auth && [auth isKindOfClass:[OMPinAuthenticator class]]) {
     return (OMPinAuthenticator*) auth;
+  }
+  return nil;
+}
+
+-(OMDefaultAuthenticator*) getDefaultAuthenticator:(NSString*) authId {
+  NSString* instanceId = [self getInstanceId:authId authenticatorName:LOCAL_AUTH_DEFAULT];
+  if (![sharedManager isAuthenticatorRegistered:LOCAL_AUTH_DEFAULT])
+    return nil;
+
+  OMAuthenticator* auth = [sharedManager authenticatorForInstanceId:instanceId error:nil];
+  if (auth && [auth isKindOfClass:[OMDefaultAuthenticator class]]) {
+    return (OMDefaultAuthenticator*) auth;
   }
   return nil;
 }

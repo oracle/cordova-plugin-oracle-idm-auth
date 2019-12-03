@@ -696,10 +696,14 @@ completedSetupWithConfiguration:(OMMobileSecurityConfiguration *)configuration
   }
   NSArray* tokens = [context tokensForScopes:scopes];
   NSString* tokenValue;
+  NSDate* sessionExpiryDate;
 
   if ([tokens count] > 0) {
     tokenValue = ((OMToken*) [tokens objectAtIndex:0]).tokenValue;
+    sessionExpiryDate = ((OMToken*) [tokens objectAtIndex:0]).sessionExpiryDate;
+
     headers[@"Authorization"] = [NSString stringWithFormat:@"Bearer %@", tokenValue];
+    headers[@"ExpiryTime"] = [NSString stringWithFormat:@"%@", sessionExpiryDate];
   }
 
   return headers;
