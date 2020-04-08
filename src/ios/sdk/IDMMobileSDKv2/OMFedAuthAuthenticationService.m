@@ -8,21 +8,22 @@
 #import "OMDefinitions.h"
 #import "OMObject.h"
 #import "OMFedAuthConfiguration.h"
-#import "OMWebViewClient.h"
 #import "OMURLProtocol.h"
 #import "OMErrorCodes.h"
 #import "OMToken.h"
 #import "OMWKWebViewClient.h"
 #import <WebKit/WebKit.h>
 #import "OMCredentialStore.h"
+#import "OMWKWebViewCookieHandler.h"
+#import "OMCSRFRequestHandler.h"
 
-@interface OMFedAuthAuthenticationService  ()<UIWebViewDelegate,WKNavigationDelegate>
+@interface OMFedAuthAuthenticationService  ()<WKNavigationDelegate>
 
 @property(nonatomic, assign) BOOL isFirstAccess;
 @property(nonatomic, strong) NSURL *previousPostURL;
 @property(nonatomic, assign) NSUInteger numVisitsToPostURL;
-@property(nonatomic, strong) OMWebViewClient *webViewClient;
 @property(nonatomic, strong) OMWKWebViewClient *wkWebViewClient;
+@property(nonatomic, strong) NSString *extractedUsername;
 
 @end
 
@@ -49,6 +50,7 @@
     self.configuration = (OMFedAuthConfiguration *)self.mss.configuration;
     self.callerThread = [NSThread currentThread];
     self.authData = authData;
+    self.isFirstAccess = YES;
     [self sendChallenge];
 }
 
@@ -107,21 +109,6 @@
         [self.wkWebViewClient loadRequest:request];
         
     }
-    else if (!self.configuration.enableWKWebView &&
-             [webView isKindOfClass:[UIWebView class]])
-    {
-        
-        [NSURLProtocol registerClass:[OMURLProtocol class]];
-        [OMURLProtocol setOMAObject:self];
-        NSURLRequest *request = [NSURLRequest
-                                 requestWithURL:self.configuration.loginURL
-                                 cachePolicy:NSURLRequestUseProtocolCachePolicy
-                                             timeoutInterval:30.0f];
-        
-        self.webViewClient = [[OMWebViewClient alloc] initWithWebView:webView
-                                                     callBackDelegate:self];
-        [self.webViewClient loadRequest:request];
-    }
     else
     {
         if (nil == webView)
@@ -172,11 +159,6 @@
     {
         [self.wkWebViewClient stopRequest];
     }
-    else
-    {
-        [self.webViewClient stopRequest];
-    }
-
 }
 
 - (void)completedAuthentication
@@ -190,7 +172,16 @@
     {
         if (self.configuration.enableWKWebView)
         {
-            [self clearWkWebViewCookies];
+            NSMutableSet *visitedURLs = [self.mss.cacheDict
+                                         valueForKey:OM_VISITED_HOST_URLS];
+
+            [OMWKWebViewCookieHandler clearWkWebViewCookiesForUrls:[visitedURLs allObjects] completionHandler:^{
+                [self performSelector:@selector(sendFinishAuthentication:)
+                             onThread:self.callerThread
+                           withObject:error
+                        waitUntilDone:YES];
+
+            }];
         }
         else
         {
@@ -198,15 +189,23 @@
         }
         
     }
+    else if (self.configuration.enableWKWebView)
+    {
+        
+        [self syncCookiesToHTTPCookieStore];
+    }
     else
     {
-        [self processRequiredTokens];
+        [self processRequiredTokens:&error];
     }
     
-    [self performSelector:@selector(sendFinishAuthentication:)
-                 onThread:self.callerThread
-               withObject:error
-            waitUntilDone:YES];
+    if (!self.configuration.enableWKWebView) {
+        
+        [self performSelector:@selector(sendFinishAuthentication:)
+                     onThread:self.callerThread
+                   withObject:error
+                waitUntilDone:YES];
+    }
 
 }
 
@@ -231,6 +230,7 @@
     [OMURLProtocol setOMAObject:nil];
     [NSURLProtocol unregisterClass:[OMURLProtocol class]];
 
+
     [self.delegate didFinishCurrentStep:self
                                nextStep:OM_NEXT_AUTH_STEP_NONE
                            authResponse:nil
@@ -239,127 +239,6 @@
 }
 
 #pragma mark -
-#pragma mark UIWebViewDelegate Delegates-
-
-///////////////////////////////////////////////////////////////////////////////
-// UIWebViewDelegate implementation
-- (BOOL)webView:(UIWebView *)webView shouldStartLoadWithRequest:(NSURLRequest *)
-                request navigationType:(UIWebViewNavigationType)navigationType
-{
-    NSURL *successURL =  self.configuration.loginSuccessURL;
-    NSURL *failureURL = self.configuration.loginFailureURL;
-    NSURL *loginURL   = self.configuration.loginURL;
-    
-    NSURL *url = request.URL;
-    [self.context.visitedHosts addObject:url];
-    
-    NSString *httpType = [request HTTPMethod];
-    NSData *bodyData = [request HTTPBody];
-
-    [self processNavgation:httpType httpData:bodyData url:url];
-    
-    if (YES == [OMObject isCurrentURL:url EqualTo:successURL])
-    {
-        if (self.isFirstAccess &&
-            YES == [OMObject isCurrentURL:successURL EqualTo:loginURL])
-        {
-            self.isFirstAccess = FALSE;
-        }
-    }
-    else if (YES == [OMObject isCurrentURL:url EqualTo:failureURL] ||
-             self.numVisitsToPostURL > 5)
-    {
-        NSError *error = [OMObject createErrorWithCode:OMERR_USER_AUTHENTICATION_FAILED];
-        [self.authData setValue:error forKey:OM_ERROR];
-        [self completedAuthentication];
-        return NO;
-    }
-    
-    if (![url.scheme isEqualToString:@"http"] &&
-        ![url.scheme isEqualToString:@"https"])
-    {
-        if ([[UIApplication sharedApplication]canOpenURL:url])
-        {
-            [[UIApplication sharedApplication]openURL:url];
-            return NO;
-        }
-    }
-
-    return YES;
-}
-
-- (void)webViewDidStartLoad:(UIWebView *)webView
-{
-    [WKWebsiteDataStore defaultDataStore];
-    
-}
-- (void)webViewDidFinishLoad:(UIWebView *)webView
-{
-    NSURL *URL = webView.request.URL;
-    
-    if (YES == [OMObject isCurrentURL:URL EqualTo:self.configuration.loginSuccessURL])
-    {
-        NSHTTPCookieStorage *cookieStore = [NSHTTPCookieStorage sharedHTTPCookieStorage];
-        NSArray *cookies = [cookieStore cookiesForURL:URL];
-        
-        if ([cookies count] > 0)
-        {
-            NSString *queryParams = [URL query];
-            NSDictionary *headers = [webView.request allHTTPHeaderFields];
-            [self.authData setValue:queryParams forKey:OM_FED_AUTH_QUERY_PARAMS];
-            [self.authData setValue:headers forKey:OM_FED_AUTH_HEADERS];
-        }
-        if (self.configuration.parseTokenRelayResponse)
-        {
-            NSString *pageContent = [webView
-                                     stringByEvaluatingJavaScriptFromString:
-                        @"document.getElementsByTagName('pre')[0].innerHTML"];
-            NSData *pageData = [pageContent
-                                dataUsingEncoding:NSUTF8StringEncoding];
-            id ssoTokens = [NSJSONSerialization JSONObjectWithData:pageData
-                                                           options:0
-                                                             error:nil];
-            if (!ssoTokens)
-            {
-                pageContent = [webView stringByEvaluatingJavaScriptFromString:
-                               @"document.body.innerHTML"];
-                pageData = [pageContent dataUsingEncoding:NSUTF8StringEncoding];
-                ssoTokens = [NSJSONSerialization JSONObjectWithData:pageData
-                                                            options:0
-                                                              error:nil];
-            }
-            if ([ssoTokens isKindOfClass:[NSDictionary class]])
-            {
-                [self.authData setValue:ssoTokens forKey:OM_TOKENS];
-            }
-        }
-        [self completedAuthentication];
-
-    }
-    else if (YES == [OMObject isCurrentURL:URL EqualTo:self.configuration.loginFailureURL])
-    {
-        NSError *error = [OMObject createErrorWithCode:OMERR_USER_AUTHENTICATION_FAILED];
-        [self.authData setValue:error forKey:OM_ERROR];
-        [self completedAuthentication];
-
-    }else
-    {
-        if (self.configuration.rememberUsernameAllowed)
-        {
-            [self injectUsernameToWebView:webView];
-
-        }
-    }
-    
-}
-- (void)webView:(UIWebView *)webView didFailLoadWithError:(NSError *)error;
-{
-    [self.authData setValue:error forKey:OM_ERROR];
-    [self completedAuthentication];
-
-}
-
-#pragma mark - 
 #pragma mark WKNavigation Delegates-
 
 - (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler
@@ -369,6 +248,10 @@
     NSURL *loginURL   = self.configuration.loginURL;
     
     NSURL *url = webView.URL;
+    if (url == nil) //defence fix to void crash in Idle timout nil url in MAF
+    {
+        return;
+    }
     [self.context.visitedHosts addObject:url];
 
     NSString *httpType = [navigationAction.request HTTPMethod];
@@ -411,73 +294,8 @@
     
     if (YES == [OMObject isCurrentURL:URL EqualTo:self.configuration.loginSuccessURL])
     {
-        if (self.configuration.parseTokenRelayResponse)
-        {
-            
-            [webView evaluateJavaScript:@"document.getElementsByTagName('pre')[0].innerHTML"
-                    completionHandler:^(id _Nullable result, NSError * _Nullable error)
-            {
-                id ssoTokens = nil;
-                
-                if (!error)
-                {
-                    NSData *pageData = [result
-                                        dataUsingEncoding:NSUTF8StringEncoding];
-                    ssoTokens = [NSJSONSerialization JSONObjectWithData:pageData
-                                                                options:0
-                                                                  error:nil];;
+        [self completedAuthentication];
 
-                }
-                
-                if (!ssoTokens)
-                {
-                    
-                    [webView evaluateJavaScript:@"document.body.innerHTML"
-                              completionHandler:^(id _Nullable result,
-                                                  NSError * _Nullable error)
-                    {
-                        
-                        if (!error)
-                        {
-                            NSData *pageData = [result
-                                                dataUsingEncoding:NSUTF8StringEncoding];
-                            
-                            id ssoTokens = [NSJSONSerialization
-                                            JSONObjectWithData:pageData
-                                            options:0
-                                            error:nil];
-                            if ([ssoTokens isKindOfClass:[NSDictionary class]])
-                            {
-                                [self.authData setValue:ssoTokens forKey:OM_TOKENS];
-                            }
-
-                        }
-
-                        [self completedAuthentication];
-                        
-                    }];
-                }
-                else
-                {
-                    if ([ssoTokens isKindOfClass:[NSDictionary class]])
-                    {
-                        [self.authData setValue:ssoTokens forKey:OM_TOKENS];
-                    }
-                   
-                    [self completedAuthentication];
-                    
-                }
-                
-
-            }];
-            
-        }
-        else
-        {
-            [self completedAuthentication];
-
-        }
-        
     }
     else if (YES == [OMObject isCurrentURL:URL EqualTo:self.configuration.loginFailureURL])
     {
@@ -554,8 +372,7 @@
                          be empty */
                         if([username length] > 0)
                         {
-                            [self.authData setObject:username
-                                              forKey:OM_USERNAME];
+                            self.extractedUsername = username;
                         }
                     }
                 }
@@ -586,8 +403,7 @@
              {
                  if ([result isKindOfClass:[NSString class]] && [result length] > 0)
                  {
-                     [self.authData setObject:result
-                                       forKey:OM_USERNAME];
+                     self.extractedUsername = result;
                      usernameFound = YES;
                  }
                  
@@ -620,35 +436,10 @@
     }
 }
 
-- (void)clearWkWebViewCookies
-{
-    NSSet *websiteDataTypes = [NSSet setWithArray:@[
-                            WKWebsiteDataTypeMemoryCache,
-                            WKWebsiteDataTypeCookies,
-                            WKWebsiteDataTypeSessionStorage,
-                            ]];
-    
-    [self.wkWebViewClient cookiesForVisitedHosts:self.context.visitedHosts
-               completionHandler:^(NSArray<WKWebsiteDataRecord *> * records)
-    {
-        if ([records count])
-        {
-            [[WKWebsiteDataStore defaultDataStore] removeDataOfTypes:websiteDataTypes
-                                                      forDataRecords:records
-                                                   completionHandler:^{
-                                                       
-                                                       NSLog(@"cleared");
-                                                   }];
-        }
-
-    }];
-    
-}
-
 #pragma mark -
 #pragma mark Tokens extracting methods -
 
-- (void)processRequiredTokens
+- (BOOL)processRequiredTokens:(NSError**)inerror
 {
     NSError *error = nil;
     
@@ -662,31 +453,49 @@
     
     if ([requiredCookies count] > 0)
     {
-        if (!self.configuration.enableWKWebView)
-        {
+        if (!self.configuration.enableWKWebView) {
             [self extractTokensFromCookies:requiredCookies error:&error];
+        }
+        else
+        {
+            if(@available(iOS 11, *))
+            {
+                [self extractTokensFromCookies:requiredCookies error:&error];
+
+            }
         }
     }
     
     if (self.configuration.parseTokenRelayResponse)
     {
-        [self parseTokenRelayResponse:&error];
+        OMCSRFRequestHandler *handler = [[OMCSRFRequestHandler alloc] init];
+        NSDictionary *jwtInfo = [handler extractTokenRelayTokensWithConfig:self.configuration error:&error];
+        
+        if (jwtInfo) {
+            [self.authData setValue:jwtInfo forKey:OM_TOKENS];
+            [self parseTokenRelayResponse:&error];
+        }
+        
+        if (inerror && error)
+            *inerror = error;
+
     }
     
-    NSString *username = [self.authData objectForKey:OM_USERNAME];
-    
-    if (username)
+    if (self.extractedUsername)
     {
-        self.context.userName = username;
+        self.context.userName = self.extractedUsername;
+        [self.authData setValue:self.extractedUsername forKey:OM_USERNAME];
     }
     
+
+    return YES;
 }
 
 
 - (void)extractTokensFromDataRecord:(NSMutableArray*)requiredCookies
                                error:(NSError**)error
 {
-    [self.wkWebViewClient cookiesForVisitedHosts:self.context.visitedHosts completionHandler:
+    [OMWKWebViewCookieHandler cookiesForVisitedHosts:self.context.visitedHosts completionHandler:
      ^(NSArray<WKWebsiteDataRecord *> * dataRecords)
     {
         for (WKWebsiteDataRecord *record in dataRecords)
@@ -775,7 +584,7 @@
     NSString *principal = [accessToken valueForKey:OM_PRINCIPAL];
     if ([principal length])
     {
-        self.context.userName = principal;
+        self.extractedUsername = principal;
     }
     if ([tokenValue length])
     {
@@ -883,7 +692,7 @@
 - (NSArray*)userNameTokensList
 {
     NSArray *usernameTokens = [NSArray arrayWithObjects:@"username",
-                               @"uname", @"email", @"uid", @"userid", nil];
+                               @"uname", @"email", @"uid", @"userid",@"sso_username", nil];
     // add app provided tokens
     NSSet *usernameParamName = self.configuration.fedAuthUsernameParamName;
     if ([usernameParamName count])
@@ -938,18 +747,51 @@
 
 - (void) retrieveRememberCredentials:(NSMutableDictionary *) authnData
 {
-    NSString *rememberCredKey = nil;
-    
-    rememberCredKey = [self.mss rememberCredKey];
-    
-    if (![rememberCredKey length] || !authnData)
-    {
-        return;
-    }
+        NSString *rememberCredKey = nil;
+        
+        rememberCredKey = [self.mss rememberCredKey];
+        
+        if (![rememberCredKey length] || !authnData)
+        {
+            return;
+        }
+        
+        OMCredential *cred = [[OMCredentialStore sharedCredentialStore]
+                              getCredential:rememberCredKey];
+    if (cred.userName) {
+        [authnData setValue:cred.userName forKey:OM_USERNAME];
 
-    OMCredential *cred = [[OMCredentialStore sharedCredentialStore]
-                          getCredential:rememberCredKey];
-    [authnData setValue:cred.userName forKey:OM_USERNAME];
+    }
+}
+
+- (void)syncCookiesToHTTPCookieStoreProcessed
+{
+    NSError *errorObj = nil;
+    [self processRequiredTokens:&errorObj];
+    [self performSelector:@selector(sendFinishAuthentication:)
+                 onThread:self.callerThread
+               withObject:errorObj
+            waitUntilDone:YES];
+
+}
+
+-(void)syncCookiesToHTTPCookieStore {
+    
+    if (@available(iOS 11, *)) {
+        // Use iOS 11 APIs.
+        [[[WKWebsiteDataStore defaultDataStore] httpCookieStore] getAllCookies:^(NSArray<NSHTTPCookie *> * cookies) {
+            
+            for (NSHTTPCookie *cookie in cookies) {
+                [[NSHTTPCookieStorage sharedHTTPCookieStorage] setCookie:cookie];
+            }
+            
+            [self syncCookiesToHTTPCookieStoreProcessed];
+        }];
+        
+    } else {
+        
+        [self syncCookiesToHTTPCookieStoreProcessed];
+    }
 }
 
 @end

@@ -6,22 +6,21 @@
 
 
 #import "OMOIDCLogoutService.h"
-#import "OMWebViewClient.h"
 #import "OMOIDCConfiguration.h"
 #import "OMErrorCodes.h"
 #import "OMCryptoService.h"
 #import "OMCredentialStore.h"
+#import "OMWKWebViewClient.h"
 
-@interface OMOIDCLogoutService()<UIWebViewDelegate>
+@interface OMOIDCLogoutService()
 @property (nonatomic, strong) OMAuthenticationChallenge *challenge;
-@property (nonatomic, strong) OMWebViewClient *webViewClient;
 @property (nonatomic, assign) BOOL clearPersistentCookies;
-@property (nonatomic, weak) id<UIWebViewDelegate> previousDelegate;
 @property (nonatomic, strong) NSURL *logoutURL;
 @property (nonatomic, weak) OMOIDCConfiguration *config;
 @property (nonatomic) BOOL redirectURLHit;
 @property (nonatomic, strong) NSString *state;
 @property (nonatomic, strong) NSError *error;
+@property (nonatomic, strong) OMWKWebViewClient *wkWebViewClient;
 @end
 
 @implementation OMOIDCLogoutService
@@ -114,7 +113,7 @@
 
 -(void)sendFinishLogout:(NSError *)error
 {
-    [self.webViewClient stopRequest];
+    [self.wkWebViewClient stopRequest];
     OMAuthenticationContext *context = [self.mss.cacheDict
                                         valueForKey:self.mss.authKey];
     OMOAuthConfiguration *config = (OMOAuthConfiguration *)
@@ -147,9 +146,9 @@
 
 - (void)proceedWithChallengeResponse
 {
-    UIWebView *webView = [self.authData valueForKey:OM_PROP_AUTH_WEBVIEW];
+    WKWebView *webView = [self.authData valueForKey:OM_PROP_AUTH_WEBVIEW];
     
-    if ([webView isKindOfClass:[UIWebView class]])
+    if ([webView isKindOfClass:[WKWebView class]])
     {
         
         NSURLRequest *request =
@@ -158,9 +157,9 @@
          cachePolicy:NSURLRequestUseProtocolCachePolicy
          timeoutInterval:10.0f];
         
-        self.webViewClient = [[OMWebViewClient alloc] initWithWebView:webView
-                                                     callBackDelegate:self];
-        [self.webViewClient loadRequest:request];
+        self.wkWebViewClient = [[OMWKWebViewClient alloc] initWithWKWebView:webView callBackDelegate:self];
+        [self.wkWebViewClient loadRequest:request];
+        
     }
     else
     {
@@ -172,47 +171,6 @@
         
     }
 }
--(BOOL)webView:(UIWebView *)webView
-shouldStartLoadWithRequest:(NSURLRequest *)request
-navigationType:(UIWebViewNavigationType)navigationType
-{
-    if ([request.URL.scheme
-         caseInsensitiveCompare:self.config.redirectURI.scheme]
-        == NSOrderedSame)
-    {
-        self.redirectURLHit = true;
-        return false;
-    }
-    return true;
-}
-
-- (void)webViewDidFinishLoad:(UIWebView *)webView
-{
-    [self performSelector:@selector(sendFinishLogout:)
-                 onThread:self.callerThread
-               withObject:nil
-            waitUntilDone:YES];
-}
-
-- (void)webView:(UIWebView *)webView
-didFailLoadWithError:(NSError *)error
-{
-    if (!self.redirectURLHit)
-    {
-        [self performSelector:@selector(sendFinishLogout:)
-                     onThread:self.callerThread
-                   withObject:error
-                waitUntilDone:YES];
-    }
-    else
-    {
-        [self performSelector:@selector(sendFinishLogout:)
-                     onThread:self.callerThread
-                   withObject:nil
-                waitUntilDone:YES];
-    }
-}
-
 -(void)parseLogoutResponse:(NSURL *)url
 {
     NSDictionary *dict = [OMOIDCConfiguration parseConfigurationURL:url
@@ -228,8 +186,60 @@ didFailLoadWithError:(NSError *)error
     {
         self.error = [OMObject createErrorWithCode:OMERR_OAUTH_STATE_INVALID];
     }
+
+
+}
+
+- (void)stopRequest
+{
+    [self.wkWebViewClient stopRequest];
+}
+
+
+- (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler
+{
+    NSURL *url = navigationAction.request.URL;
+    NSLog(@"url = %@", url);
+    NSString *urlScheme = navigationAction.request.URL.scheme;
     
-    
+    if ([urlScheme
+         caseInsensitiveCompare:self.config.redirectURI.scheme]
+        == NSOrderedSame)
+    {
+        self.redirectURLHit = true;
+//        decisionHandler(WKNavigationActionPolicyCancel);
+//        [self.wkWebViewClient stopRequest];
+    }
+}
+
+- (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation
+{
+    [self performSelector:@selector(sendFinishLogout:)
+                 onThread:self.callerThread
+               withObject:nil
+            waitUntilDone:YES];
+}
+
+-(void)webView:(WKWebView *)webView
+    didFailProvisionalNavigation:(null_unspecified WKNavigation *)navigation
+     withError:(nonnull NSError *)error
+{
+    if (!self.redirectURLHit)
+    {
+        [self performSelector:@selector(sendFinishLogout:)
+                     onThread:self.callerThread
+                   withObject:error
+                waitUntilDone:YES];
+    }
+    else
+    {
+        [self performSelector:@selector(sendFinishLogout:)
+                     onThread:self.callerThread
+                   withObject:nil
+                waitUntilDone:YES];
+    }
+
+
 }
 
 - (void)removeClientRegistrationToken

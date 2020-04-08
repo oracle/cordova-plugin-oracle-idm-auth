@@ -20,4 +20,14 @@
                               completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition disposition,
                                                           NSURLCredential *credential))completionHandler;
 
+
+- (void)doServerTrustSynchronouslyForAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
+                                   challengeReciver:(id)reciver
+                                  completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition disposition,
+                                                              NSURLCredential *credential))completionHandler;
+- (void)doClientTrustSynchronouslyForAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
+                                   challengeReciver:(id)reciver
+                                  completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition disposition,
+                                                              NSURLCredential *credential))completionHandler;
+
 @end

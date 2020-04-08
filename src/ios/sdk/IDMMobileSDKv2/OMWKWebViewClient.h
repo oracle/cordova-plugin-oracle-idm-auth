@@ -10,14 +10,11 @@
 @interface OMWKWebViewClient : NSObject
 
 @property (nonatomic, weak) WKWebView *clientWebView;
+@property (nonatomic, assign) BOOL rejectSSLChallanges;
 
 - (instancetype)initWithWKWebView:(WKWebView *)webView callBackDelegate:(id)del;
 
 - (void)loadRequest:(NSURLRequest*)request;
 - (void)stopRequest;
-
-
-- (void)cookiesForVisitedHosts:(NSMutableArray*)visitedHosts completionHandler:
-(void (^)(NSArray<WKWebsiteDataRecord *> *))completionHandler;
 
 @end

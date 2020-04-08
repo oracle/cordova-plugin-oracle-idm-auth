@@ -274,4 +274,211 @@
     }
 }
 
+
+- (void)doClientTrustSynchronouslyForAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
+                               challengeReciver:(id)reciver
+                              completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition disposition,
+                                                          NSURLCredential *credential))completionHandler
+{
+    self.currentService = reciver;
+    
+    
+    if (![OMCertService isClientIdentityInstalled])
+    {
+        [self.currentService  performSelector:@selector(sendFinishAuthentication:)
+                                     onThread:self.currentService.callerThread
+                                   withObject:[OMObject createErrorWithCode:
+                                               OMERR_NO_IDENTITY]
+                                waitUntilDone:false];
+        [self.currentService cancelAuthentication];
+        
+        return;
+    }
+    else
+    {
+        
+        self.clientIdentitiesList = [OMCertService allClientIdentities];
+        NSArray *clientCerts = [OMCertService getCertInfoForIdentities:
+                                self.clientIdentitiesList];
+        
+        if (![clientCerts count])
+        {
+            if (clientCerts == nil) {
+                clientCerts = [NSArray array];
+            }
+            
+            [self.currentService.authData setObject:clientCerts forKey:OM_CLIENTCERTS];
+        }
+        else
+        {
+            [self.currentService.authData setObject:clientCerts forKey:OM_CLIENTCERTS];
+            self.certInfoList = clientCerts;
+        }
+        
+        [self.currentService.authData setObject:[NSNull null] forKey:OM_SELECTED_CERT];
+        
+        
+        self.currentService.challenge = [[OMAuthenticationChallenge alloc] init];
+        self.currentService.challenge.authData = self.currentService.authData;
+        self.currentService.challenge.challengeType = OMChallengeClientCert;
+        
+        __block __weak OMAuthenticationService *weakself = self.currentService;
+        
+        self.currentService.challenge.authChallengeHandler = ^(NSDictionary *dict,
+                                                               OMChallengeResponse response)
+        {
+            if (response == OMProceed)
+            {
+                
+                id cert = [dict valueForKey:OM_SELECTED_CERT];
+                
+                if ([cert isKindOfClass:[OMCertInfo class]])
+                {
+                    NSUInteger index = [self.certInfoList indexOfObject:cert];
+                    
+                    SecIdentityRef currentIdentity = (__bridge SecIdentityRef)
+                    ([self.clientIdentitiesList objectAtIndex:index]);
+                    NSURLCredential *cred = [OMCertService
+                                             getCretCredentialForIdentity:
+                                             currentIdentity];
+                    
+                    completionHandler(NSURLSessionAuthChallengeUseCredential, cred);
+                }
+                else
+                {
+                    completionHandler(NSURLSessionAuthChallengePerformDefaultHandling,
+                                      nil);
+                }
+
+            }
+            else
+            {
+                completionHandler(NSURLSessionAuthChallengeCancelAuthenticationChallenge,
+                                  nil);
+                [weakself cancelAuthentication];
+                [weakself.delegate didFinishCurrentStep:weakself
+                                               nextStep:OM_NEXT_AUTH_STEP_NONE
+                                           authResponse:nil
+                                                  error:[OMObject createErrorWithCode:
+                                                         OMERR_USER_CANCELED_AUTHENTICATION]];
+            }
+            
+        };
+        
+        [self.currentService.delegate didFinishCurrentStep:self
+                                                  nextStep:OM_NEXT_AUTH_STEP_CHALLENGE
+                                              authResponse:nil
+                                                     error:nil];
+
+        
+    
+    }
+}
+
+- (void)doServerTrustSynchronouslyForAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
+                               challengeReciver:(id)reciver
+                              completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition disposition,
+                                                          NSURLCredential *credential))completionHandler
+{
+    self.currentService = reciver;
+    OSStatus err;
+    
+    
+    SecTrustRef trustRef = [[challenge protectionSpace]serverTrust];
+    
+    SecTrustResultType trustResult = [OMCertService evaluateTrustResultForChallenge:
+                                      challenge withError:&err];
+    
+    // cert chain invalid - alert user and get confirmation
+    if ( err == noErr &&
+        trustResult == kSecTrustResultRecoverableTrustFailure)
+    {
+        // human-readable summary of certificate
+        NSString *certDesc;
+        certDesc = [OMCertService certSummaryInTrust:trustRef];
+        
+        OMCertInfo *certInfo = [OMCertService infoForServerTrustRef:trustRef];
+        
+        if (nil != certDesc)
+            [self.currentService.authData setObject:certDesc forKey:OM_CERT_DESC];
+        
+        if(nil != certInfo)
+            [self.currentService.authData setObject:certInfo
+                                             forKey:OM_SERVER_TRUST_INFO];
+        
+        [self.currentService.authData setObject:[NSNumber numberWithBool:NO]
+                                         forKey:OM_TRUST_SERVER_CHALLANGE];
+        
+            self.currentService.challenge = [[OMAuthenticationChallenge alloc] init];
+            self.currentService.challenge.authData = self.currentService.authData;
+            self.currentService.challenge.challengeType = OMChallengeServerTrust;
+            
+            __block __weak OMAuthenticationService *weakself = self.currentService;
+        
+            self.currentService.challenge.authChallengeHandler = ^(NSDictionary *dict,
+                                                                   OMChallengeResponse response)
+            {
+                if (response == OMProceed)
+                {
+                    weakself.authData = [NSMutableDictionary
+                                         dictionaryWithDictionary:dict];
+                   
+                    if ([[self.currentService.authData objectForKey:OM_TRUST_SERVER_CHALLANGE] boolValue])
+                    {
+                        [OMCertService addLeafCertificateFromTrust:trustRef];
+                        completionHandler(NSURLSessionAuthChallengeUseCredential,
+                                          [NSURLCredential credentialForTrust:trustRef]);
+
+                        
+                    }
+                    else
+                    {
+                        completionHandler(NSURLSessionAuthChallengePerformDefaultHandling,
+                                          nil);
+                    }
+
+                }
+                else
+                {
+                    completionHandler(NSURLSessionAuthChallengeCancelAuthenticationChallenge,
+                                      nil);
+                    [weakself cancelAuthentication];
+                    [weakself.delegate didFinishCurrentStep:weakself
+                                                   nextStep:OM_NEXT_AUTH_STEP_NONE
+                                               authResponse:nil
+                                                      error:[OMObject createErrorWithCode:
+                                                             OMERR_USER_CANCELED_AUTHENTICATION]];
+                    
+                }
+            };
+            
+            [self.currentService.delegate didFinishCurrentStep:self
+                                                      nextStep:OM_NEXT_AUTH_STEP_CHALLENGE
+                                                  authResponse:nil
+                                                         error:nil];
+        
+    }
+    // cert chain ok
+    else if ( err == noErr &&
+             ((trustResult == kSecTrustResultProceed) ||
+              (trustResult == kSecTrustResultUnspecified)))
+    {
+        completionHandler(NSURLSessionAuthChallengeUseCredential,
+                          [NSURLCredential credentialForTrust:trustRef]);
+
+    }
+    // Failed: kSecTrustResultDeny, kSecTrustResultFatalTrustFailure,
+    //         kSecTrustResultInvalid, kSecTrustResultOtherError
+    //         kSecTrustResultConfirm - deprecated - iOS 7.0
+    else
+    {
+        // cancel or cert addition failed
+        completionHandler(NSURLSessionAuthChallengePerformDefaultHandling,
+                          nil);
+
+    }
+    
+}
+
+
 @end

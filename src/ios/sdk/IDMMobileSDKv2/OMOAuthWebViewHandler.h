@@ -7,11 +7,12 @@
 #import <Foundation/Foundation.h>
 #import "OMOAuthConfiguration.h"
 #import "OMOAuthAuthenticationService.h"
+#import <WebKit/WebKit.h>
 
-@interface OMOAuthWebViewHandler : NSObject<UIWebViewDelegate>
-@property (nonatomic, weak) UIWebView *webView;
+@interface OMOAuthWebViewHandler : NSObject
 @property (nonatomic, weak) OMOAuthAuthenticationService *oauthService;
 @property (nonatomic) BOOL redirectURIHit;
+@property (nonatomic, weak) WKWebView *wkwebView;
 
 - (void)loadRequest:(NSURLRequest*)request;
 - (void)stopRequest;

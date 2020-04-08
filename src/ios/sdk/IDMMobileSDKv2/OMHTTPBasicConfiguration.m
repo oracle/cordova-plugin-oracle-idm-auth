@@ -52,6 +52,8 @@
                                                   OM_PROP_IDENTITY_DOMAIN_NAME_IN_HEADER];
             id identityDomainHeaderName = [properties valueForKey:
                                            OM_PROP_IDENTITY_DOMAIN_HEADER_NAME];
+            id identityDomainHeaderNameToMobileAgent = [properties valueForKey:
+                                           OM_PROP_SEND_IDENTITY_DOMAIN_HEADER_TO_MOBILE_AGENT];
 
             if (requiredTokens &&
                 [requiredTokens isKindOfClass:[NSSet class]] == false)
@@ -119,8 +121,10 @@
             }
             self.provideIdentityDomainToMobileAgent =
             [OMMobileSecurityConfiguration
-             boolValue:provideIdentityDomainNameInHeader];
+             boolValue:identityDomainHeaderNameToMobileAgent];
 
+            self.identityDomainInHeader = [OMMobileSecurityConfiguration
+                                           boolValue:provideIdentityDomainNameInHeader];
             if (identityDomainHeaderName &&
                 [identityDomainHeaderName isKindOfClass:
                                           [NSString class]] == false)

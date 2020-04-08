@@ -3,6 +3,7 @@
  * The Universal Permissive License (UPL), Version 1.0
  */
 /* jshint esversion: 6 */
+/* Plugin Version :  1.4.0 */
 
 /**
  * @file {@link https://github.com/oracle/cordova-plugin-oracle-idm-auth|cordova-plugin-oracle-idm-auth}
@@ -1070,8 +1071,7 @@ var IdmAuthFlows = function() {
    * For example, user may accidentally click a link on the login page. In this case, user can use "Back" button to come back to the login page.
    * For example, if the login page is not loaded correctly, user may want to try reloading the page, before cancelling the login.
    * If user cancels the login, the promise returned by {@link AuthenticationFlow#login} will be rejected.
-   * For iOS, {@link https://developer.apple.com/documentation/uikit/uiwebview|UIWebView} will be used by default.
-   * App can choose to use {@link https://developer.apple.com/documentation/webkit/wkwebview|WKWebView} through {@link FedAuthPropertiesBuilder#enableWkWebView|configuration}.
+   * For iOS, {@link https://developer.apple.com/documentation/webkit/wkwebview|WKWebView} will be used by default.
    * </p>
    * <p>
    * While logging out, the plugin brings up a WebView and loads the {@link FedAuthPropertiesBuilder#logoutUrl|logout page} provided in the configuration.
@@ -1093,6 +1093,7 @@ var IdmAuthFlows = function() {
    var FedAuthPropertiesBuilder = function(appName, loginUrl, logoutUrl, loginSuccessUrl, loginFailureUrl) {
     RemoteAuthPropertiesBuilder.call(this, appName);
     this.put(authPropertyKeys.AuthServerType, authServerTypes.FederatedAuthentication);
+    this.put(authPropertyKeys.EnableWkWebView, true);
     // There is a feature to remember the user name for fed auth cases.
     // Android has this support inbuilt in the OS level. So setting this property does not make a difference for Android.
     // iOS SDK needs this flag to remember the user name. So to make things consistent across platforms, this is set by default.

@@ -10,7 +10,7 @@
 #import "OMCredentialStore.h"
 #import "OMAuthenticationManager.h"
 
-@interface OMHTTPBasicLogoutService ()<UIWebViewDelegate>
+@interface OMHTTPBasicLogoutService ()
 @property (nonatomic, assign) BOOL clearPersistentCookies;
 @end
 

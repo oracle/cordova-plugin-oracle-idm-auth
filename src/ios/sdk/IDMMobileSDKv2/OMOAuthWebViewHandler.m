@@ -8,28 +8,42 @@
 #import "OMDefinitions.h"
 #import "OMAuthorizationCodeGrant.h"
 #import "OMErrorCodes.h"
-#import "OMWebViewClient.h"
+#import "OMWKWebViewClient.h"
 
 @interface OMOAuthWebViewHandler ()
 
-@property(nonatomic, strong) OMWebViewClient *webViewClient;
+@property(nonatomic, strong) OMWKWebViewClient *wkwebViewClient;
 
 @end
 
 @implementation OMOAuthWebViewHandler
 
--(BOOL)webView:(UIWebView *)webView
-shouldStartLoadWithRequest:(NSURLRequest *)request
-navigationType:(UIWebViewNavigationType)navigationType
+- (void)loadRequest:(NSURLRequest*)request;
 {
-    NSString *urlScheme = request.URL.scheme;
+    self.wkwebViewClient = [[OMWKWebViewClient alloc] initWithWKWebView:self.wkwebView callBackDelegate:self];
+    [self.wkwebViewClient loadRequest:request];
+}
+
+- (void)stopRequest
+{
+    [self.wkwebViewClient stopRequest];
+}
+
+#pragma mark -
+#pragma mark WKNavigation Delegates-
+
+- (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler
+{
+    NSURL *url = navigationAction.request.URL;
+    NSLog(@"url = %@", url);
+    NSString *urlScheme = navigationAction.request.URL.scheme;
     
     if ([urlScheme isEqual:self.oauthService.config.redirectURI.scheme])
     {
         self.redirectURIHit = true;
         NSDictionary *responseDict = [self.oauthService
                                       parseFrontChannelResponse:
-                                      request.URL];
+                                      navigationAction.request.URL];
         [self.oauthService.authData addEntriesFromDictionary:responseDict];
         if ([responseDict objectForKey:@"error"])
         {
@@ -63,15 +77,16 @@ navigationType:(UIWebViewNavigationType)navigationType
          onThread:self.oauthService.callerThread
          withObject:self.oauthService.error
          waitUntilDone:false];
-        [self.webViewClient stopRequest];
-        return false;
+        [self.wkwebViewClient stopRequest];
     }
-    return true;
 }
 
-- (void)webView:(UIWebView *)webView
-didFailLoadWithError:(NSError *)error
+
+-(void)webView:(WKWebView *)webView
+    didFailProvisionalNavigation:(null_unspecified WKNavigation *)navigation
+     withError:(nonnull NSError *)error
 {
+    NSLog(@" Challenge received = %@",error);
     if (!self.redirectURIHit)
     {
         self.oauthService.nextStep = OM_NEXT_REG_STEP_NONE;
@@ -82,18 +97,9 @@ didFailLoadWithError:(NSError *)error
          withObject:error
          waitUntilDone:false];
         
-        [self.webViewClient stopRequest];
+        [self.wkwebViewClient stopRequest];
     }
-}
-- (void)loadRequest:(NSURLRequest*)request;
-{
-    self.webViewClient = [[OMWebViewClient alloc] initWithWebView:self.webView callBackDelegate:self];
-    [self.webViewClient loadRequest:request];
-}
 
-- (void)stopRequest
-{
-    [self.webViewClient stopRequest];
 }
 
 @end

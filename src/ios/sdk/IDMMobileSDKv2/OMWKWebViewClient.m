@@ -144,7 +144,7 @@ decisionHandler:(void (^)(WKNavigationResponsePolicy))decisionHandler
     }
     else
     {
-        decisionHandler(WKNavigationActionPolicyAllow);
+        decisionHandler(WKNavigationResponsePolicyAllow);
     }
 
 }
@@ -307,8 +307,11 @@ completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition disposition,
         [challengeType isEqual:NSURLAuthenticationMethodNegotiate] ||
         [challengeType isEqual:NSURLAuthenticationMethodDefault])
     {
-        [self sendBasicAuthChallenge:challenge
-                   completionHandler:completionHandler];
+        
+            [self sendBasicAuthChallenge:challenge
+                       completionHandler:completionHandler];
+
+        
     }
     else if ([challengeType
               isEqualToString:NSURLAuthenticationMethodClientCertificate] &&
@@ -316,17 +319,33 @@ completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition disposition,
               presentClientCertIdentityOnDemand])
     {
         [[OMClientCertChallangeHandler sharedHandler]
-         doClientTrustForAuthenticationChallenge:challenge
+         doClientTrustSynchronouslyForAuthenticationChallenge:challenge
          challengeReciver:self.callBackDelegate
          completionHandler:completionHandler];
         
     }
     else if ([challengeType isEqualToString:NSURLAuthenticationMethodServerTrust])
     {
-        [[OMClientCertChallangeHandler sharedHandler]
-         doServerTrustForAuthenticationChallenge:challenge
-         challengeReciver:self.callBackDelegate
-         completionHandler:completionHandler];
+        if (self.rejectSSLChallanges)
+        {
+            
+            completionHandler(NSURLSessionAuthChallengePerformDefaultHandling,
+                              nil);
+        }
+        else
+        {
+            [[OMClientCertChallangeHandler sharedHandler]
+             doServerTrustSynchronouslyForAuthenticationChallenge:challenge
+             challengeReciver:self.callBackDelegate
+             completionHandler:completionHandler];
+
+        }
+    }
+    else
+    {
+        completionHandler(NSURLSessionAuthChallengePerformDefaultHandling,
+                          nil);
+
     }
     
 }
@@ -378,10 +397,8 @@ completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition disposition,
     completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition disposition,
                     NSURLCredential *__nullable credential))completionHandler
 {
-    dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
     
-    
-    OMAuthenticationService *currentAuthService = self.callBackDelegate;
+    __block __weak OMAuthenticationService *currentAuthService = self.callBackDelegate;
     
     currentAuthService.challenge = [[OMAuthenticationChallenge alloc] init];
     
@@ -434,11 +451,34 @@ completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition disposition,
                     [weakOms.authData removeObjectForKey:OM_ERROR];
                 }
                 
+                NSString * userName = [currentAuthService.authData valueForKey:OM_USERNAME];
+                NSString * password = [currentAuthService.authData valueForKey:OM_PASSWORD];
+                
+                if (userName && password)
+                {
+                    NSURLCredential *credential =  [NSURLCredential
+                                                    credentialWithUser:userName
+                                                    password:password
+                                                    persistence:
+                                                    NSURLCredentialPersistenceForSession];
+                    
+                    completionHandler(NSURLSessionAuthChallengeUseCredential, credential);
+                    
+                }
+                else
+                {
+                    completionHandler(NSURLSessionAuthChallengePerformDefaultHandling,
+                                      nil);
+                }
+
             }
             
         }
         else
         {
+            
+            completionHandler(NSURLSessionAuthChallengeCancelAuthenticationChallenge,
+                              nil);
             [self stopRequest];
             
             [weakOms.delegate didFinishCurrentStep:weakOms
@@ -448,141 +488,13 @@ completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition disposition,
                                             OMERR_USER_CANCELED_AUTHENTICATION]];
         }
        
-        dispatch_semaphore_signal(semaphore);
-        
     };
     
-    [currentAuthService.delegate didFinishCurrentStep:currentAuthService
-                              nextStep:OM_NEXT_AUTH_STEP_CHALLENGE
-                          authResponse:nil
-                                 error:nil];
+        [currentAuthService.delegate didFinishCurrentStep:currentAuthService
+                                                 nextStep:OM_NEXT_AUTH_STEP_CHALLENGE
+                                             authResponse:nil
+                                                    error:nil];
     
-    
-    dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
-    
-    NSString * userName = [currentAuthService.authData valueForKey:OM_USERNAME];
-    NSString * password = [currentAuthService.authData valueForKey:OM_PASSWORD];
-    
-    if (userName && password)
-    {
-        NSURLCredential *credential =  [NSURLCredential
-                                        credentialWithUser:userName
-                                        password:password
-                                        persistence:
-                                        NSURLCredentialPersistenceForSession];
-        
-        completionHandler(NSURLSessionAuthChallengeUseCredential, credential);
-        
-    }
-    else
-    {
-        completionHandler(NSURLSessionAuthChallengePerformDefaultHandling,
-                          nil);
-    }
-    
-}
-
-#pragma mark -
-#pragma mark cookies related methds -
-
-- (void)cookiesForVisitedHosts:(NSMutableArray*)visitedHosts completionHandler:
-(void (^)(NSArray<WKWebsiteDataRecord *> *))completionHandler;
-
-{
-    NSSet *websiteDataTypes = [NSSet setWithArray:@[
-                                                    WKWebsiteDataTypeMemoryCache,
-                                                    WKWebsiteDataTypeLocalStorage,
-                                                    WKWebsiteDataTypeCookies,
-                                                    WKWebsiteDataTypeSessionStorage,
-                                                    ]];
-    
-    [[WKWebsiteDataStore defaultDataStore] fetchDataRecordsOfTypes:websiteDataTypes
-                    completionHandler:
-                ^(NSArray<WKWebsiteDataRecord *> * _Nonnull dataRecords)
-     {
-         NSMutableSet *domainList = [self domainNamesfromVisitedHosts:
-                                     visitedHosts];
-         if ([domainList count])
-         {
-             NSCompoundPredicate* predicate = [self predicateForDomainNames:
-                                               domainList];
-             NSArray *filtredDataRecord = [dataRecords
-                                           filteredArrayUsingPredicate:predicate];
-             
-             completionHandler(filtredDataRecord);
-         }
-         else
-         {
-             completionHandler(nil);
-         }
-         
-     }];
-}
-
-//use sets to avoid duplicate domain name
-- (NSMutableSet*)domainNamesfromVisitedHosts:(NSMutableArray*)visitedHosts
-{
-    NSMutableSet *domainList = [NSMutableSet set];
-    
-    for (NSURL *vistedURL in visitedHosts)
-    {
-        [domainList addObject:[self domainNameFromHostName:[vistedURL host]]];
-    }
-    
-    return domainList;
-}
-
-- (NSString*)domainNameFromHostName:(NSString*)hostname
-{
-
-    NSString *domainName = nil;
-    
-    NSArray*components = [hostname componentsSeparatedByString:@"."];
-    
-    if ([components count] > 2)
-    {
-       NSArray *domainComponents = [components
-                        subarrayWithRange:NSMakeRange([components count]-2, 2)];
-        
-        for (NSString *component in domainComponents)
-        {
-            if (domainName == nil)
-            {
-                domainName = component;
-            }
-            else
-            {
-                domainName = [domainName stringByAppendingString:@"."];
-                domainName = [domainName stringByAppendingString:component];
-            }
-        }
-    }
-    else
-    {
-        domainName = hostname;
-    }
-    
-    return domainName;
-}
-
-- (NSCompoundPredicate*)predicateForDomainNames:(NSSet*)domainNames
-{
-    NSMutableArray *predicatesList = [NSMutableArray array];
-    
-    for (NSString *domainName in domainNames)
-    {
-        NSPredicate *domainCookiePredicate = [NSPredicate
-                                              predicateWithFormat:
-                                              @"displayName = %@",domainName];
-        [predicatesList addObject:domainCookiePredicate];
-        
-    }
-    
-    NSCompoundPredicate *compoundPredicate = [NSCompoundPredicate
-                                              andPredicateWithSubpredicates:
-                                              predicatesList];
-    
-    return compoundPredicate;
 }
 
 @end

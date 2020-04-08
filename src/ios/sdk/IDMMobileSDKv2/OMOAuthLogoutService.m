@@ -11,12 +11,12 @@
 #import "OMObject.h"
 #import "OMDefinitions.h"
 #import "OMErrorCodes.h"
-#import "OMWebViewClient.h"
 #import "OMCredentialStore.h"
+#import "OMWKWebViewClient.h"
 
-@interface OMOAuthLogoutService()<UIWebViewDelegate>
+@interface OMOAuthLogoutService()
 @property (nonatomic, strong) OMAuthenticationChallenge *challenge;
-@property (nonatomic, strong) OMWebViewClient *webViewClient;
+@property (nonatomic, strong) OMWKWebViewClient *wkWebViewClient;
 @property (nonatomic, assign) BOOL clearPersistentCookies;
 @end
 
@@ -88,9 +88,7 @@
 }
 
 -(void)sendFinishLogout:(NSError *)error
-{
-    [self.webViewClient stopRequest];
-    
+{    
     OMAuthenticationContext *context = [self.mss.cacheDict
                                         valueForKey:self.mss.authKey];
     OMOAuthConfiguration *config = (OMOAuthConfiguration *)
@@ -129,9 +127,9 @@
 
 - (void)proceedWithChallengeResponse
 {
-    UIWebView *webView = [self.authData valueForKey:OM_PROP_AUTH_WEBVIEW];
+    WKWebView *webView = [self.authData valueForKey:OM_PROP_AUTH_WEBVIEW];
     
-    if ([webView isKindOfClass:[UIWebView class]])
+    if ([webView isKindOfClass:[WKWebView class]])
     {
         
         NSURLRequest *request =
@@ -139,10 +137,10 @@
          requestWithURL:[(OMOAuthConfiguration *)self.mss.configuration logoutURL]
          cachePolicy:NSURLRequestUseProtocolCachePolicy
          timeoutInterval:10.0f];
-        
-        self.webViewClient = [[OMWebViewClient alloc] initWithWebView:webView
-                                                     callBackDelegate:self];
-        [self.webViewClient loadRequest:request];
+    
+        self.wkWebViewClient = [[OMWKWebViewClient alloc] initWithWKWebView:webView callBackDelegate:self];
+        [self.wkWebViewClient loadRequest:request];
+
     }
     else
     {
@@ -155,23 +153,31 @@
     }
 }
 
-- (void)webViewDidFinishLoad:(UIWebView *)webView
+- (void)stopRequest
+{
+    [self.wkWebViewClient stopRequest];
+}
+
+- (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation
 {
     [self performSelector:@selector(sendFinishLogout:)
                  onThread:self.callerThread
                withObject:nil
             waitUntilDone:YES];
+    [self stopRequest];
+
 }
 
-- (void)webView:(UIWebView *)webView
-didFailLoadWithError:(NSError *)error
+-(void)webView:(WKWebView *)webView
+    didFailProvisionalNavigation:(null_unspecified WKNavigation *)navigation
+     withError:(nonnull NSError *)error
 {
     [self performSelector:@selector(sendFinishLogout:)
                  onThread:self.callerThread
                withObject:error
             waitUntilDone:YES];
-}
 
+}
 - (void)removeClientRegistrationToken
 {
     NSError *error = [[OMCredentialStore sharedCredentialStore]

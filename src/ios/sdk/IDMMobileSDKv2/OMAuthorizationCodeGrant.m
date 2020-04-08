@@ -158,15 +158,15 @@ NSString *clientAssertionType = @"urn:ietf:params:oauth:client-assertion-type:jw
             }
             else if (authService.config.browserMode == OMBrowserModeEmbedded)
             {
-                UIWebView *webView = [dict valueForKey:OM_PROP_AUTH_WEBVIEW];
-                if ([webView isKindOfClass:[UIWebView class]])
+                WKWebView *webView = [dict valueForKey:OM_PROP_AUTH_WEBVIEW];
+                if([webView isKindOfClass:[WKWebView class]])
                 {
-                    
                     NSURLRequest *request =  [[NSURLRequest alloc]
                                               initWithURL:
                                               weakSelf.frontChannelRequestURL];
-                    weakSelf.handler.webView = webView;
+                    weakSelf.handler.wkwebView = webView;
                     [weakSelf.handler loadRequest:request];
+
                 }
                 else
                 {
@@ -227,10 +227,11 @@ NSString *clientAssertionType = @"urn:ietf:params:oauth:client-assertion-type:jw
                               createErrorWithCode:
                               OMERR_USER_CANCELED_AUTHENTICATION];
             
-            [weakSelf performSelector:@selector(sendFinishAuthentication:)
-                         onThread:weakSelf.oauthService.callerThread
-                       withObject:error
-                    waitUntilDone:YES];
+            [weakSelf.oauthService
+             performSelector:@selector(sendFinishAuthentication:)
+             onThread:weakSelf.oauthService.callerThread
+             withObject:error
+             waitUntilDone:YES];
         }
     };
     self.oauthService.challenge = challenge;

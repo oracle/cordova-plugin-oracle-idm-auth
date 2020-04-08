@@ -20,6 +20,14 @@ import oracle.idm.mobile.auth.local.OMAuthenticator;
 import oracle.idm.mobile.auth.local.OMFingerprintAuthenticator;
 import oracle.idm.mobile.auth.local.OMPinAuthenticator;
 import org.apache.cordova.CallbackContext;
+
+import oracle.idm.mobile.auth.local.*;
+import oracle.idm.mobile.credentialstore.OMCredentialStore;
+import oracle.idm.mobile.crypto.OMKeyManagerException;
+import oracle.idm.mobile.crypto.OMSecureStorageException;
+import oracle.idm.mobile.crypto.OMSecureStorageService;
+import java.io.Serializable;
+
 import org.apache.cordova.PluginResult;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -41,8 +49,14 @@ public class LocalAuthentication {
     this._context = mainActivity.getApplicationContext();
     try {
       this._sharedManager = OMAuthenticationManager.getInstance(mainActivity.getApplicationContext());
+      OMAuthenticator defAuth = OMMobileSecurityService.getDefaultAuthenticator(_context);
+      _defaultSecuredStore = new OMSecureStorageService(_context, defAuth.getKeyStore(), OMCredentialStore.DEFAULT_AUTHENTICATOR_NAME);
+
       _init();
     } catch (OMAuthenticationManagerException e) {
+      // Nothing we can do to recover here.
+      throw new RuntimeException(e);
+    } catch (OMKeyManagerException e) {
       // Nothing we can do to recover here.
       throw new RuntimeException(e);
     }
@@ -193,6 +207,91 @@ public class LocalAuthentication {
 
     if (authenticatePin(authenticator, new OMAuthData(pin), id, callbackContext, PluginErrorCodes.AUTHENTICATION_FAILED))
       _sendSuccess(callbackContext);
+  }
+
+  /**
+   * Fetches the [key,value] data stored in keystore
+   * @param args
+   * @param callbackContext
+   */
+  public void getPreference(JSONArray args, CallbackContext callbackContext) {
+    String id = args.optString(0);
+    String key = args.optString(1);
+
+    try {
+      OMAuthenticator pinAuthenticator = _getAuthenticator(id, LocalAuthType.PIN);
+
+      if (pinAuthenticator == null)
+        throw new IllegalStateException("No enabled authenticators.");
+
+      OMSecureStorageService securedService = new OMSecureStorageService(_context,
+              pinAuthenticator.getKeyStore(),
+              LocalAuthType.PIN.getInstanceId(id));
+      Serializable result = securedService.get(key);
+      if (result == null)
+        throw new IllegalStateException("No key found in PIN secured store, check in default.");
+
+      _sendSuccess(callbackContext, result.toString());
+    } catch (Throwable t) {
+      Log.w(TAG, "Error fetching key.", t);
+      try {
+        Serializable result = _defaultSecuredStore.get(key);
+        _sendSuccess(callbackContext, result == null ? null : result.toString());
+      } catch (OMSecureStorageException e) {
+        Log.e(TAG, "Error while fetching key from default storage.", e);
+        IdmAuthenticationPlugin.invokeCallbackError(callbackContext, PluginErrorCodes.GETTING_VALUE_FROM_DEFAULT_STORAGE_FAILED);
+      }
+      IdmAuthenticationPlugin.invokeCallbackError(callbackContext, PluginErrorCodes.GETTING_VALUE_FROM_SECURED_STORAGE_FAILED);
+    }
+  }
+
+  /**
+   * Sets the [key,value] data in keystore
+   * @param args
+   * @param callbackContext
+   */
+  public void setPreference(JSONArray args, CallbackContext callbackContext) {
+    String id = args.optString(0);
+    String key = args.optString(1);
+    String value = args.optString(2);
+    boolean secure = args.optBoolean(3);
+    if (!secure) {
+      String errorToThrow = PluginErrorCodes.SAVING_VALUE_TO_DEFAULT_STORAGE_FAILED;
+      try {
+        if (value == null)
+          _defaultSecuredStore.delete(key);
+        else
+          _defaultSecuredStore.store(key, value);
+
+        _sendSuccess(callbackContext);
+      } catch (Throwable e) {
+        Log.e(TAG, "Error while storing in default storage.", e);
+        IdmAuthenticationPlugin.invokeCallbackError(callbackContext, errorToThrow);
+      }
+    }
+    String errorToThrow = PluginErrorCodes.SAVING_VALUE_TO_SECURED_STORAGE_FAILED;
+    OMAuthenticator pinAuthenticator = _getAuthenticator(id, LocalAuthType.PIN);
+
+    try {
+      if (pinAuthenticator == null) {
+        errorToThrow = PluginErrorCodes.NO_LOCAL_AUTHENTICATORS_ENABLED;
+        throw new IllegalStateException("No enabled authenticators.");
+      }
+
+      OMSecureStorageService securedService = new OMSecureStorageService(_context,
+              pinAuthenticator.getKeyStore(),
+              LocalAuthType.PIN.getInstanceId(id));
+
+      if (value == null)
+        securedService.delete(key);
+      else
+        securedService.store(key, value);
+      _sendSuccess(callbackContext);
+
+    } catch (Throwable e) {
+      Log.e(TAG, "Error while storing in secured storage.", e);
+      IdmAuthenticationPlugin.invokeCallbackError(callbackContext, errorToThrow);
+    }
   }
 
   /**
@@ -493,6 +592,7 @@ public class LocalAuthentication {
   private final Context _context;
   private final OMAuthenticationManager _sharedManager;
   private boolean _clearFingerprintInstancesAfterAuthentication;
+  private final OMSecureStorageService _defaultSecuredStore;
 
   // Localized strings for fingerprint prompt
   private static final String PROMPT_MESSAGE = "promptMessage";

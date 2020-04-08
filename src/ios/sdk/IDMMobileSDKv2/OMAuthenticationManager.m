@@ -205,6 +205,7 @@
 {
     [self.mss saveAuthContext:context];
     [self setIsAuthRequestInProgress:NO];
+
     if (error)
     {
         error = [self mapOSErrorWithOMError:error];

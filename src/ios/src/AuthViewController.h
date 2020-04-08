@@ -43,7 +43,7 @@
 /**
  * Reference to the webview.
  */
-@property (weak, nonatomic) IBOutlet UIWebView *authWebView;
+@property (weak, nonatomic) WKWebView *authWebView;
 
 
 @property (strong, nonatomic) WKWebView *wkWebView;

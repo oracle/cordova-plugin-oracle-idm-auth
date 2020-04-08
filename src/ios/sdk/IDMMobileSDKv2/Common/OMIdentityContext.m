@@ -20,7 +20,7 @@
 #include <sys/socket.h>
 #include <net/if_dl.h>
 #import "OMCredentialStore.h"
-#import "OMReachability.h"]
+#import "OMReachability.h"
 #import "OMCredential.h"
 
 #define IFT_ETHER 0x6

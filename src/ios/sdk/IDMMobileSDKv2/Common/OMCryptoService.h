@@ -630,6 +630,9 @@ typedef uint32_t OMCryptoKeyType;
 + (NSData *) publicKeyFromKeychainWithTagPrefix:(NSString *)tagPrefix
                                        outError:(NSError **)error;
 
++ (NSData *)   privateKeyFromKeychainWithTagPrefix:(NSString *)tagPrefix
+                                          outError:(NSError **)error;
+
 /**
  * Delete key pair from keychain.
  *
@@ -782,5 +785,39 @@ typedef uint32_t OMCryptoKeyType;
  * @return       NSData containing random bytes of specified length.
  */
 + (NSData *)randomDataOfLength:(size_t)length;
+// Get Private Key Ref from keychain store
+/**
+* Retrieve Private keyref  from keychain.
+*
+* @param  tagPrefix  Retrieve the stored private key in keychain based on the
+*                    value of ApplicationTag attribute. The value of the
+*                    attribute is the combination of the given prefix and
+*                    the string ".private". For example, when the TagPrefix is
+*                    "com.yourcompany.appauth", the public key with the tag
+*                    "com.yourcompany.appauth.private" is picked.
+* @param  error      If not nil, on return this points to an error object when
+*                    an error is encountered.
+* @return            Returns Private keyref key data on success or nil on failure.
+*/
+
++ (SecKeyRef) privateKeyRefWithTagPrefix:(NSString *)prefix
+                                outError:(NSError **)error;
+
+/**
+* Retrieve public KeyRef   from keychain.
+*
+* @param  tagPrefix  Retrieve the stored public key in keychain based on the
+*                    value of ApplicationTag attribute. The value of the
+*                    attribute is the combination of the given prefix and
+*                    the string ".public". For example, when the TagPrefix is
+*                    "com.yourcompany.appauth", the public key with the tag
+*                    "com.yourcompany.appauth.public" is picked.
+* @param  error      If not nil, on return this points to an error object when
+*                    an error is encountered.
+* @return            Returns Public keyref key data on success or nil on failure.
+*/
+
++ (SecKeyRef) publicKeyRefWithTagPrefix:(NSString *)prefix
+outError:(NSError **)error;
 
 @end

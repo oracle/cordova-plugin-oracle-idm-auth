@@ -16,5 +16,7 @@
 + (NSString *)filePathForfile:(NSString*)fileName inDirectory:(NSString*)directory
                         error:(NSError **)error;
 
-
++ (NSData *)sendSynchronousRequest:(NSURLRequest *)request
+returningResponse:(__autoreleasing NSURLResponse **)responsePtr
+                             error:(__autoreleasing NSError **)errorPtr;
 @end

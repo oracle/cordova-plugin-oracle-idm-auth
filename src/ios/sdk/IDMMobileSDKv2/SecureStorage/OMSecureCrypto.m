@@ -11,6 +11,7 @@
 #import "OMKeyStore.h"
 #import "OMCryptoService.h"
 #import "NSData+OMBase64.h"
+#import "IDMMobileSDKv2Library.h"
 
 @interface OMSecureCrypto ()
 
@@ -93,7 +94,6 @@
     NSData *decryptedData = [OMCryptoService decryptData:data
                                         withSymmetricKey:encKey
                                                 outError:error];
-    
     id dec = [OMDataSerializationHelper deserializeData:decryptedData];
     
     return dec;
@@ -114,9 +114,9 @@
         encKey = [self.keyStore getKey:encryptKey];
         
     }
-    
+
     NSData *archivedData = [OMDataSerializationHelper serializeData:plainText];
-    
+
     NSString *encryptedData = [OMCryptoService encryptData:archivedData
                                         withSymmetricKey:encKey
                                     initializationVector:nil
@@ -130,4 +130,40 @@
     return encryptedData;
     
 }
+
+- (NSString*)decryptString:(NSString*)plainText withKey:(NSString*)encryptKey
+                     error:(NSError**)error;
+{
+    NSData *encKey = nil;
+    
+    if (encryptKey == nil)
+    {
+        encKey = [self.keyStore defaultKey];
+        
+    }
+    else
+    {
+        encKey = [self.keyStore getKey:encryptKey];
+        
+    }
+
+        NSData *decryptedData  = [OMCryptoService decryptData:plainText
+                    withSymmetricKey:encKey
+                initializationVector:nil
+                           algorithm:(OMAlgorithmAES128)
+                             padding:OMPaddingPKCS7 mode:OMModeCBC
+    isInputPrefixedWithAlgorithmName:NO
+                isInputBase64Encoded:YES
+                        outError:error];
+    
+    if (!decryptedData)
+    {
+        return nil;
+    }
+    NSString *decryptedString = [OMDataSerializationHelper deserializeData:decryptedData];
+
+    return decryptedString;
+    
+}
+
 @end

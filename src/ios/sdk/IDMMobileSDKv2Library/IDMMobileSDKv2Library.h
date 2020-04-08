@@ -32,6 +32,7 @@
 #import "OMJailBrokenDetector.h"
 #import "OMReachability.h"
 #import "OMBiometricAuthenticator.h"
+#import "OMClassicCredential.h"
 
 @interface IDMMobileSDKv2Library : NSObject
 

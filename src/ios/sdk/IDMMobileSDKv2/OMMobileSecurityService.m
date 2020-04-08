@@ -380,7 +380,6 @@
          [NSNumber numberWithBool:FALSE]
         forKey:[NSString stringWithFormat:@"%@_%@",rememberCredKey,
                 OM_AUTO_LOGIN_PREF]];
-       
         [[NSUserDefaults standardUserDefaults]
          setObject:[NSNumber numberWithBool:FALSE]
          forKey:[NSString stringWithFormat:@"%@_%@",rememberCredKey,
@@ -390,7 +389,7 @@
          setObject:[NSNumber numberWithBool:FALSE]
          forKey:[NSString stringWithFormat:@"%@_%@",rememberCredKey,
                  OM_REMEMBER_USERNAME_PREF]];
-
+       
         [[NSUserDefaults standardUserDefaults]
          setObject:[NSNumber numberWithBool:FALSE]
          forKey:[NSString stringWithFormat:@"%@_%@", rememberCredKey,

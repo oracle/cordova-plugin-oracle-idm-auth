@@ -359,7 +359,8 @@
         authenticationError.code == LAErrorTouchIDNotAvailable ||
         authenticationError.code == LAErrorTouchIDNotEnrolled ||
         authenticationError.code == LAErrorUserCancel ||
-        authenticationError.code == LAErrorTouchIDLockout)
+        authenticationError.code == LAErrorTouchIDLockout ||
+        authenticationError.code == LAErrorSystemCancel)
     {
         isPinRequired = YES;
     }

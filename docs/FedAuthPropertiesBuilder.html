@@ -38,8 +38,7 @@ While showing the WebView, plugin provides basic operations such as "Forward", "
 For example, user may accidentally click a link on the login page. In this case, user can use "Back" button to come back to the login page.
 For example, if the login page is not loaded correctly, user may want to try reloading the page, before cancelling the login.
 If user cancels the login, the promise returned by <a href="AuthenticationFlow.html#login">AuthenticationFlow#login</a> will be rejected.
-For iOS, UIWebView will be used by default.
-App can choose to use WKWebView through <a href="FedAuthPropertiesBuilder.html#enableWkWebView">configuration</a>.
+For iOS, WKWebView will be used by default.
 </p>
 <p>
 While logging out, the plugin brings up a WebView and loads the <a href="FedAuthPropertiesBuilder.html#logoutUrl">logout page</a> provided in the configuration.

@@ -57,7 +57,7 @@
     [self.cancelButton setEnabled:YES];
   }
 
-  if (self.wkWebViewEnabled && self.wkWebView == nil) {
+  if (self.wkWebView == nil) {
     [self createWKWebview];
   }
 }

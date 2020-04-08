@@ -8,15 +8,14 @@
 #import "OMObject.h"
 #import "OMFedAuthConfiguration.h"
 #import "OMAuthenticationChallenge.h"
-#import "OMWebViewClient.h"
 #import "OMErrorCodes.h"
 #import "OMWKWebViewClient.h"
 #import <WebKit/WebKit.h>
+#import "OMWKWebViewCookieHandler.h"
 
-@interface OMFedAuthLogoutService ()<UIWebViewDelegate>
+@interface OMFedAuthLogoutService ()
 
 @property (nonatomic, strong) OMAuthenticationChallenge *challenge;
-@property (nonatomic, strong) OMWebViewClient *webViewClient;
 @property(nonatomic, strong) OMWKWebViewClient *wkWebViewClient;
 @property (nonatomic,retain) NSTimer *timer;
 
@@ -79,23 +78,42 @@
 
 -(void)sendFinishLogout:(NSError *)error
 {
-    if([(OMFedAuthConfiguration*)self.mss.configuration enableWKWebView])
+    if([self isWkWebViewEnabled])
     {
-        [self clearWkWebViewCookies];
-        [self.wkWebViewClient stopRequest];
+        NSMutableSet *visitedURLs = [self.mss.cacheDict
+                                         valueForKey:OM_VISITED_HOST_URLS];
+
+        [OMWKWebViewCookieHandler clearWkWebViewCashForUrls:[visitedURLs allObjects] completionHandler:^{
+            
+            
+            [self.wkWebViewClient stopRequest];
+            if(@available(iOS 11.0,*))
+            {
+                [self clearWebViewCookies];
+            }
+            //Delay the giving the logout sucesses still all cookies got cleaned up
+            [self performSelector:@selector(processLogout:) withObject:error afterDelay:1.0];
+            
+        }];
     }
     else
     {
         [self clearWebViewCookies];
-        [self.webViewClient stopRequest];
+//        [self.webViewClient stopRequest];
+        [self processLogout:error];
     }
     
+}
+
+- (void)processLogout:(NSError *)error
+{
     [self.mss.cacheDict removeAllObjects];
+    
     if (self.clearPersistentCookies)
     {
         self.mss.authManager.curentAuthService.context = nil;
     }
-
+    
     if (self.mss.configuration.sessionActiveOnRestart)
     {
         [[OMCredentialStore sharedCredentialStore]
@@ -104,15 +122,20 @@
 
     [self.mss.delegate mobileSecurityService:self.mss
                              didFinishLogout:error];
+
 }
 
+- (BOOL)isWkWebViewEnabled
+{
+    return  [(OMFedAuthConfiguration*)self.mss.configuration enableWKWebView];
+}
  - (void)proceedWithChallengeResponce
 {
     NSError *error = nil;
     
     id webView = [self.authData valueForKey:OM_PROP_AUTH_WEBVIEW];
 
-    if ([(OMFedAuthConfiguration*)self.mss.configuration enableWKWebView] &&
+    if ([self isWkWebViewEnabled] &&
         [webView isKindOfClass:[WKWebView class]])
     {
         NSURLRequest *request = [NSURLRequest
@@ -124,23 +147,9 @@
         
         self.wkWebViewClient = [[OMWKWebViewClient alloc] initWithWKWebView:webView
                                                            callBackDelegate:self];
+        self.wkWebViewClient.rejectSSLChallanges = YES;
         [self.wkWebViewClient loadRequest:request];
 
-    }
-    else if (![(OMFedAuthConfiguration*)self.mss.configuration enableWKWebView]
-             &&
-             [webView isKindOfClass:[UIWebView class]])
-    {
-        
-        NSURLRequest *request = [NSURLRequest
-                                 requestWithURL:
-                                 [(OMFedAuthConfiguration*)self.mss.configuration
-                                  logoutURL] cachePolicy:NSURLRequestUseProtocolCachePolicy
-                                 timeoutInterval:10.0f];
-        
-        self.webViewClient = [[OMWebViewClient alloc] initWithWebView:webView
-                                                     callBackDelegate:self];
-        [self.webViewClient loadRequest:request];
     }
     else
     {
@@ -151,110 +160,6 @@
                    withObject:error
                 waitUntilDone:YES];
     }
-}
-
-#pragma mark -
-#pragma UIWebView Delegate Methods -
-
-- (void)webViewDidStartLoad:(UIWebView *)webView
-{
-    if ([self.timer isValid])
-    {
-        [self.timer invalidate];
-    }
-}
-
-- (void)webViewDidFinishLoad:(UIWebView *)webView
-{
-
-    if (webView.isLoading)
-        return;
-    
-    NSURL *URL = webView.request.URL;
-
-    OMFedAuthConfiguration *fedauthconfig = (OMFedAuthConfiguration*)self.mss.configuration;
-
-    if (fedauthconfig.autoConfirmLogout)
-    {
-        BOOL isAutoConfirmDone = NO;
-        
-        if ([fedauthconfig.confirmLogoutButtons count])
-        {
-            for (NSString *button in fedauthconfig.confirmLogoutButtons)
-            {
-               
-                NSString *jsScript = [NSString stringWithFormat:
-                                      @"document.getElementById('%@').value;",
-                                      button];
-                NSString *value = [webView stringByEvaluatingJavaScriptFromString:jsScript];
-
-                if ([value length] > 0)
-                {
-                    jsScript = [NSString stringWithFormat:
-                                          @"document.getElementById('%@').click()",
-                                          button];
-                    
-                    [webView stringByEvaluatingJavaScriptFromString:
-                     jsScript];
-                    isAutoConfirmDone = YES;
-                    break;
-                }
-
-            }
-        }
-        else
-        {
-        
-            NSString *value = [webView stringByEvaluatingJavaScriptFromString:@"document.getElementById('Confirm').value;"];
-            
-            if ([value length] > 0)
-            {
-                [webView stringByEvaluatingJavaScriptFromString:
-                 @"document.getElementById('Confirm').click()"];
-                isAutoConfirmDone = YES;
-
-            }
-
-        }
-        
-        if (isAutoConfirmDone)
-            return;
-    }
-    
-    if (fedauthconfig.logoutFailureURL || fedauthconfig.logoutSuccessURL)
-    {
-        [self processLogoutWithUrl:URL];
-
-    }
-    else if (fedauthconfig.logoutSuccessURL == nil)
-    {
-        self.timer = [NSTimer scheduledTimerWithTimeInterval:3 target:self
-                                                    selector:@selector(validatePageRedirects)
-                                                    userInfo:nil
-                                                     repeats:NO];
-        
-    }
-    
-}
-
-- (void)webView:(UIWebView *)webView didFailLoadWithError:(NSError *)error
-{
-    OMFedAuthConfiguration *fedauthconfig = (OMFedAuthConfiguration*)self.mss.configuration;
-    
-    if (fedauthconfig.autoConfirmLogout && (error.code == NSURLErrorCancelled))
-    {
-        error = nil;
-    }
-    
-    if ([self.timer isValid])
-    {
-        [self.timer invalidate];
-    }
-
-    [self performSelector:@selector(sendFinishLogout:)
-                 onThread:self.callerThread
-               withObject:error
-            waitUntilDone:YES];
 }
 
 #pragma mark -
@@ -349,33 +254,6 @@ didFailProvisionalNavigation:(null_unspecified WKNavigation *)navigation
 
 }
 
-- (void)clearWkWebViewCookies
-{
-    NSSet *websiteDataTypes = [NSSet setWithArray:@[
-                                                    WKWebsiteDataTypeMemoryCache,
-                                                    WKWebsiteDataTypeCookies,
-                                                    WKWebsiteDataTypeSessionStorage,
-                                                    ]];
-    NSMutableSet *visitedURLs = [self.mss.cacheDict
-                                 valueForKey:OM_VISITED_HOST_URLS];
-    
-    [self.wkWebViewClient cookiesForVisitedHosts:visitedURLs
-                               completionHandler:^(NSArray<WKWebsiteDataRecord *> * records)
-     {
-         if ([records count])
-         {
-             [[WKWebsiteDataStore defaultDataStore] removeDataOfTypes:websiteDataTypes
-                                                       forDataRecords:records
-                                                    completionHandler:^{
-                                                        
-                                                        NSLog(@"cleared");
-                                                    }];
-         }
-         
-     }];
-    
-}
-
 - (void)clearWebViewCookies
 {
     NSMutableSet *visitedURLs = [self.mss.cacheDict
@@ -388,13 +266,15 @@ didFailProvisionalNavigation:(null_unspecified WKNavigation *)navigation
         NSArray *cookies = [cookieStore cookiesForURL:url];
         for (NSHTTPCookie *cookie in cookies)
         {
-            if (_clearPersistentCookies)
-            {
+            
+            if (self.clearPersistentCookies) {
                 [cookieStore deleteCookie:cookie];
+                [OMWKWebViewCookieHandler deleteCookieFromWKHTTPStore:cookie];
             }
-            if ([cookie isSessionOnly])
-            {
+            else if ([cookie isSessionOnly]){
                 [cookieStore deleteCookie:cookie];
+                [OMWKWebViewCookieHandler deleteCookieFromWKHTTPStore:cookie];
+
             }
         }
     }

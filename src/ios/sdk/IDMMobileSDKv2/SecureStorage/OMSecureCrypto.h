@@ -19,5 +19,7 @@
 
 - (NSString*)encryptString:(NSString*)plainText withKey:(NSString*)encryptKey
                  error:(NSError**)error;
+- (NSString*)decryptString:(NSString*)plainText withKey:(NSString*)encryptKey
+error:(NSError**)error;
 
 @end

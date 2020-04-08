@@ -561,10 +561,8 @@ completedSetupWithConfiguration:(OMMobileSecurityConfiguration *)configuration
     [self.authViewController setIsLoginChallenge:isLogin];
     [self.baseViewController presentViewController:self.authViewController animated:YES completion:^{
       NSObject* webView __unused = nil;
-      if (self.isWkWebViewEnabled && [OMMobileSecurityConfiguration isWKWebViewAvailable]) {
+      if ([OMMobileSecurityConfiguration isWKWebViewAvailable]) {
         webView = self.authViewController.wkWebView;
-      } else {
-        webView = self.authViewController.authWebView;
       }
 
       if (webView == nil) {

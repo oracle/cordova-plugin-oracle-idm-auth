@@ -12,14 +12,6 @@
 #import "OMAuthenticationManager.h"
 #import "OMErrorCodes.h"
 
-@interface OMServiceDiscoveryHandler ()
-
-@property (nonatomic, strong) NSError *error;
-@property (nonatomic, strong) NSThread *callerThread;
-@property (nonatomic, weak) OMMobileSecurityService *mss;
-
-@end
-
 @implementation OMServiceDiscoveryHandler
 
 + (OMServiceDiscoveryHandler *)sharedHandler

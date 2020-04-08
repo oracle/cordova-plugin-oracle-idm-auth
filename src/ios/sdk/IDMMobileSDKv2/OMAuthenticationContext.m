@@ -20,6 +20,7 @@
 #import "NSData+OMBase64.h"
 #import "OMOAuthAuthenticationService.h"
 #import "OMOIDCConfiguration.h"
+#import "OMWKWebViewCookieHandler.h"
 
  NSString *kSessionExpiryDate = @"sessionExpiryDate";
  NSString *kTokensList = @"tokensList";
@@ -132,40 +133,75 @@
     }
 }
 
+- (NSArray *)getHttpCookies{
+    
+    NSMutableArray *cookiesList = [NSMutableArray array];
+    
+    NSHTTPCookieStorage *cookieStore = [NSHTTPCookieStorage
+                                        sharedHTTPCookieStorage];
+    for (NSURL *url in self.visitedHosts)
+    {
+        NSArray *cookies = [cookieStore cookiesForURL:url];
+        [cookiesList addObjectsFromArray:cookies];
+    }
+    
+    return cookiesList;
+    
+}
+
 - (NSArray *)cookies
 {
-    NSMutableArray *arr = [NSMutableArray array];
+    NSArray *cookiesList = nil;
     
-    if(![self isWkWebViewEnabled])
+    if(@available(iOS 11, *))
     {
-        NSHTTPCookieStorage *cookieStore = [NSHTTPCookieStorage
-                                            sharedHTTPCookieStorage];
-        for (NSURL *url in self.visitedHosts)
-        {
-            NSArray *cookies = [cookieStore cookiesForURL:url];
-            [arr addObjectsFromArray:cookies];
-        }
-        
+        cookiesList = [self getHttpCookies];
     }
     else
     {
-        arr = nil;
+        if(![self isWkWebViewEnabled]){
+            
+            cookiesList = [self getHttpCookies];
+        }
     }
         
     
-    return arr;
+    return cookiesList;
 }
 
 - (void)startTimers
 {
-    [self startSessionTimer];
-    [self startIdleTimer];
+    if([NSThread currentThread] == [NSThread mainThread])
+    {
+        [self startSessionTimer];
+        [self startIdleTimer];
+    }
+    else
+    {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            
+            [self startSessionTimer];
+            [self startIdleTimer];
+        });
+    }
 }
 
 - (void)stopTimers
 {
-    [self.sessionTimer stop];
-    [self.idleTimer stop];
+    if([NSThread currentThread] == [NSThread mainThread])
+    {
+        [self.sessionTimer stop];
+        [self.idleTimer stop];
+    }
+    else
+    {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            
+            [self.sessionTimer stop];
+            [self.idleTimer stop];
+        });
+
+    }
 }
 
 - (void)startSessionTimer
@@ -297,7 +333,18 @@
         {
             if (self.idleTimer)
             {
-                [self resetTimer:OMIdleTimer];
+                if([NSThread currentThread] == [NSThread mainThread])
+                {
+                    [self resetTimer:OMIdleTimer];
+                }
+                else
+                {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+
+                        [self resetTimer:OMIdleTimer];
+
+                    });
+                }
             }
             else
             {
@@ -322,17 +369,43 @@
             (int)self.idleTimer.remainingTime <= 0)
         {
             valid = false;
-            [self clearCookies:false];
+           
+            if ([self isWkWebViewEnabled]) {
+                
+                [self clearWebViewCookies:false];
+            }
+            else
+            {
+                [self clearCookies:false];
+            }
         }
         else
         {
-            [self resetTimer:OMIdleTimer];
+            if([NSThread currentThread] == [NSThread mainThread])
+            {
+                [self resetTimer:OMIdleTimer];
+            }
+            else
+            {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    
+                    [self resetTimer:OMIdleTimer];
+                    
+                });
+            }
         }
         if (self.sessionTimer.duration >0 &&
             (int)self.sessionTimer.remainingTime <= 0)
         {
             valid = false;
-            [self clearCookies:false];
+            if ([self isWkWebViewEnabled]) {
+                
+                [self clearWebViewCookies:false];
+            }
+            else
+            {
+                [self clearCookies:false];
+            }
             [self.mss.cacheDict removeObjectForKey:self.mss.authKey];
         }
 
@@ -366,7 +439,18 @@
             }
             else
             {
-                [self resetTimer:OMIdleTimer];
+                if([NSThread currentThread] == [NSThread mainThread])
+                {
+                    [self resetTimer:OMIdleTimer];
+                }
+                else
+                {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        
+                        [self resetTimer:OMIdleTimer];
+                        
+                    });
+                }
             }
         }
         else
@@ -405,41 +489,57 @@
     return isValid;
 }
 
-- (NSDictionary *)requestParametersForURL:(NSString *)theURL
-                           includeHeaders:(BOOL)includeHeaders
+- (NSDictionary *)requestInfoForURL:(NSString *)theURL
+                     includeHeaders:(BOOL)includeHeaders
 {
     NSMutableDictionary *cookieDict = [NSMutableDictionary dictionary];
     
-
-    if(![self isWkWebViewEnabled])
+    NSURL *cookieURL = [NSURL URLWithString:theURL];
+    NSArray *cookieArray = [OMMobileSecurityService cookiesForURL:cookieURL];
+    NSMutableString *cookieString = [[NSMutableString alloc] init];
+    for(NSHTTPCookie *cookie in cookieArray)
     {
-        NSURL *cookieURL = [NSURL URLWithString:theURL];
-        NSArray *cookieArray = [OMMobileSecurityService cookiesForURL:cookieURL];
-        NSMutableString *cookieString = [[NSMutableString alloc] init];
-        for(NSHTTPCookie *cookie in cookieArray)
+        NSString *cookieParam = [NSString stringWithFormat:@"%@=%@;",
+                                 cookie.name,cookie.value];
+        [cookieString appendString:cookieParam];
+    }
+    
+    if([cookieString length] > 0)
+    {
+        [cookieDict
+         setObject:[cookieString substringToIndex:(cookieString.length - 1)]
+         forKey:OM_PROP_COOKIES];
+    }
+    if(includeHeaders)
+    {
+        [cookieDict setObject:[self customHeaders]
+                       forKey:OM_CUSTOM_HEADERS_MOBILE_AGENT];
+    }
+    
+    return cookieDict;
+    
+}
+
+
+- (NSDictionary *)requestParametersForURL:(NSString *)theURL
+                           includeHeaders:(BOOL)includeHeaders
+{
+    NSDictionary *cookieDict = nil;
+
+    if(@available(iOS 11, *)){
+        
+        cookieDict = [self requestInfoForURL:theURL includeHeaders:includeHeaders];
+    }
+    else{
+        
+        if(![self isWkWebViewEnabled])
         {
-            NSString *cookieParam = [NSString stringWithFormat:@"%@=%@;",
-                                     cookie.name,cookie.value];
-            [cookieString appendString:cookieParam];
-        }
-        if([cookieString length] > 0)
-        {
-            [cookieDict
-             setObject:[cookieString substringToIndex:(cookieString.length - 1)]
-             forKey:OM_PROP_COOKIES];
-        }
-        if(includeHeaders)
-        {
-            [cookieDict setObject:[self customHeaders]
-                           forKey:OM_CUSTOM_HEADERS_MOBILE_AGENT];
+            cookieDict = [self requestInfoForURL:theURL includeHeaders:includeHeaders];
+
         }
         
     }
-    else
-    {
-        cookieDict = nil;
-    }
-    
+        
     return cookieDict;
 }
 
@@ -705,6 +805,13 @@
 {
     BOOL valid = FALSE;
 
+    OMAuthenticationContext *cachedContext = [self.mss.cacheDict
+                                              valueForKey:self.mss.authKey];
+    if (!cachedContext || cachedContext.isLogoutFalseCalled)
+    {
+        return false;
+    }
+
     for(OMToken *token in self.tokens)
     {
         OMTokenStatus tokenStatus = [self isToken:token validForScopes:scopes];
@@ -719,7 +826,10 @@
             {
                 NSError *err = [self refreshAccessTokenRequest:token];
                 if(err == nil)
+                {
                     valid = TRUE;
+                    [self.mss saveAuthContext:self];
+                }
                 break;
             }
         }
@@ -902,4 +1012,32 @@
     
     return isWKWebView;
 }
+
+- (void)clearWebViewCookies:(BOOL)clearPersistentCookies
+{
+    NSMutableSet *visitedURLs = [self.mss.cacheDict
+                                 valueForKey:OM_VISITED_HOST_URLS];
+    
+    NSHTTPCookieStorage *cookieStore = [NSHTTPCookieStorage
+                                        sharedHTTPCookieStorage];
+    for (NSURL *url in visitedURLs)
+    {
+        NSArray *cookies = [cookieStore cookiesForURL:url];
+        for (NSHTTPCookie *cookie in cookies)
+        {
+            
+            if (clearPersistentCookies) {
+                [cookieStore deleteCookie:cookie];
+                [OMWKWebViewCookieHandler deleteCookieFromWKHTTPStore:cookie];
+            }
+            else if ([cookie isSessionOnly]){
+                [cookieStore deleteCookie:cookie];
+                [OMWKWebViewCookieHandler deleteCookieFromWKHTTPStore:cookie];
+                
+            }
+        }
+    }
+    
+}
+
 @end

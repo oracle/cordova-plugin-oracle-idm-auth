@@ -485,18 +485,19 @@ NSString *defaultHeadlessAuthenticator = @"authenticator_default_headless";
     NSUInteger deletedCreds = 0;
     NSString *loginURL = [properties valueForKey:OM_PROP_LOGIN_URL];
     NSString *appName = [properties valueForKey:OM_PROP_APPNAME];
-    NSString *oauthClientId = [properties valueForKey:OM_PROP_OAUTH_CLIENT_ID];
     NSString *idDomain = [properties valueForKey:OM_PROP_IDENTITY_DOMAIN_NAME];
     NSString *offlineAuthKey = nil;
     NSString *authKey = [properties valueForKey:OM_PROP_AUTH_KEY];
-    if ([oauthClientId length])
+    
+    if ([loginURL length])
     {
-        offlineAuthKey = oauthClientId;
-    }
-    else if ([loginURL length] && [appName length])
-    {
-        offlineAuthKey = [NSString stringWithFormat:@"%@_%@",
-                          loginURL,appName];
+        NSString *credentialKey = (authKey != nil)?authKey:appName;
+        
+        if (credentialKey)
+        {
+            offlineAuthKey = [NSString stringWithFormat:@"%@_%@",
+                              loginURL,credentialKey];
+        }
     }
     if (![offlineAuthKey length])
     {
@@ -504,13 +505,14 @@ NSString *defaultHeadlessAuthenticator = @"authenticator_default_headless";
     }
     offlineAuthKey = [NSString
                       stringWithFormat:@"%@_offlineAuth",offlineAuthKey];
-    if ([authKey length])
+
+    if ([idDomain length])
     {
-        offlineAuthKey = authKey;
+        offlineAuthKey = [NSString
+                          stringWithFormat:@"%@_%@::",offlineAuthKey,
+                          [idDomain length]?idDomain:@""];
     }
-    offlineAuthKey = [NSString
-                      stringWithFormat:@"%@_%@::",offlineAuthKey,
-                      [idDomain length]?idDomain:@""];
+
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     NSArray *keys = [defaults objectForKey:OM_CRED_FILE_LIST];
     if (keys.count)

@@ -9,4 +9,5 @@
 
 @interface OMImplicitGrant : OMAuthorizationGrant
 @property (nonatomic, strong) OMOAuthWebViewHandler *handler;
+
 @end

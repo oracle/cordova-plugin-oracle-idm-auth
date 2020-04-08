@@ -1,5 +1,8 @@
 # Release Notes
 
+## 1.4.0 (8 Apr, 2020)
+* Removing the referencing of UIWebView as per Apple guideline.
+
 ## 1.3.0 (3 Dec, 2019)
 * API to control buttons shown on webview for OAuth usecase.
 * Ability to store data into local authenticator secure keystore.

@@ -98,6 +98,8 @@ NSString *const OM_PROP_LOGIN_TIMEOUT_VALUE  = @"AuthTimeOutVal";
 NSString *const OM_FED_AUTH_QUERY_PARAMS     = @"FedAuthQueryParams";
 NSString *const OM_FED_AUTH_USER_COOKIE_NAME = @"FedAuthUserCookieName";
 NSString *const OM_PROP_AUTH_KEY             = @"AuthKey";
+NSString *const OM_PROP_SEND_IDENTITY_DOMAIN_HEADER_TO_MOBILE_AGENT
+= @"IdentityDomainHeaderToMobileAgent";
 
 NSString *const OM_CHALLENGE_FINISHED = @"ChallengeFinished";
 

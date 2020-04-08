@@ -43,3 +43,4 @@ FOUNDATION_EXPORT const unsigned char IDMMobileSDKv2VersionString[];
 #import <IDMMobileSDKv2/OMCryptoService.h>
 #import <IDMMobileSDKv2/OMOTPService.h>
 #import <IDMMobileSDKv2/OMBiometricAuthenticator.h>
+#import <IDMMobileSDKv2/OMClassicCredential.h>

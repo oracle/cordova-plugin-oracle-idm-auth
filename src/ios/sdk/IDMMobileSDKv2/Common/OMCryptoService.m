@@ -1700,6 +1700,64 @@ isInputPrefixedWithAlgorithmName:(BOOL)prefix
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Get bits of a Key Pair's private key
+////////////////////////////////////////////////////////////////////////////////
++ (NSData *)privateKeyFromKeychainWithTagPrefix:(NSString *)tagPrefix
+                                         outError:(NSError **)error
+{
+    OSStatus status = noErr;
+
+    NSData * privateKeyData = NULL;
+    CFTypeRef inTypeRef = (__bridge CFTypeRef)privateKeyData;
+
+    NSString *  publicTag = OM_KEYPAIR_TAG_PRIVATE;
+    
+    if (tagPrefix == nil || [tagPrefix length] == 0)
+    {
+        if (error)
+            *error = [OMObject createErrorWithCode:
+                      OMERR_TAG_REQUIRED_TO_IDENTIFY_KEY_IN_KEYCHAIN];
+        return nil;
+    }
+    
+    publicTag  = [tagPrefix stringByAppendingString:publicTag];
+    
+    NSMutableDictionary * queryPrivateKey = [[NSMutableDictionary alloc] init];
+    
+    // set the private key query dictionary.
+    [queryPrivateKey setObject:(id)kSecClassKey
+                       forKey:(id)kSecClass];
+    [queryPrivateKey setObject:publicTag
+                       forKey:(id)kSecAttrApplicationTag];
+    [queryPrivateKey setObject:[NSNumber numberWithBool:YES]
+                       forKey:(id)kSecReturnData];
+    
+    // get key
+    status = SecItemCopyMatching((CFDictionaryRef)queryPrivateKey,
+                                 (CFTypeRef *)&inTypeRef);
+    
+    if (status == errSecItemNotFound)
+    {
+        inTypeRef = nil;
+        
+        if (error)
+            *error = [OMObject createErrorWithCode:
+                      OMERR_KEYCHAIN_ITEM_NOT_FOUND];
+    }
+    else if (status != noErr)
+    {
+        inTypeRef = nil;
+        
+        if (error)
+            *error = [OMObject createErrorWithCode:
+                      OMERR_KEYCHAIN_SYSTEM_ERROR, status];
+    }
+    
+    
+    return (__bridge NSData *)inTypeRef;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // Delete key pair from keychain
 ////////////////////////////////////////////////////////////////////////////////
 + (BOOL) deleteKeyPairFromKeychainWithTagPrefix:(NSString *)tagPrefix
