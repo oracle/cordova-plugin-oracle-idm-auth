@@ -16,6 +16,7 @@ import oracle.idm.mobile.OMMobileSecurityService;
 import oracle.idm.mobile.callback.OMMobileSecurityServiceCallback;
 import oracle.idm.mobile.configuration.OMMobileSecurityConfiguration;
 import oracle.idm.mobile.logging.OMLog;
+import oracle.idm.mobile.util.ArrayUtils;
 
 import static oracle.idm.mobile.OMSecurityConstants.Challenge.*;
 
@@ -41,6 +42,14 @@ public abstract class OMAuthenticationCompletionHandler {
     protected OMMobileSecurityServiceCallback mAppCallback;
     protected ASMInputController mChallengeInputCallback;
     protected OMMobileSecurityConfiguration mConfig;
+    protected AuthenticationServiceManager mASM;
+
+    protected OMAuthenticationCompletionHandler(AuthenticationServiceManager asm, OMMobileSecurityConfiguration config,
+                                                OMMobileSecurityServiceCallback appCallback) {
+        mASM = asm;
+        mConfig = config;
+        mAppCallback = appCallback;
+    }
 
     protected OMAuthenticationCompletionHandler(OMMobileSecurityConfiguration config, OMMobileSecurityServiceCallback appCallback) {
         mConfig = config;
@@ -58,7 +67,11 @@ public abstract class OMAuthenticationCompletionHandler {
     protected abstract void createChallengeRequest(OMMobileSecurityService mas, OMAuthenticationChallenge challenge, AuthServiceInputCallback authServiceCallback);
 
     /**
-     * Components registered(OMMobileSecurityServiceCallback) for authentication should call this to provide the challenge input response to proceed with authentication.
+     * Components registered(OMMobileSecurityServiceCallback) for authentication should call this
+     * to provide the challenge input response to proceed with authentication.
+     * <p>
+     * <b>Note:</b> This MUST BE called only once to provide the challenge input. Calling it
+     * again results in undefined behavior.
      *
      * @param responseFields
      */
@@ -77,6 +90,9 @@ public abstract class OMAuthenticationCompletionHandler {
 
     /**
      * Method to cancel the authentication
+     * <p>
+     * <b>Note:</b> This MUST BE called only once to cancel authentication. Calling it
+     * again results in undefined behavior.
      */
     public abstract void cancel();
 
@@ -97,7 +113,6 @@ public abstract class OMAuthenticationCompletionHandler {
         }
 
         String username = (String) responseFields.get(USERNAME_KEY);
-        String password = (String) responseFields.get(PASSWORD_KEY);
         String identityDomain = (String) responseFields.get(IDENTITY_DOMAIN_KEY);
 
         boolean usernameMissing = false;
@@ -118,8 +133,36 @@ public abstract class OMAuthenticationCompletionHandler {
             throw new OMMobileSecurityException(OMErrorCode.IDENTITY_DOMAIN_REQUIRED);
         }
 
-        if (TextUtils.isEmpty(password)) {
+        if (isPasswordEmpty(responseFields)) {
             throw new OMMobileSecurityException(OMErrorCode.PASSWORD_REQUIRED);
+        }
+    }
+
+    public boolean isPasswordEmpty(Map<String, Object> inputParams) {
+        if (inputParams != null) {
+            char[] passwordCharArray = (char[]) inputParams.get(PASSWORD_KEY_2);
+            if (ArrayUtils.isEmpty(passwordCharArray)) {
+                String passwordString = (String) inputParams.get(PASSWORD_KEY);
+                if (TextUtils.isEmpty(passwordString)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * This method stores the challenge input in {@link AuthenticationServiceManager#mTemporaryAuthContext}
+     * This ensures that whatever preferences like remember credentials checkbox state, which user has
+     * changed in previous authentication attempt are preserved in the challenge which SDK throws back
+     * later; e.g: in case authentication has failed since username was not entered.
+     *
+     * @param challengeInput
+     */
+    protected void storeChallengeInputTemporarily(Map<String, Object> challengeInput) {
+        OMAuthenticationContext tempAuthenticationContext = mASM.getTemporaryAuthenticationContext();
+        if (tempAuthenticationContext != null) {
+            tempAuthenticationContext.getInputParams().putAll(challengeInput);
         }
     }
 }

@@ -13,7 +13,7 @@ public class OMSecurityConstants {
 
     /**
      * Change this boolean to enable/disable debug logging in SDK.
-     *
+     * <p>
      * Cannot use {@link BuildConfig#DEBUG} in library project because of
      * https://issuetracker.google.com/issues/36967265
      * <p>
@@ -24,6 +24,7 @@ public class OMSecurityConstants {
      */
     public static boolean DEBUG = false;
 
+    public static final String UTF_8 = "UTF-8";
     public static final char COLON = ':';
     public static final char EQUAL = '=';
     public static final char AMPERSAND = '&';
@@ -59,17 +60,38 @@ public class OMSecurityConstants {
 
     /*TODO Documentation*/
     //TODO Add javadoc for every constant following the format specified for CLIENT_CERTIFICATE_HOST
+
     /**
      * Holds constants specific to OMAuthenticationChallenge
      */
     public static class Challenge {
         public static final String USERNAME_KEY = "username_key";
+        /**
+         * The key against which the following is present or MUST be provided:
+         * the password of the end user.
+         * <p/>
+         * The value is of type {@link String}.
+         *
+         * @deprecated This accepts or provides password as String which leads to security issues.
+         * This field will be removed in a future release. This is maintained now just to have
+         * backward compatibility. Instead of this field, use {@link #PASSWORD_KEY_2}.
+         */
+        @Deprecated
         public static final String PASSWORD_KEY = "password_key";
+
+        /**
+         * The key against which the following is present or MUST be provided:
+         * the password of the end user.
+         * <p/>
+         * The value is of type char[].
+         */
+        public static final String PASSWORD_KEY_2 = "password_as_char_array_key";
+
         public static final String IDENTITY_DOMAIN_KEY = "iddomain_key";
         public static final String OFFLINE_CREDENTIAL_KEY = "offline_credential_key";
-        public static final String IS_FORCE_AUTHENTICATION ="isForceAuthentication";
+        public static final String IS_FORCE_AUTHENTICATION = "isForceAuthentication";
         /**
-         * The key against the following is present:
+         * The key against which the following is present:
          * Exception thrown in the authentication attempt
          * <p/>
          * The value is of type {@link OMMobileSecurityException}.
@@ -78,7 +100,7 @@ public class OMSecurityConstants {
         public static final String MOBILE_SECURITY_EXCEPTION = "mobileSecurityException";
 
         /**
-         * The key against the following is present:
+         * The key against which the following is present:
          * the host name of the server requesting the certificate
          * <p/>
          * The value is of type {@link String}.
@@ -89,7 +111,7 @@ public class OMSecurityConstants {
         public static final String CLIENT_CERTIFICATE_HOST = "client_certificate_host_key";
 
         /**
-         * The key against the following is present:
+         * The key against which the following is present:
          * the port number of the server requesting the certificate
          * <p/>
          * The value is of type {@link Integer}.
@@ -100,7 +122,7 @@ public class OMSecurityConstants {
         public static final String CLIENT_CERTIFICATE_PORT = "client_certificate_port_key";
 
         /**
-         * The key against the following is present:
+         * The key against which the following is present:
          * the acceptable certificate issuers for the certificate matching the private key (can be null)
          * null implies any issuer will do.
          * <p/>
@@ -112,22 +134,22 @@ public class OMSecurityConstants {
         public static final String CLIENT_CERTIFICATE_ISSUERS_KEY = "client_certificate_issuer_names_key";
 
         /**
-         * The key against the following is present:
+         * The key against which the following is present:
          * the acceptable types of asymmetric keys (can be null) or in other words: the list of public key algorithm names
-         *
+         * <p>
          * The value is of type {@link String}[].
-         *
+         * <p>
          * <b>Note:</b> Client certificate authentication in embedded browser [Fed Auth, OAuth] is supported only from LOLLIPOP onwards.
          * Refer {@link oracle.idm.mobile.OMMobileSecurityService.AuthServerType} for more details.
          */
         public static final String CLIENT_CERTIFICATE_KEYTYPES_KEY = "client_certificate_keytypes_key";
 
         /**
-         * The key against the following MUST BE provided by the developer:
+         * The key against which the following MUST BE provided by the developer:
          * the alias for the client side of an SSL connection to authenticate it with the specified public key type and certificate issuers
-         *
+         * <p>
          * The value MUST be of type {@link String}
-         *
+         * <p>
          * <b>Note:</b> Client certificate authentication in embedded browser [Fed Auth, OAuth] is supported only from LOLLIPOP onwards.
          * Refer {@link oracle.idm.mobile.OMMobileSecurityService.AuthServerType} for more details.
          */
@@ -144,6 +166,15 @@ public class OMSecurityConstants {
         public static final String CLIENT_CERTIFICATE_STORAGE_PREFERENCE_KEY = "client_certificate_storage_pref_key";
         public static final String UNTRUSTED_SERVER_CERTIFICATE_AUTH_TYPE_KEY = "untrusted_certificate_authtype_key";
         public static final String UNTRUSTED_SERVER_CERTIFICATE_CHAIN_KEY = "untrusted_server_certificate_chain_key";
+        /**
+         * The key against which the following is present:
+         * The URL of the server being accessed which resulted
+         * in {@link javax.net.ssl.SSLHandshakeException}.
+         * <p>
+         * The value is of type {@link java.net.URL}.
+         * <p>
+         */
+        public static final String UNTRUSTED_SERVER_URL_KEY = "untrusted_server_url_key";
         public static final String INVALID_REDIRECT_TYPE_KEY = "invalid_redirect_type_key";
 
 
@@ -170,6 +201,7 @@ public class OMSecurityConstants {
     public static final String EXPIRY_DATE = "expiresdate";
     public static final String EXPIRES_IN = "expires_in";
     public static final String IS_SECURE = "issecure";
+
     /**
      * Constants to represent parameter keys used internally in SDK.
      *
@@ -179,6 +211,7 @@ public class OMSecurityConstants {
         public static final String OAUTH_REFRESH_TOKEN_VALUE = "ParamOAuthRefreshTokenValue";
         public static final String OAUTH_FRONT_CHANNEL_RESPONSE_JSON = "ParamFrontChannelResponseJSON";
         public static final String COLLECT_OFFLINE_CREDENTIAL = "collectOfflineCredential";
+        public static final String CLEAR_PASSWORD = "clearPassword";
         //Begin: Fed Auth
         public static final String LOGIN_FAILURE_URL_HIT = "login_failure_url_hit";
         public static final String VISITED_URLS = "visited_urls";
@@ -244,4 +277,6 @@ public class OMSecurityConstants {
         public static final int CONNECTION_ALLOW_HTTPS_TO_HTTP_REDIRECT = 103;
         public static final int CONNECTION_ALLOW_HTTP_TO_HTTPS_REDIRECT = 104;
     }
+
+    public static final String OM_CREDENTIAL = "_Credential";
 }

@@ -16,6 +16,7 @@ import org.json.JSONObject;
 import java.net.URI;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
@@ -38,9 +39,11 @@ import oracle.idm.mobile.credentialstore.OMCredential;
 import oracle.idm.mobile.credentialstore.OMCredentialStore;
 import oracle.idm.mobile.crypto.CryptoScheme;
 import oracle.idm.mobile.logging.OMLog;
+import oracle.idm.mobile.util.ArrayUtils;
 
 import static oracle.idm.mobile.OMSecurityConstants.Challenge.IDENTITY_DOMAIN_KEY;
 import static oracle.idm.mobile.OMSecurityConstants.Challenge.OFFLINE_CREDENTIAL_KEY;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.PASSWORD_KEY_2;
 import static oracle.idm.mobile.OMSecurityConstants.Challenge.USERNAME_KEY;
 import static oracle.idm.mobile.OMSecurityConstants.DOMAIN;
 import static oracle.idm.mobile.OMSecurityConstants.EXPIRES;
@@ -52,6 +55,7 @@ import static oracle.idm.mobile.OMSecurityConstants.OAUTH_ACCESS_TOKEN;
 import static oracle.idm.mobile.OMSecurityConstants.OAUTH_TOKEN_SCOPE;
 import static oracle.idm.mobile.OMSecurityConstants.PATH;
 import static oracle.idm.mobile.OMSecurityConstants.Param.AUTHENTICATION_MECHANISM;
+import static oracle.idm.mobile.OMSecurityConstants.Param.CLEAR_PASSWORD;
 import static oracle.idm.mobile.OMSecurityConstants.TOKEN_NAME;
 import static oracle.idm.mobile.OMSecurityConstants.TOKEN_VALUE;
 
@@ -117,7 +121,6 @@ public class OMAuthenticationContext {
      * user credentials during next login even if SDK tries to clear it using
      * corres. android APIs.
      * Bug: https://code.google.com/p/android/issues/detail?id=22272
-     *
      */
     public enum AuthenticationMechanism {
         /**
@@ -147,7 +150,20 @@ public class OMAuthenticationContext {
     // constants
     public static final String CREDENTIALS = "credentials";
     public static final String USERNAME_PROPERTY = "javax.xml.ws.security.auth.username";
+    /**
+     * This is used as a key against which password is populated in a {@link Map}.
+     * The password is present as {@link String}.
+     *
+     * @deprecated Keeping password as String in memory is a security concern. Instead of
+     * this, use {@link #PASSWORD_PROPERTY_2}.
+     */
+    @Deprecated
     public static final String PASSWORD_PROPERTY = "javax.xml.ws.security.auth.password";
+    /**
+     * This is used as a key against which password is populated in a {@link Map}.
+     * The password is present as char[].
+     */
+    public static final String PASSWORD_PROPERTY_2 = "javax.xml.ws.security.auth.password.char.array";
     public static final String ERROR = "Error";
     public static final String CREDENTIALS_UNAVAILABLE = "Credentials unavailable";
     public static final String COOKIES = "cookies";
@@ -189,6 +205,11 @@ public class OMAuthenticationContext {
     private int idleTimeExpInSecs;
     private TimeoutManager mTimeoutManager;
     private boolean isIdleTimeout = false;
+    /**
+     * Any auxiliary tokens generated during the auth process are added to
+     * this OAuth token list, e.g: OpenIDToken (instanceof OAuthToken) is present.
+     * OpenID token is also added to authContext.getTokens().
+     */
     private List<OAuthToken> oAuthTokenList;
     private Map<String, OMToken> tokens;
     private Map<String, OMToken> owsmMACookies;
@@ -470,8 +491,9 @@ public class OMAuthenticationContext {
                 boolean credentialsAvailable = false;
                 if (credential != null
                         && !TextUtils.isEmpty(credential.getUserName())
-                        && !TextUtils.isEmpty(credential.getUserPassword())) {
+                        && !ArrayUtils.isEmpty(credential.getUserPasswordAsCharArray())) {
                     credentialsAvailable = true;
+                    credential.invalidateUserPassword();
                 }
 
                 for (AuthenticationService authService : mASM
@@ -516,16 +538,16 @@ public class OMAuthenticationContext {
                                 && ((BasicAuthenticationService) authService)
                                 .isSessionTimedOut()
                                 || !(authService instanceof BasicAuthenticationService)) {
-                        /*
-                         * Setting this to true so that deleteAuthContext() is
-                         * not called again when
-                         * OMAuthenticationContext#isValid() is called
-                         * subsequently. If it is called, it would lead to
-                         * unnecessary invocation of logout url again.
-                         */
+                            /*
+                             * Setting this to true so that deleteAuthContext() is
+                             * not called again when
+                             * OMAuthenticationContext#isValid() is called
+                             * subsequently. If it is called, it would lead to
+                             * unnecessary invocation of logout url again.
+                             */
                             authContextDeleted = true;
                         }
-                    /* since its not a logout call */
+                        /* since its not a logout call */
                         break;
                     }
                 }
@@ -718,7 +740,11 @@ public class OMAuthenticationContext {
             }
             while (authService != null);
 
-            deletePersistedAuthContext(isDeleteUnPwd, isDeleteToken, isLogoutCall);
+            boolean authContextPersistenceAllowed = mASM.getMSS().getMobileSecurityConfig()
+                    .isAuthContextPersistenceAllowed();
+            if (authContextPersistenceAllowed) {
+                deletePersistedAuthContext(isDeleteUnPwd, isDeleteToken, isLogoutCall);
+            }
 
             if (isDeleteUnPwd && isDeleteCookies) {
                 //no op
@@ -729,28 +755,25 @@ public class OMAuthenticationContext {
         }
     }
 
-    private void deletePersistedAuthContext(boolean isDeleteUnPwd, boolean isDeleteToken,
-                                            boolean isLogoutCall) {
+    public void deletePersistedAuthContext(boolean isDeleteUnPwd, boolean isDeleteToken,
+                                           boolean isLogoutCall) {
         // this checks whether the app configuration allows auth context persistence or not?
         boolean authContextPersistenceAllowed = mASM.getMSS().getMobileSecurityConfig()
                 .isAuthContextPersistenceAllowed();
+        if (!authContextPersistenceAllowed) {
+            return;
+        }
         OMCredentialStore css = mASM.getMSS().getCredentialStoreService();
         String credentialKey = getStorageKey() != null ? getStorageKey() : mASM.getAppCredentialKey();
         if (isDeleteUnPwd && isDeleteToken) {
-            // this wont put any impact however we can avoid an unnecessary
-            // call to shared preference.
-            if (authContextPersistenceAllowed) {
-                // which means calling class has to remove the complete
-                // information from the store.
-                css.deleteAuthContext(credentialKey);
+            /* This means complete information has
+            to be removed from the store.*/
+            css.deleteAuthContext(credentialKey);
 
-                OMLog.debug(TAG,
-                        "After forget device all the details are removed for the key "
-                                + credentialKey
-                                + " from the credential store");
-            } else
-                OMLog.debug(TAG, "Skipped removing details for the key "
-                        + credentialKey + " from the credential store");
+            OMLog.debug(TAG,
+                    "After forget device all the details are removed for the key "
+                            + credentialKey
+                            + " from the credential store");
         } else {
 
             boolean isRemoveFromStore = false;
@@ -758,34 +781,34 @@ public class OMAuthenticationContext {
             if ((isDeleteToken && getAuthenticatedMode() == AuthenticationMode.OFFLINE)
                     || (isDeleteToken && isLogoutCall)) {
                 /*If it is logout use-case or offline authentication
-                * session being invalid, authContext should be completely
-                * removed.*/
+                 * session being invalid, authContext should be completely
+                 * removed.*/
                 isRemoveFromStore = true;
             }
-            if (authContextPersistenceAllowed) {
-                /* Tokens would have been removed in logout() of respective AuthenticationServices.
-                * So, even though true is passed for isAllowTokens in the below toString method,
-                * tokens will not be present in the string representation.
-                * */
-                String detailsToStore = toString(true);
+            /** Tokens would have been removed in logout() of respective AuthenticationServices.
+             * So, even though true is passed for isAllowTokens in the below toString method,
+             * normally tokens will not be present in the string representation. It will
+             * be present in following scenario:
+             * OAuth Resource owner flow with offline authentication enabled,
+             * idle timeout occurred, tokens with refresh token are not cleared.
+             * Refer: {@link OAuthAuthenticationService#clearOAuthTokens(OMAuthenticationContext, boolean)}
+             * */
+            String detailsToStore = toString(true);
 
-                if (detailsToStore != null && !isRemoveFromStore) {
-                    css.addAuthContext(credentialKey, detailsToStore);
-                    OMLog.debug(TAG,
-                            "After logout the authentication context for the key "
-                                    + credentialKey
-                                    + " in the credential store is : "
-                                    + detailsToStore);
-                } else {
-                    css.deleteAuthContext(credentialKey);
-                    OMLog.debug(TAG,
-                            "After logout the authentication context for the key "
-                                    + credentialKey
-                                    + " is removed from the  credential store");
-                }
-            } else
+            if (detailsToStore != null && !isRemoveFromStore) {
+                css.addAuthContext(credentialKey, detailsToStore);
                 OMLog.debug(TAG,
-                        "Skipped addition or deletion of auth context to the store as this is a Secure Mode");
+                        "After logout the authentication context for the key "
+                                + credentialKey
+                                + " in the credential store is : "
+                                + detailsToStore);
+            } else {
+                css.deleteAuthContext(credentialKey);
+                OMLog.debug(TAG,
+                        "After logout the authentication context for the key "
+                                + credentialKey
+                                + " is removed from the  credential store");
+            }
         }
     }
 
@@ -851,8 +874,12 @@ public class OMAuthenticationContext {
         }
     }
 
-    String getUserPassword() {
-        String password = null;
+    /**
+     * Password returned should be cleared (zeroed out) immediately when
+     * its use is over.
+     */
+    char[] getUserPassword() {
+        char[] password = null;
         OMMobileSecurityService mss = mASM.getMSS();
         OMCredentialStore credService = mss.getCredentialStoreService();
         if (!TextUtils.isEmpty(offlineCredentialKey)) {
@@ -860,14 +887,11 @@ public class OMAuthenticationContext {
             if (credential != null) {
                 CryptoScheme scheme = mss.getMobileSecurityConfig()
                         .getCryptoScheme();
-                if (CryptoScheme.isHashAlgorithm(scheme)) {
-                    // Since the password is hashed, returning an empty
-                    // String.
-                    password = "";
-                } else {
+                // If the password is hashed, returning null
+                if (!CryptoScheme.isHashAlgorithm(scheme)) {
                     /* Since the password is available in plaintext (already decrypted by SecureStorageService),
                     just removing the prefix.*/
-                    password = credential.getUserPassword();
+                    password = credential.getUserPasswordAsCharArray();
                 }
             }
         } else {
@@ -932,6 +956,7 @@ public class OMAuthenticationContext {
      * necessary once the authentication operation is completed.
      */
     void clearFields() {
+        clearPassword();
         if (mAuthRequest != null && mAuthRequest.getAuthenticationURL() != null) {
             mASM.getMSS().getMobileSecurityConfig()
                     .setAuthenticationURL(mAuthRequest.getAuthenticationURL());
@@ -951,6 +976,7 @@ public class OMAuthenticationContext {
      * once the authentication is failure.
      */
     void clearAllFields() {
+        clearPassword();
         mASM = null;
         mAuthRequest = null;
         this.idleTimeExpiry = null;
@@ -966,6 +992,28 @@ public class OMAuthenticationContext {
         }
         this.getInputParams().clear();
         this.authenticationProvider = null;
+    }
+
+    void clearPassword() {
+        /*char[] password should be cleared by SDK only if SDK has created it. If it is created
+         * by developer, developer MUST clear it, e.g: in onAuthenticationCompleted().*/
+        boolean clearPassword = false;
+        Object clearPasswordObj = getInputParams().get(CLEAR_PASSWORD);
+        if (clearPasswordObj instanceof Boolean && (boolean) clearPasswordObj) {
+            /* This is the case in following 2 scenarios:
+            1. SDK creates char[] when password is passed as String in
+            Authentication challenge.
+            2. During auto login, SDK retrieves password and does not
+            expose it to developer.*/
+            clearPassword = true;
+        }
+        Object passwordObj = getInputParams().get(PASSWORD_KEY_2);
+        if (clearPassword && passwordObj instanceof char[]) {
+            char[] password = (char[]) passwordObj;
+            Arrays.fill(password, ' ');
+            OMLog.trace(TAG, "password is cleared");
+        }
+        getInputParams().remove(PASSWORD_KEY_2);
     }
 
     boolean checkIdleTimeout() {
@@ -1018,10 +1066,19 @@ public class OMAuthenticationContext {
         return oAuthTokenList;
     }
 
-    boolean hasRefreshToken() {
+    /**
+     * Checks if there is any refresh token for the passed scopes.
+     * Refresh token is checked in all access tokens including
+     * expired ones.
+     */
+    boolean hasRefreshToken(Set<String> scopes) {
+        List<OMToken> tokens = getTokens(scopes, true);
+        if (tokens == null || tokens.isEmpty()) {
+            return false;
+        }
         boolean hasRefreshToken = false;
-        for (OAuthToken oAuthToken : getOAuthTokenList()) {
-            if (oAuthToken.hasRefreshToken()) {
+        for (OMToken omToken : tokens) {
+            if (omToken instanceof OAuthToken && ((OAuthToken) omToken).hasRefreshToken()) {
                 hasRefreshToken = true;
                 break;
             }
@@ -1036,6 +1093,10 @@ public class OMAuthenticationContext {
         if (authenticationProvider == AuthenticationProvider.OAUTH20 || authenticationProvider == AuthenticationProvider.OPENIDCONNECT10) {
             isOAuth = true;
         } else if (authenticationProvider == AuthenticationProvider.FEDERATED) {
+            /*
+             * In case of FedAuth, we get OAuth access token from Token Relay
+             * service.
+             */
             if (((OMFederatedMobileSecurityConfiguration) mASM.getMSS().getMobileSecurityConfig()).parseTokenRelayResponse()) {
                 isOAuth = true;
             }
@@ -1047,8 +1108,9 @@ public class OMAuthenticationContext {
     /**
      * This method returns a list of available OAuth2.0 access tokens based on
      * the Scopes passed. If null is passed as scopes then the SDK will return
-     * all the non expired access tokens . Other wise it will return all the
-     * access tokens whose scopes contains all the scopes passed in the request
+     * all the unexpired access tokens . Other wise it will return all the
+     * unexpired access tokens whose scopes contains all the scopes passed
+     * in the request.
      * .
      *
      * @param scopes {@link List} of scopes for which we want to get the access
@@ -1056,18 +1118,11 @@ public class OMAuthenticationContext {
      * @return {@link List} of Access tokens matching the criteria .
      */
     public List<OMToken> getTokens(Set<String> scopes) {
-        List<OMToken> matchedTokens = new ArrayList<>();
-        /*
-         * In case of FedAuth, we get OAuth access token from Token Relay
-         * service.
-         */
-       /* if (this.authenticationProvider != AuthenticationProvider.OAUTH20
-                && !(authenticationProvider == AuthenticationProvider.FEDERATED && ((OMFederatedMobileSecurityConfiguration) mASM
-                .getMSS().getMobileSecurityConfig())
-                .parseTokenRelayResponse())) {
-            return null;
-        }*/
+        return getTokens(scopes, false);
+    }
 
+    private List<OMToken> getTokens(Set<String> scopes, boolean includeExpiredTokens) {
+        List<OMToken> matchedTokens = new ArrayList<>();
         if (!isOAuthRelated()) {
             return null;
         }
@@ -1080,7 +1135,7 @@ public class OMAuthenticationContext {
                 OAuthToken oAuthToken = (OAuthToken) token;
                 if (oAuthToken.getScopes() != null) {
                     if (oAuthToken.getScopes().containsAll(scopes)) {
-                        if (!token.isTokenExpired()) {
+                        if (includeExpiredTokens || !token.isTokenExpired()) {
                             // return only if token is not expired
                             matchedTokens.add(token);
                         }
@@ -1122,17 +1177,64 @@ public class OMAuthenticationContext {
      * @param keys a String array of the information requested. e.g. credentials
      *             or tokens.
      * @return map of requested credential information.
+     * @deprecated This returns password as String which is a security concern.
+     * Instead use {@link #getCredentialInformation2(String[])} which returns
+     * password as a char array against the key: {@link #PASSWORD_PROPERTY_2}.
      */
+    @Deprecated
     public Map<String, Object> getCredentialInformation(String[] keys) {
+        return getCredentialInformationInternal(keys, false);
+    }
+
+    /**
+     * This method returns a Map of requested credential information from the
+     * credential store. It also contains custom headers to be injected in the
+     * web service request, if any. Currently, this method supports the
+     * following keys:
+     * <ul>
+     * <li>
+     * {@link #CREDENTIALS} - Returns credentials of the user associated with this
+     * authentication context. Format of the returned map :
+     * {{@link #USERNAME_PROPERTY}:"username_value",
+     * {@link #PASSWORD_PROPERTY_2}:['p','a','s','s','w','o','r','d'],
+     * {@link #HEADERS}:{"headerName1":"headerValue1","headerName2":"headerValue2",...}
+     * }
+     * <br />
+     * <b>Note:</b> password char[] MUST BE cleared after use by the caller of this method.
+     * </li>
+     * <p>
+     * <li>
+     * {@link OMSecurityConstants#OAUTH_ACCESS_TOKEN} - Returns OAuth access tokens associated with
+     * this authentication context.
+     * Format of the returned map : {"oauth_access_token1":"value1",
+     * "oauth_access_token2":"value2",...,
+     * "{@link #HEADERS}":{"headerName1":"headerValue1"
+     * ,"headerName2":"headerValue2",...}}
+     * </li>
+     * </ul>
+     *
+     * @param keys a String array of the information requested. e.g. credentials
+     *             or tokens.
+     * @return map of requested credential information.
+     */
+    public Map<String, Object> getCredentialInformation2(String[] keys) {
+        return getCredentialInformationInternal(keys, true);
+    }
+
+    private Map<String, Object> getCredentialInformationInternal(String[] keys, boolean passwordAsCharArray) {
         Map<String, Object> credentialInfo = new HashMap<>();
         for (String key : keys) {
             if (key.equalsIgnoreCase(CREDENTIALS)) {
-                String password = getUserPassword();
-                if (TextUtils.isEmpty(password)) {
+                char[] password = getUserPassword();
+                if (ArrayUtils.isEmpty(password)) {
                     credentialInfo.put(ERROR, CREDENTIALS_UNAVAILABLE);
                 } else {
                     credentialInfo.put(USERNAME_PROPERTY, getUserName());
-                    credentialInfo.put(PASSWORD_PROPERTY, password);
+                    if (passwordAsCharArray) {
+                        credentialInfo.put(PASSWORD_PROPERTY_2, password);
+                    } else {
+                        credentialInfo.put(PASSWORD_PROPERTY, new String(password));
+                    }
                 }
             } else {
                 try {
@@ -1149,7 +1251,6 @@ public class OMAuthenticationContext {
         }
         return credentialInfo;
     }
-
 
     /**
      * This method stores the credential information <code>credInfo</code>
@@ -1349,17 +1450,16 @@ public class OMAuthenticationContext {
                 .equalsIgnoreCase(requestedToken)) {
             int count = 1;
             
-           /* if (getAuthenticationProvider() == AuthenticationProvider.OAUTH20
-                    || (getAuthenticationProvider() == AuthenticationProvider.FEDERATED && ((OMFederatedMobileSecurityConfiguration) mASM
-                    .getMSS()
-                    .getMobileSecurityConfig())
-                    .parseTokenRelayResponse())) {*/
-
             if (isOAuthRelated()) {
                 // can have oauth access tokens, user_assertion and
                 // client_assertion
                 // populate OAuth access tokens.
                 for (OMToken token : getOAuthTokenList()) {
+                    if (OpenIDToken.OPENID_CONNECT_TOKEN.equals(token.getName())) {
+                        /* This is because OWSM MA expects only OAuth access tokens. It does not
+                        expect other tokens like OpenID token.*/
+                        continue;
+                    }
                     Map<String, String> tokenValues = new HashMap<>();
                     tokenValues.put(TOKEN_NAME, token.getName());
                     tokenValues.put(TOKEN_VALUE, token.getValue());

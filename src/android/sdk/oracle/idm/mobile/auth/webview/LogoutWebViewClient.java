@@ -84,7 +84,7 @@ public class LogoutWebViewClient extends BaseWebViewClient {
     public LogoutWebViewClient(WebView webView, WebViewClient appWebViewClient, OMMobileSecurityService mss,
                                Handler handler, OMMobileSecurityConfiguration config, int logoutTimeout,
                                boolean isLogoutCall) {
-        super(appWebViewClient);
+        super(mss.getApplicationContext(), appWebViewClient);
         this.webView = webView;
         this.mss = mss;
         this.handler = handler;

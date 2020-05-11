@@ -114,8 +114,13 @@ public class OMLogger
     private void log(OMLogManager.LogLevel level, String tag, String msg, Throwable tr) {
         String logMsg;
 
-        if(OMLogManager.isInitialised() && OMLogManager.getInstance().getLevel().ordinal() > level.ordinal())
-        {
+        if (OMLogManager.isInitialised()
+                && !OMLogManager.getInstance().isLoggingEnabled()) {
+            return;
+        }
+
+        if (OMLogManager.isInitialised()
+                && OMLogManager.getInstance().getLevel().ordinal() > level.ordinal()) {
             return;
         }
 

@@ -33,7 +33,9 @@ import oracle.idm.mobile.configuration.OMOAuthMobileSecurityConfiguration;
 import oracle.idm.mobile.configuration.OMOICMobileSecurityConfiguration;
 import oracle.idm.mobile.crypto.CryptoScheme;
 import oracle.idm.mobile.logging.OMLog;
+import oracle.idm.mobile.util.ArrayUtils;
 
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.PASSWORD_KEY_2;
 import static oracle.idm.mobile.OMSecurityConstants.Challenge.PASSWORD_KEY;
 import static oracle.idm.mobile.OMSecurityConstants.Challenge.USERNAME_KEY;
 import static oracle.idm.mobile.configuration.OAuthAuthorizationGrantType.RESOURCE_OWNER;
@@ -253,9 +255,17 @@ public class OAuthConnectionsUtil {
                         + getURLEncodedString((String) paramMap
                         .get(USERNAME_KEY)));
                 payload.append(AMPERSAND);
+                char[] passwordCharArray = (char[]) paramMap.get(PASSWORD_KEY_2);
+                String passwordString;
+                if (!ArrayUtils.isEmpty(passwordCharArray)) {
+                    /*URLEncoder API in java accepts only String. Hence,
+                    * have to create password as String here.*/
+                    passwordString = new String(passwordCharArray);
+                } else {
+                    passwordString = (String) paramMap.get(PASSWORD_KEY);
+                }
                 payload.append(OAUTH_PASSWORD_REQ
-                        + getURLEncodedString((String) paramMap
-                        .get(PASSWORD_KEY)));
+                        + getURLEncodedString(passwordString));
                 payload.append(AMPERSAND);
                 // resource owner credentials grant type we send scopes also.
 

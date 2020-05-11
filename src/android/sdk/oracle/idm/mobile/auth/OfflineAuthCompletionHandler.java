@@ -23,14 +23,15 @@ class OfflineAuthCompletionHandler extends OMAuthenticationCompletionHandler {
     //TODO
     private OMMobileSecurityConfiguration mConfig;
 
-    OfflineAuthCompletionHandler(OMMobileSecurityConfiguration config, OMMobileSecurityServiceCallback appCallback) {
-        super(config, appCallback);
+    OfflineAuthCompletionHandler(AuthenticationServiceManager asm, OMMobileSecurityConfiguration config,
+                                 OMMobileSecurityServiceCallback appCallback) {
+        super(asm, config, appCallback);
         mConfig = config;
     }
 
     @Override
     protected void createChallengeRequest(OMMobileSecurityService mas, OMAuthenticationChallenge challenge, AuthServiceInputCallback authServiceCallback) {
-       OMLog.trace(TAG, "createChallengeRequest");
+        OMLog.trace(TAG, "createChallengeRequest");
         mAuthServiceCallback = authServiceCallback;
         mAppCallback.onAuthenticationChallenge(mas, challenge, this);
     }
@@ -46,6 +47,7 @@ class OfflineAuthCompletionHandler extends OMAuthenticationCompletionHandler {
             mAuthServiceCallback.onInput(responseFields);
         } catch (OMMobileSecurityException e) {
             OMLog.debug(TAG, "Response fields are not valid. Error : " + e.getErrorMessage());
+            storeChallengeInputTemporarily(responseFields);
             mAuthServiceCallback.onError(e.getError());
         }
     }
@@ -59,7 +61,7 @@ class OfflineAuthCompletionHandler extends OMAuthenticationCompletionHandler {
     @Override
     public void cancel() {
         OMLog.trace(TAG, "cancel");
-        if(mAuthServiceCallback != null) {
+        if (mAuthServiceCallback != null) {
             mAuthServiceCallback.onCancel();
         }
     }

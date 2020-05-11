@@ -6,13 +6,16 @@
 
 package oracle.idm.mobile.crypto;
 
-import java.io.UnsupportedEncodingException;
+import android.util.Log;
+
+import java.nio.charset.Charset;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.KeySpec;
+import java.util.Arrays;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -24,12 +27,13 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 
+import oracle.idm.mobile.OMSecurityConstants;
 import oracle.idm.mobile.credentialstore.OMCredentialStore;
+import oracle.idm.mobile.util.ArrayUtils;
 
 /**
  * OMCryptoService class is to perform hashing / encrption / decryption of plain
  * text. It also provides method to compare a plain text with an encoded text.
- *
  */
 public class OMCryptoService {
     private static final String TAG = OMCryptoService.class.getName();
@@ -40,7 +44,7 @@ public class OMCryptoService {
     private OMCredentialStore credStore;
 
     public OMCryptoService(OMCredentialStore credStore) {
-        if(credStore == null) {
+        if (credStore == null) {
             throw new IllegalArgumentException("OMCredentialStore must be non-null");
         }
         this.credStore = credStore;
@@ -67,7 +71,11 @@ public class OMCryptoService {
      * @throws CryptoException          if there is any exception in the process of hashing
      * @throws IllegalArgumentException If the given plain text is null or empty If the algorithm
      *                                  specified is not an hashing algorithm.
+     * @deprecated Normally passwords are hashed. Hence, plainText given here can be password.
+     * Storing password in String as opposed to char[] is a security concern. So, instead of this
+     * method, use {@link #hash(byte[], CryptoScheme, int, byte[], boolean)} .
      */
+    @Deprecated
     public String hash(String plainText, CryptoScheme scheme, int saltLength,
                        boolean prefixAlgorithm) throws CryptoException {
         return hash(plainText, scheme, saltLength, null, prefixAlgorithm);
@@ -109,7 +117,46 @@ public class OMCryptoService {
      * will throw {@link CryptoException} if it encounters any exception in the
      * process of hashing. If the given {@link CryptoScheme} algorithm is a
      * salted one and the salt length is not specified, then the default is 8
-     * bytes.
+     * bytes.  If the salt bytes are not specified, a random salt will be
+     * generated of {@code saltLength} bits.
+     *
+     * @param plainText       text to be hashed
+     * @param scheme          algorithm to be used for hashing
+     * @param saltLength      number of bytes in the salt
+     * @param salt            array of bytes to be used as the salt
+     * @param prefixAlgorithm whether the hashing algorithm name should be prefixed in the
+     *                        result as {algorithm name}
+     * @return hashed text
+     * @throws CryptoException          if there is any exception in the process of hashing
+     * @throws IllegalArgumentException If the given plain text is null or empty If the algorithm
+     *                                  specified is not an hashing algorithm.
+     * @deprecated Normally passwords are hashed. Hence, plainText given here can be password.
+     * Storing password in String as opposed to char[] is a security concern. So, instead of this
+     * method, use {@link #hash(byte[], CryptoScheme, int, byte[], boolean)}
+     */
+    @Deprecated
+    public String hash(String plainText, CryptoScheme scheme, int saltLength,
+                       byte[] salt, boolean prefixAlgorithm) throws CryptoException {
+        if (plainText == null || plainText.length() == 0) {
+            throw new IllegalArgumentException(
+                    "Text for hashing cannot be null or empty.");
+        }
+        return hash(plainText.getBytes(Charset.forName(OMSecurityConstants.UTF_8)), scheme, saltLength,
+                salt, prefixAlgorithm);
+    }
+
+    /**
+     * Produces a hashed form (Base64 encoded form of salted bytes followed by
+     * hash bytes) of the plain text based on the given {@link CryptoScheme}
+     * algorithm. If the given {@link CryptoScheme} algorithm doesn't belong to
+     * any valid java crypto hash algorithm, then it throws an
+     * {@link IllegalArgumentException}. This method will also throw
+     * {@link IllegalArgumentException} if the plain text is empty or null. It
+     * will throw {@link CryptoException} if it encounters any exception in the
+     * process of hashing. If the given {@link CryptoScheme} algorithm is a
+     * salted one and the salt length is not specified, then the default is 8
+     * bytes.  If the salt bytes are not specified, a random salt will be
+     * generated of {@code saltLength} bits.
      *
      * @param plainText       text to be hashed
      * @param scheme          algorithm to be used for hashing
@@ -122,7 +169,7 @@ public class OMCryptoService {
      * @throws IllegalArgumentException If the given plain text is null or empty If the algorithm
      *                                  specified is not an hashing algorithm.
      */
-    public String hash(String plainText, CryptoScheme scheme, int saltLength,
+    public String hash(byte[] plainText, CryptoScheme scheme, int saltLength,
                        byte[] salt, boolean prefixAlgorithm) throws CryptoException {
         String hashText = null;
         byte[] digestWithSalt = null;
@@ -160,9 +207,9 @@ public class OMCryptoService {
      *                                  specified is not an hashing algorithm.
      */
 
-    public byte[] hash(String plainText, CryptoScheme scheme, int saltLength,
+    public byte[] hash(byte[] plainText, CryptoScheme scheme, int saltLength,
                        byte[] salt) throws CryptoException {
-        if (plainText == null || plainText.length() == 0) {
+        if (plainText == null || plainText.length == 0) {
             throw new IllegalArgumentException(
                     "Text for hashing cannot be null or empty.");
         }
@@ -184,7 +231,7 @@ public class OMCryptoService {
                 schemeValue = schemeValue.substring(6);
             }
             MessageDigest md = MessageDigest.getInstance(schemeValue);
-            md.update(plainText.getBytes("UTF-8")); // first is the plainText
+            md.update(plainText); // first is the plainText
 
             if (isSalted) {
                 if (salt == null || salt.length != saltLength) {
@@ -206,11 +253,45 @@ public class OMCryptoService {
             return digestWithSalt;
         } catch (NoSuchAlgorithmException e) {
             throw new CryptoException(e);
-        } catch (UnsupportedEncodingException e) {
-            throw new CryptoException(e);
         } catch (Exception e) {
             throw new CryptoException(e);
         }
+    }
+
+    /**
+     * Produces a hashed form (salted bytes followed by hash bytes) of the plain
+     * text based on the given {@link CryptoScheme} algorithm. If the given
+     * {@link CryptoScheme} algorithm doesn't belong to any valid java crypto
+     * hash algorithm, then it throws an {@link IllegalArgumentException}. The
+     * hashed bytes returned are not Base64 encoded .This method will also throw
+     * {@link IllegalArgumentException} if the plain text is empty or null. It
+     * will throw {@link CryptoException} if it encounters any exception in the
+     * process of hashing. If the given {@link CryptoScheme} algorithm is a
+     * salted one and the salt bit length is not specified, then the default is
+     * 8 bytes. If the salt bytes are not specified, a random salt will be
+     * generated of {@code saltLength} bits.
+     *
+     * @param plainText  text to be hashed
+     * @param scheme     algorithm to be used for hashing
+     * @param saltLength number of bytes in the salt
+     * @param salt       array of bytes to be used as the salt
+     * @return hashed plain text as byte array
+     * @throws CryptoException          if there is any exception in the process of hashing
+     * @throws IllegalArgumentException If the given plain text is null or empty. If the algorithm
+     *                                  specified is not an hashing algorithm.
+     * @deprecated Normally passwords are hashed. Hence, plainText given here can be password.
+     * Storing password in String as opposed to char[] is a security concern. So, instead of this
+     * method, use {@link #hash(byte[], CryptoScheme, int, byte[])} .
+     */
+    @Deprecated
+    public byte[] hash(String plainText, CryptoScheme scheme, int saltLength,
+                       byte[] salt) throws CryptoException {
+        if (plainText == null || plainText.length() == 0) {
+            throw new IllegalArgumentException(
+                    "Text for hashing cannot be null or empty.");
+        }
+
+        return hash(plainText.getBytes(Charset.forName("UTF-8")), scheme, saltLength, salt);
     }
 
     /**
@@ -283,16 +364,37 @@ public class OMCryptoService {
      * @param scheme scheme to be prefixed
      * @param text   text value
      * @return string value prefixing the algorithm to the text.
+     * @deprecated text given can be password. So, use {@link #prefixAlgorithm(CryptoScheme, char[])}.
      */
+    @Deprecated
     public String prefixAlgorithm(CryptoScheme scheme, String text) {
         if (text == null || text.length() == 0) {
             throw new IllegalArgumentException(
                     "Text cannot be null or an empty string");
         }
 
+        return new String(prefixAlgorithm(scheme, text.toCharArray()));
+    }
+
+    /**
+     * This method prefixs the given algorithm to the text and returns the
+     * result as "{algorihthm}text".
+     *
+     * @param scheme scheme to be prefixed
+     * @param text   text value
+     * @return string value prefixing the algorithm to the text.
+     */
+    public char[] prefixAlgorithm(CryptoScheme scheme, char[] text) {
+        if (text == null || text.length == 0) {
+            throw new IllegalArgumentException(
+                    "Text cannot be null or an empty string");
+        }
+
         StringBuilder sb = new StringBuilder("{");
         sb.append(scheme.getValue()).append('}').append(text);
-        return sb.toString();
+        char[] result = new char[sb.length()];
+        sb.getChars(0, sb.length(), result, 0);
+        return result;
     }
 
     @Deprecated
@@ -603,6 +705,9 @@ public class OMCryptoService {
      *                    with a salted algorithm
      * @return true / false
      * or you can use your custom key.
+     * @deprecated Normally passwords are hashed. Hence, plainText given here can be password.
+     * Storing password in String as opposed to char[] is a security concern. So, instead of this
+     * method, use {@link #match(char[], char[], int, byte[])}.
      */
     @Deprecated
     public boolean match(String plainText, String encodedText, int saltLength) {
@@ -620,41 +725,59 @@ public class OMCryptoService {
      *                    with a salted algorithm
      * @return true / false
      */
-    public boolean match(String plainText, String encodedText, int saltLength,
+    public boolean match(char[] plainText, char[] encodedText, int saltLength,
                          byte[] key) {
-        if (plainText == null || plainText.length() == 0 || encodedText == null
-                || encodedText.length() == 0) {
+        if (ArrayUtils.isEmpty(plainText) || ArrayUtils.isEmpty(encodedText)) {
             throw new IllegalArgumentException(
-                    "Text for comparition cannot be null or empty.");
+                    "Text for comparision cannot be null or empty.");
         }
 
         boolean isMatched = false;
-        if (!encodedText.startsWith("{")) {
+        if (encodedText[0] != '{') {
             return isMatched;
         }
-        int endIndex = encodedText.indexOf("}");
-        String algorithm = encodedText.substring(1, endIndex);
-        String encodedTextValue = encodedText.substring(endIndex + 1);
-        CryptoScheme scheme = CryptoScheme.getCryptoScheme(algorithm);
+
+        int endIndex = ArrayUtils.indexOf(encodedText, '}');
+        if (endIndex == -1 || endIndex == 1) {
+            // endIndex == 1 means that encodedText starts with {} and algorithm is not specified.
+            return isMatched;
+        }
+
+        int algorithmLength = endIndex - 1;
+        char[] algorithm = new char[algorithmLength];
+        System.arraycopy(encodedText, 1, algorithm, 0, algorithmLength);
+
+        int encodedTextValueLength = encodedText.length - endIndex - 1;
+        // New arrays created here (which contain sensitive info) MUST BE cleared in this method itself.
+        char[] encodedTextValue = new char[encodedTextValueLength];
+        if (OMSecurityConstants.DEBUG) {
+            Log.v(TAG, "encodedText = " + Arrays.toString(encodedText));
+        }
+        System.arraycopy(encodedText, endIndex + 1, encodedTextValue, 0, encodedTextValueLength);
+
+        byte[] encodedTextValueBytes = ArrayUtils.toBytes(encodedTextValue);
+        byte[] plainTextBytes = ArrayUtils.toBytes(plainText);
+        byte[] decryptedValueBytes = null;
+        CryptoScheme scheme = CryptoScheme.getCryptoScheme(new String(algorithm));
         try {
             if (scheme != null && CryptoScheme.isHashAlgorithm(scheme)) {
                 byte[] saltBytes = null;
                 if (CryptoScheme.isSaltedHashAlgorithm(scheme)
                         && saltLength > 0) {
-                    byte[] decodedBytes = Base64.decode(encodedTextValue);
+                    byte[] decodedBytes = Base64.bytesDecode(encodedTextValueBytes);
                     saltBytes = new byte[saltLength];
                     System.arraycopy(decodedBytes,
                             (decodedBytes.length - saltLength), saltBytes, 0,
                             saltLength);
                 }
-                String encodedValue = hash(plainText, scheme, saltLength,
+                String encodedValue = hash(plainTextBytes, scheme, saltLength,
                         saltBytes, false);
                 if (encodedValue != null
-                        && encodedValue.equals(encodedTextValue)) {
+                        && encodedValue.equals(new String(encodedTextValue))) {
                     isMatched = true;
                 }
             } else if (CryptoScheme.PLAINTEXT == scheme) {
-                if (plainText.equals(encodedTextValue)) {
+                if (Arrays.equals(plainTextBytes, encodedTextValueBytes)) {
                     isMatched = true;
                 }
             } else {
@@ -662,19 +785,56 @@ public class OMCryptoService {
                 // if key is present then decrypt using this key else carry on
                 // with the default key
                 if (key != null) {
-                    decryptedValue = decrypt(encodedText, key);
+                    decryptedValue = decrypt(new String(encodedText), key);
                 } else {
-                    decryptedValue = decrypt(encodedText);
+                    decryptedValue = decrypt(new String(encodedText));
                 }
-                if (decryptedValue != null && decryptedValue.equals(plainText)) {
-                    isMatched = true;
+                if (decryptedValue != null) {
+                    decryptedValueBytes = decryptedValue.getBytes(OMSecurityConstants.UTF_8);
+                    if (Arrays.equals(decryptedValueBytes, plainTextBytes)) {
+                        isMatched = true;
+                    }
                 }
             }
         } catch (Exception e) {
             Logger.getLogger(OMCryptoService.class.getName()).log(Level.INFO,
                     e.getLocalizedMessage(), e);
+        } finally {
+            Arrays.fill(encodedTextValue, ' ');
+            if (encodedTextValueBytes != null) {
+                Arrays.fill(encodedTextValueBytes, (byte) 0);
+            }
+            Arrays.fill(plainTextBytes, (byte) 0);
+            if (decryptedValueBytes != null) {
+                Arrays.fill(decryptedValueBytes, (byte) 0);
+            }
         }
         return isMatched;
+    }
+
+    /**
+     * This method compares the given plain text and the encoded text for
+     * equality and returns true if they are same and false otherwise. This
+     * method accepts a custom key to perform this check .
+     *
+     * @param plainText   plain text
+     * @param encodedText encoded text
+     * @param saltLength  salt length which is used if the given encoded text is hashed
+     *                    with a salted algorithm
+     * @return true / false
+     * @deprecated Normally passwords are hashed. Hence, plainText given here can be password.
+     * Storing password in String as opposed to char[] is a security concern. So, instead of this
+     * method, use {@link #match(char[], char[], int, byte[])}.
+     */
+    @Deprecated
+    public boolean match(String plainText, String encodedText, int saltLength,
+                         byte[] key) {
+        if (plainText == null || plainText.length() == 0 || encodedText == null
+                || encodedText.length() == 0) {
+            throw new IllegalArgumentException(
+                    "Text for comparision cannot be null or empty.");
+        }
+        return match(plainText.toCharArray(), encodedText.toCharArray(), saltLength, key);
     }
 
     /**

@@ -19,6 +19,15 @@ import oracle.idm.mobile.configuration.OMMobileSecurityConfiguration;
 import oracle.idm.mobile.credentialstore.OMCredential;
 import oracle.idm.mobile.credentialstore.OMCredentialStore;
 import oracle.idm.mobile.logging.OMLog;
+import oracle.idm.mobile.util.ArrayUtils;
+
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.AUTO_LOGIN_UI_PREFERENCE_KEY;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.IDENTITY_DOMAIN_KEY;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.PASSWORD_KEY_2;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.PASSWORD_KEY;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.REMEMBER_CREDENTIALS_UI_PREFERENCE_KEY;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.REMEMBER_USER_NAME_UI_PREFERENCE_KEY;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.USERNAME_KEY;
 
 
 /**
@@ -30,6 +39,7 @@ public class RCUtility {
     final static int OPTION_SELECTED_BY_USER = 1;
     final static int OPTION_UNSELECTED_BY_USER = -1;
     final static String OBFUSCATED_PWD = "********";
+    final static char[] OBFUSCATED_PWD_CHAR_ARRAY = OBFUSCATED_PWD.toCharArray();
     // Strings to be suffixed to the app credential key to store the
     // Remember credential related info in the store //
     static String KEY_SUFFIX_REMEMBER_CREDENTIALS = "_RC";
@@ -62,7 +72,7 @@ public class RCUtility {
         if (mConfig.isAutoLoginEnabled()) {
             OMLog.info(TAG, "Auto Login Enabled in Init Config, So lets persist its UI preferences");
             Object autoLoginUIObj = params
-                    .get(OMSecurityConstants.Challenge.AUTO_LOGIN_UI_PREFERENCE_KEY);
+                    .get(AUTO_LOGIN_UI_PREFERENCE_KEY);
             if (autoLoginUIObj != null) {
                 setAutoLoginUIPrefToStore((Boolean) autoLoginUIObj);
             } else {
@@ -130,13 +140,13 @@ public class RCUtility {
         if (autoLoginFromUser || rememberCredentialsFromUser
                 || rememberUsernameFromUser) {
             String usernameFromParams = (String) map.get(OMSecurityConstants.Challenge.USERNAME_KEY);
-            String passwordFromParams = (String) map.get(OMSecurityConstants.Challenge.PASSWORD_KEY);
+            char[] passwordCharArray = (char[]) map.get(PASSWORD_KEY_2);
             OMCredential credObj = new OMCredential();
             if (!TextUtils.isEmpty(usernameFromParams)) {
                 credObj.setUserName(usernameFromParams);
                 if (autoLoginFromUser || rememberCredentialsFromUser) {
-                    if (!TextUtils.isEmpty(passwordFromParams)) {
-                        credObj.setUserPassword(passwordFromParams);
+                    if (!ArrayUtils.isEmpty(passwordCharArray)) {
+                        credObj.setUserPassword(passwordCharArray);
                     }
                 }
             }
@@ -167,7 +177,20 @@ public class RCUtility {
     }
 
 
-    public Map<String, Object> getRememberCredentialsChallengeFields() {
+    /**
+     * This method returns a map which contains values like Identity Domain, Username, password,
+     * and remember credentials preferences. These values will be obtained from the method parameter
+     * <code>challengeInputFromUser</code> if present. <code>challengeInputFromUser</code> contains
+     * the response from the app for
+     * {@link OMAuthenticationChallengeType#USERNAME_PWD_REQUIRED} challenge which failed for some reason:
+     * e.g: Username missing, Invalid credentials, etc. Reading the values from <code>challengeInputFromUser</code>
+     * will ensure that the same state is maintained in the login form when authentication fails
+     * for the use-cases mentioned above.
+     * <p>
+     * If the values are not present in <code>challengeInputFromUser</code>, these values will be obtained from
+     * persistent storage. This will be the case for the first authentication attempt.
+     */
+    public Map<String, Object> getRememberCredentialsChallengeFields(Map<String, Object> challengeInputFromUser) {
         OMLog.debug(TAG, "Getting Remember Credential preferences for Challenge");
         Map<String, Object> map = new HashMap<>();
         //update the map UI preferences.
@@ -177,54 +200,76 @@ public class RCUtility {
             //let us also send this to info to challenge for app convenience.
             map.put(OMMobileSecurityService.OM_PROP_AUTO_LOGIN_ALLOWED, true);
             boolean autoLoginUIPref;
-            if (getAutoLoginUIPrefFromStore() != 0) {
-                autoLoginUIPref = (getAutoLoginUIPrefFromStore() == 1) ? true : false;
+            Object autoLoginUIPrefInputFromUser = (challengeInputFromUser != null) ?
+                    challengeInputFromUser.get(AUTO_LOGIN_UI_PREFERENCE_KEY) : null;
+            if (autoLoginUIPrefInputFromUser instanceof Boolean) {
+                autoLoginUIPref = (boolean) autoLoginUIPrefInputFromUser;
+            } else if (getAutoLoginUIPrefFromStore() != 0) {
+                autoLoginUIPref = (getAutoLoginUIPrefFromStore() == 1);
             } else {
                 autoLoginUIPref = mConfig.getDefaultValueForAutoLogin();
             }
             OMLog.info(TAG, "AutoLogin UI Pref to application: " + autoLoginUIPref);
-            map.put(OMSecurityConstants.Challenge.AUTO_LOGIN_UI_PREFERENCE_KEY, autoLoginUIPref);
+            map.put(AUTO_LOGIN_UI_PREFERENCE_KEY, autoLoginUIPref);
             populateCred = true;
         }
         if (mConfig.isRememberUsernameEnabled()) {
             map.put(OMMobileSecurityService.OM_PROP_REMEMBER_USERNAME_ALLOWED, true);//add on.
             boolean rememberUserUIPref;
-            if (getRememberUsernameUIPrefFromStore() != 0) {
-                rememberUserUIPref = (getRememberUsernameUIPrefFromStore() == 1) ? true : false;
+            Object rememberUserUIPrefInputFromUser = (challengeInputFromUser != null) ?
+                    challengeInputFromUser.get(REMEMBER_USER_NAME_UI_PREFERENCE_KEY) : null;
+            if (rememberUserUIPrefInputFromUser instanceof Boolean) {
+                rememberUserUIPref = (boolean) rememberUserUIPrefInputFromUser;
+            } else if (getRememberUsernameUIPrefFromStore() != 0) {
+                rememberUserUIPref = (getRememberUsernameUIPrefFromStore() == 1);
             } else {
                 //if nothing is selected yet, lets send back the default value.
                 rememberUserUIPref = mConfig.getDefaultValueForRememberUsername();
             }
             OMLog.info(TAG, "Remember Username UI Pref to application: " + rememberUserUIPref);
-            map.put(OMSecurityConstants.Challenge.REMEMBER_USER_NAME_UI_PREFERENCE_KEY, rememberUserUIPref);
+            map.put(REMEMBER_USER_NAME_UI_PREFERENCE_KEY, rememberUserUIPref);
             populateCred = true;
         }
 
         if (mConfig.isRememberCredentialsEnabled()) {
             map.put(OMMobileSecurityService.OM_PROP_REMEMBER_CREDENTIALS_ALLOWED, true);
             boolean rememberCredUIPref;
-            if (getRememberCredentialsUIPrefFromStore() != 0) {
-                rememberCredUIPref = (getRememberCredentialsUIPrefFromStore() == 1) ? true : false;
+            Object rememberCredUIPrefInputFromUser = (challengeInputFromUser != null) ?
+                    challengeInputFromUser.get(REMEMBER_CREDENTIALS_UI_PREFERENCE_KEY) : null;
+            if (rememberCredUIPrefInputFromUser instanceof Boolean) {
+                rememberCredUIPref = (boolean) rememberCredUIPrefInputFromUser;
+            } else if (getRememberCredentialsUIPrefFromStore() != 0) {
+                rememberCredUIPref = (getRememberCredentialsUIPrefFromStore() == 1);
             } else {
                 rememberCredUIPref = mConfig.getDefaultValueForRememberCredentials();
             }
             OMLog.info(TAG, "Remember Cred UI Pref to application: " + rememberCredUIPref);
-            map.put(OMSecurityConstants.Challenge.REMEMBER_CREDENTIALS_UI_PREFERENCE_KEY, rememberCredUIPref);
+            map.put(REMEMBER_CREDENTIALS_UI_PREFERENCE_KEY, rememberCredUIPref);
             populateCred = true;
         }
 
         if (populateCred) {
-            OMCredential rememberedCred;
-            rememberedCred = retrieveRememberedCredentials();
+            if (isChallengeInputValid(challengeInputFromUser)) {
+                map.put(USERNAME_KEY, challengeInputFromUser.get(USERNAME_KEY));
+                map.put(PASSWORD_KEY_2, challengeInputFromUser.get(PASSWORD_KEY_2));
+                map.put(PASSWORD_KEY, challengeInputFromUser.get(PASSWORD_KEY));
+                if (mConfig.isCollectIdentityDomain()) {
+                    map.put(IDENTITY_DOMAIN_KEY, challengeInputFromUser.get(IDENTITY_DOMAIN_KEY));
+                }
+                return map;
+            }
+            OMCredential rememberedCred = retrieveRememberedCredentials();
             if (rememberedCred != null) {
                 if (!TextUtils.isEmpty(rememberedCred.getUserName())) {
                     map.put(OMSecurityConstants.Challenge.USERNAME_KEY, rememberedCred.getUserName());
                 }
-                if (!TextUtils.isEmpty(rememberedCred.getUserPassword())) {
+                if (!ArrayUtils.isEmpty(rememberedCred.getUserPasswordAsCharArray())) {
                     //sending obfuscated value in the challenge fields.
                     //TODO don't think this a Good Idea.
                     //For SDK its difficult to maintain the state
                     map.put(OMSecurityConstants.Challenge.PASSWORD_KEY, OBFUSCATED_PWD);
+                    map.put(OMSecurityConstants.Challenge.PASSWORD_KEY_2, OBFUSCATED_PWD_CHAR_ARRAY);
+                    rememberedCred.invalidateUserPassword();
                     //map.put(OMSecurityConstants.Challenge.PASSWORD_KEY, rememberedCred.getUserPassword());//pass encrypted password
                     //for now I am adding a flag as a preference to the app.
                     //If app updates this flags it means we need to consider the new password other wise
@@ -235,6 +280,14 @@ public class RCUtility {
             }
         }
         return map;
+    }
+
+    private boolean isChallengeInputValid(Map<String, Object> challengeInputFromUser) {
+        return (challengeInputFromUser != null &&
+                (challengeInputFromUser.containsKey(USERNAME_KEY) ||
+                        challengeInputFromUser.containsKey(IDENTITY_DOMAIN_KEY) ||
+                        challengeInputFromUser.containsKey(PASSWORD_KEY) ||
+                        challengeInputFromUser.containsKey(PASSWORD_KEY_2)));
     }
 
     //returns remembered credential during last successful authentication.
@@ -278,10 +331,10 @@ public class RCUtility {
         OMCredential newCredToBeStored = new OMCredential();
         OMCredential storedCred = retrieveRememberedCredentials();
         if (storedCred != null) {
+            storedCred.invalidateUserPassword();
             newCredToBeStored.setUserName(storedCred.getUserName());
-            newCredToBeStored.setIdentityDomain(storedCred
-                    .getIdentityDomain());
-            newCredToBeStored.setUserPassword(null);
+            newCredToBeStored.setIdentityDomain(storedCred.getIdentityDomain());
+            newCredToBeStored.setUserPassword((char[]) null);
             storeCredentialsToStore(newCredToBeStored);
         }
         OMLog.info(TAG,
@@ -302,7 +355,7 @@ public class RCUtility {
         rememberedCred = mCredentialStore.getCredential(credentialKey);
         if (rememberedCred != null) {
             OMLog.debug(TAG, "Remembered Credentials Found!");
-            String decryptedPassword = rememberedCred.getUserPassword();
+            char[] decryptedPassword = rememberedCred.getUserPasswordAsCharArray();
             rememberedCred.setUserPassword(decryptedPassword);
         } else {
             OMLog.debug(TAG, "Remembered Credentials Not Found!");

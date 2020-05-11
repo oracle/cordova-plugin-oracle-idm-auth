@@ -1,5 +1,8 @@
 # Release Notes
 
+## 1.5.0 (11 May, 2020)
+* Support for CSRF Protection for token relay service.
+
 ## 1.4.0 (8 Apr, 2020)
 * Removing the referencing of UIWebView as per Apple guideline.
 

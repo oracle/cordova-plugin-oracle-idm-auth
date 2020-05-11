@@ -7,7 +7,6 @@
 package oracle.idm.mobile.auth;
 
 
-import android.text.TextUtils;
 import android.util.Log;
 
 import java.net.URL;
@@ -23,16 +22,16 @@ import oracle.idm.mobile.OMMobileSecurityException;
 import oracle.idm.mobile.OMSecurityConstants;
 import oracle.idm.mobile.auth.OMAuthenticationContext.AuthenticationProvider;
 import oracle.idm.mobile.auth.OMAuthenticationContext.Status;
-import oracle.idm.mobile.configuration.OMMobileSecurityConfiguration;
 import oracle.idm.mobile.connection.InvalidCredentialEvent;
 import oracle.idm.mobile.connection.OMConnectionHandler;
 import oracle.idm.mobile.connection.OMCookieManager;
 import oracle.idm.mobile.connection.OMHTTPRequest;
 import oracle.idm.mobile.connection.OMHTTPResponse;
-import oracle.idm.mobile.credentialstore.OMCredential;
 import oracle.idm.mobile.logging.OMLog;
+import oracle.idm.mobile.util.ArrayUtils;
 
 import static oracle.idm.mobile.OMSecurityConstants.Challenge.IDENTITY_DOMAIN_KEY;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.PASSWORD_KEY_2;
 import static oracle.idm.mobile.OMSecurityConstants.Challenge.PASSWORD_KEY;
 import static oracle.idm.mobile.OMSecurityConstants.Challenge.USERNAME_KEY;
 
@@ -85,44 +84,8 @@ class BasicAuthenticationService extends AuthenticationService implements Challe
             //have all the required inputs lets proceed for authentication
             controller.onInputAvailable(inputParams);
         } else {
-            mAuthCompletionHandler.createChallengeRequest(mASM.getMSS(), createLoginChallenge(), new AuthServiceInputCallback() {
-                @Override
-                public void onInput(final Map<String, Object> inputs) {
-                    if (mASM.getMSS().getMobileSecurityConfig().isAnyRCFeatureEnabled()) {
-                        //lets update the RC UI preferences.
-
-                        OMLog.info(TAG, "Remember Cred feature is enabled, Storing UI prefs");
-                        //check for the password.
-                        //we already have the password.
-                        //usually in case of remember creds and auto login we check for this.
-                        OMMobileSecurityConfiguration config = mASM.getMSS().getMobileSecurityConfig();
-                        if (config.isAutoLoginEnabled() || config.isRememberCredentialsEnabled()) {
-                            String inputPWD = (String) inputs.get(OMSecurityConstants.Challenge.PASSWORD_KEY);
-                            RCUtility rcUtility = mASM.getRCUtility();
-                            OMCredential remCred = rcUtility.retrieveRememberedCredentials();
-                            if (remCred != null && !(TextUtils.isEmpty(remCred.getUserPassword())) && inputPWD.equalsIgnoreCase(RCUtility.OBFUSCATED_PWD)) {
-                                //this means the creds are already persisted and the user did not change the password which was pre-filled in the login screen.
-                                //TODO if possible we should change this impl.
-                                OMLog.info(TAG, "Updating the obfuscated PWD with the one we have in the store.");
-                                inputs.put(OMSecurityConstants.Challenge.PASSWORD_KEY, remCred.getUserPassword());
-                            }
-                        }
-                        storeRCUIPreferences(inputs);
-                    }
-                    controller.onInputAvailable(inputs);
-                }
-
-                @Override
-                public void onError(final OMErrorCode error) {
-                    controller.onInputError(error);
-                }
-
-                @Override
-                public void onCancel() {
-                    //FIXME Clear cookies which were set during this basic authentication attempt
-                    controller.onCancel();
-                }
-            });
+            mAuthCompletionHandler.createChallengeRequest(mASM.getMSS(), createLoginChallenge(),
+                    new UsernamePasswdAuthServiceInputCallbackImpl(mASM, controller));
         }
     }
 
@@ -134,7 +97,6 @@ class BasicAuthenticationService extends AuthenticationService implements Challe
         OMCookieManager omCookieManager = OMCookieManager.getInstance();
         Map<String, Object> inputParams = authContext.getInputParams();
         String username = (String) inputParams.get(USERNAME_KEY);
-        String password = (String) inputParams.get(PASSWORD_KEY);
         String identityDomain = (String) inputParams.get(IDENTITY_DOMAIN_KEY);
         authContext.setUserName(username);
 
@@ -150,11 +112,32 @@ class BasicAuthenticationService extends AuthenticationService implements Challe
              */
             existingAuthContext.deleteCookies();
         }
-        omCookieManager.startURLTracking();
+
         int flag = (OMHTTPRequest.AUTHENTICATION_REQUEST | OMHTTPRequest.REQUIRE_RESPONSE_HEADERS |
                 OMHTTPRequest.REQUIRE_RESPONSE_CODE | OMHTTPRequest.REQUIRE_RESPONSE_STRING);
-        OMHTTPResponse httpResponse = connectionHandler.httpGet(authRequest.getAuthenticationURL(), username, password, headers, false, flag);
-        omCookieManager.stopURLTracking();
+        OMHTTPResponse httpResponse;
+        try {
+            omCookieManager.startURLTracking();
+            char[] passwordCharArray = (char[]) inputParams.get(PASSWORD_KEY_2);
+            if (!ArrayUtils.isEmpty(passwordCharArray)) {
+                httpResponse = connectionHandler.httpGet(authRequest.getAuthenticationURL(),
+                        username, passwordCharArray, headers, false, flag);
+            } else {
+                String passwordString = (String) inputParams.get(PASSWORD_KEY);
+                httpResponse = connectionHandler.httpGet(authRequest.getAuthenticationURL(),
+                        username, passwordString, headers, false, flag);
+            }
+        } catch (OMMobileSecurityException e) {
+            if (OMErrorCode.UN_PWD_INVALID.getErrorCode().equals(e.getErrorCode())
+                    && mASM.getMSS().getMobileSecurityConfig().isCollectIdentityDomain()) {
+                throw new OMMobileSecurityException(OMErrorCode.UN_PWD_TENANT_INVALID);
+            } else {
+                throw e;
+            }
+        } finally {
+            omCookieManager.stopURLTracking();
+        }
+
         Set<String> requiredCookies = mASM.getMSS().getMobileSecurityConfig().getRequiredTokens();
         authContext.setAuthenticationProvider(AuthenticationProvider.BASIC);
         boolean hasReqCookies = omCookieManager.hasRequiredCookies(requiredCookies, omCookieManager.getVisitedURLs());

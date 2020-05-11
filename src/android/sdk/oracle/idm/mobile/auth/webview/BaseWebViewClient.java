@@ -7,9 +7,14 @@
 package oracle.idm.mobile.auth.webview;
 
 import android.annotation.TargetApi;
+import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Message;
+import android.text.TextUtils;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -22,28 +27,84 @@ import oracle.idm.mobile.logging.OMLog;
 /**
  * This class just contains methods which MUST simply delegate the control to app's webviewclient.
  * <p>
- *
  */
 public class BaseWebViewClient extends WebViewClient {
     private final String TAG = BaseWebViewClient.class.getSimpleName();
+    private Context context;
     private WebViewClient origAppWebViewClient;
+
+    private enum OMAUrlScheme {
+        ORACLE_MOBILE_AUTHENTICATOR("oraclemobileauthenticator"),
+        ORACLE_AUTHENTICATOR("oracleauthenticator"),
+        OTP_AUTH("otpauth"),
+        OMA("oma");
+
+        private String value;
+
+        OMAUrlScheme(String value) {
+            this.value = value;
+        }
+
+        public String getValue() {
+            return value;
+        }
+    }
 
     // for testing.
     BaseWebViewClient() {
 
     }
 
-    public BaseWebViewClient(WebViewClient origAppWebViewClient) {
+    public BaseWebViewClient(Context context, WebViewClient origAppWebViewClient) {
+        this.context = context;
         this.origAppWebViewClient = origAppWebViewClient;
     }
 
     @Override
     public boolean shouldOverrideUrlLoading(WebView view, String url) {
         OMLog.trace(TAG, "shouldOverrideUrlLoading: url = " + url);
-        if (origAppWebViewClient != null) {
-            return origAppWebViewClient.shouldOverrideUrlLoading(view, url);
+        if (isUrlOfOMAApp(url)) {
+            /* This use-case is Mobile App enrollment in case
+             * of IDCS. WebView does not have support to launch
+             * the app by its own. Hence, below code launches
+             * the OMA app.*/
+            Intent omaIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            if (context == null) {
+                Log.e(TAG, "context is null. Cannot launch OMA app");
+                return false;
+            }
+            if (omaIntent.resolveActivity(context.getPackageManager()) == null) {
+                Log.e(TAG, "No apps are found with the url scheme to be loaded.");
+                return false;
+            }
+            context.startActivity(omaIntent);
+            if (origAppWebViewClient != null) {
+                /* SDK anyways overrides URL loading by returning true.
+                 * But, SDK lets the app know through origAppWebViewClient
+                 * as done below.*/
+                origAppWebViewClient.shouldOverrideUrlLoading(view, url);
+            }
+            return true;
         } else {
-            return super.shouldOverrideUrlLoading(view, url);
+            if (origAppWebViewClient != null) {
+                return origAppWebViewClient.shouldOverrideUrlLoading(view, url);
+            } else {
+                return super.shouldOverrideUrlLoading(view, url);
+            }
+        }
+    }
+
+    private boolean isUrlOfOMAApp(String url) {
+        if (TextUtils.isEmpty(url)) {
+            return false;
+        }
+        if (url.startsWith(OMAUrlScheme.OMA.getValue())
+                || url.startsWith(OMAUrlScheme.ORACLE_AUTHENTICATOR.getValue())
+                || url.startsWith(OMAUrlScheme.ORACLE_MOBILE_AUTHENTICATOR.getValue())
+                || url.startsWith(OMAUrlScheme.OTP_AUTH.getValue())) {
+            return true;
+        } else {
+            return false;
         }
     }
 

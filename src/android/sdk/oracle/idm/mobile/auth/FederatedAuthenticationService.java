@@ -13,11 +13,14 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 import org.json.JSONException;
+import org.json.JSONObject;
 
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,6 +35,7 @@ import oracle.idm.mobile.auth.logout.OMLogoutCompletionHandler;
 import oracle.idm.mobile.auth.webview.LogoutWebViewClient;
 import oracle.idm.mobile.auth.webview.WebViewAuthServiceInputCallbackImpl;
 import oracle.idm.mobile.configuration.OMFederatedMobileSecurityConfiguration;
+import oracle.idm.mobile.connection.OMConnectionHandler;
 import oracle.idm.mobile.connection.OMCookieManager;
 import oracle.idm.mobile.connection.OMHTTPResponse;
 import oracle.idm.mobile.logging.OMLog;
@@ -41,6 +45,11 @@ import oracle.idm.mobile.logging.OMLog;
  */
 public class FederatedAuthenticationService extends AuthenticationService implements ChallengeBasedService {
     private static final String TAG = FederatedAuthenticationService.class.getSimpleName();
+    private static final String TOKEN_RELAY_PATH = "/fscmRestApi/tokenrelay";
+    private static final String ANTI_CSRF_PATH = "/fscmRestApi/anticsrf";
+    private static final String XSRF_TOKEN_RESPONSE_JSON_KEY = "xsrftoken";
+    private static final String XSRF_TOKEN_REQUEST_HEADER = "X-XSRF-TOKEN";
+
     private OMFederatedMobileSecurityConfiguration mConfig;
 
     protected FederatedAuthenticationService(
@@ -102,7 +111,9 @@ public class FederatedAuthenticationService extends AuthenticationService implem
             }
             boolean parseTokenRelayResponse = mConfig.parseTokenRelayResponse();
             if (parseTokenRelayResponse) {
-                parseTokenRelayResponse(authContext);
+                String tokenRelayResponse = (String) inputParams
+                        .get(OMSecurityConstants.Param.TOKEN_RELAY_RESPONSE);
+                processTokenRelayResponse(tokenRelayResponse, authContext, true);
             }
 
             authContext.setStatus(OMAuthenticationContext.Status.SUCCESS);
@@ -292,27 +303,88 @@ public class FederatedAuthenticationService extends AuthenticationService implem
         return challenge;
     }
 
-    private void parseTokenRelayResponse(OMAuthenticationContext authContext) throws OMMobileSecurityException {
-        Map<String, Object> inputParams = authContext.getInputParams();
-        String tokenRelayResponse = (String) inputParams
-                .get(OMSecurityConstants.Param.TOKEN_RELAY_RESPONSE);
+    /**
+     * Parses tokenRelayResponse as {@link OAuthToken}. Fetches XSRF Token
+     * by accessing anti-CSRF endpoint if parameter "retryWithXSRFToken"
+     * is true.
+     */
+    private void processTokenRelayResponse(String tokenRelayResponse,
+                                           OMAuthenticationContext authContext,
+                                           boolean retryWithXSRFToken) throws OMMobileSecurityException {
+        if (OMSecurityConstants.DEBUG) {
+            OMLog.debug(TAG, "tokenRelayResponse obtained: " + tokenRelayResponse);
+        }
         if (TextUtils.isEmpty(tokenRelayResponse)) {
-            onAuthenticationFailed(authContext,
-                    "Token Relay Response is empty", null);
+            //Normally, this does not happen with rel-13 server. It is just defensive approach.
+            tokenRelayResponse = fetchAccessTokenWithXSRFToken(authContext);
         }
         try {
             OAuthToken oAuthToken = new OAuthToken(tokenRelayResponse);
             List<OAuthToken> oauthTokenList = new ArrayList<>();
             oauthTokenList.add(oAuthToken);
             authContext.setOAuthTokenList(oauthTokenList);
-            Log.d(TAG,
+            OMLog.debug(TAG,
                     "Token Relay Response has a valid access token. It is parsed & set in authContext.");
         } catch (JSONException e) {
-            onAuthenticationFailed(
-                    authContext,
-                    "Token Relay Response does not have valid access token",
-                    e);
+            /* This happens with rel-13 server as it returns 401 error in html format.
+             * So, SDK accesses anti-csrf endpoint below. */
+            OMLog.debug(TAG, "Error parsing response. " + e.getMessage()
+                    + " retryWithXSRFToken = " + retryWithXSRFToken);
+            if (retryWithXSRFToken) {
+                tokenRelayResponse = fetchAccessTokenWithXSRFToken(authContext);
+                processTokenRelayResponse(tokenRelayResponse, authContext, false);
+            } else {
+                onAuthenticationFailed(authContext,
+                        "Token Relay Response does not have valid access token.", e);
+            }
         }
+    }
+
+    private String fetchAccessTokenWithXSRFToken(OMAuthenticationContext authContext)
+            throws OMMobileSecurityException {
+        String tokenRelayResponse = null;
+        try {
+            OMConnectionHandler connectionHandler = mASM.getMSS().getConnectionHandler();
+            URL tokenRelay = getTokenRelayUrl(mConfig.getLoginSuccessUrl());
+            URL antiCsrf = getAntiCsrfUrl(mConfig.getLoginSuccessUrl());
+            OMHTTPResponse antiCsrfResponse = connectionHandler.httpGet(antiCsrf, null);
+            if (TextUtils.isEmpty(antiCsrfResponse.getResponseStringOnSuccess())) {
+                onAuthenticationFailed(authContext, "Anti-CSRF response is empty.", null);
+            }
+            JSONObject xsrfJsonObject = new JSONObject(antiCsrfResponse.getResponseStringOnSuccess());
+            String xsrfValue = xsrfJsonObject.getString(XSRF_TOKEN_RESPONSE_JSON_KEY);
+            Map<String, String> headers = new HashMap<>();
+            headers.put(XSRF_TOKEN_REQUEST_HEADER, xsrfValue);
+            // Cookie XSRF-TOKEN will also be sent by below call in addition to the above header
+            OMHTTPResponse tokenRelayOMHttpResponse = connectionHandler.httpGet(tokenRelay, headers);
+            tokenRelayResponse = tokenRelayOMHttpResponse.getResponseStringOnSuccess();
+        } catch (MalformedURLException e) {
+            OMLog.error(TAG, e.getMessage(), e);
+        } catch (JSONException e) {
+            OMLog.error(TAG, e.getMessage(), e);
+        }
+        if (TextUtils.isEmpty(tokenRelayResponse)) {
+            onAuthenticationFailed(authContext, "Token Relay Response could not obtained.", null);
+        }
+        return tokenRelayResponse;
+    }
+
+    private URL getTokenRelayUrl(URL url) throws MalformedURLException {
+        String tokenRelayUrl = getBaseUrl(url) + TOKEN_RELAY_PATH;
+        return new URL(tokenRelayUrl);
+    }
+
+    private URL getAntiCsrfUrl(URL url) throws MalformedURLException {
+        String antiCsrfUrl = getBaseUrl(url) + ANTI_CSRF_PATH;
+        return new URL(antiCsrfUrl);
+    }
+
+    private String getBaseUrl(URL url) {
+        String baseUrl = url.getProtocol() + "://" + url.getHost();
+        if (url.getPort() != -1) {
+            baseUrl = baseUrl + ":" + url.getPort();
+        }
+        return baseUrl;
     }
 
     private void onAuthenticationFailed(OMAuthenticationContext authContext,

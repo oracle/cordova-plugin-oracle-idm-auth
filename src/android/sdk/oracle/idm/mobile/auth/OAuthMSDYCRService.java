@@ -18,15 +18,22 @@ import java.util.Map;
 import oracle.idm.mobile.OMMobileSecurityException;
 import oracle.idm.mobile.OMSecurityConstants;
 import oracle.idm.mobile.configuration.OMOAuthMobileSecurityConfiguration;
+import oracle.idm.mobile.util.ArrayUtils;
 
-import static oracle.idm.mobile.OMSecurityConstants.Challenge.*;
-import static oracle.idm.mobile.auth.OAuthConnectionsUtil.*;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.PASSWORD_KEY_2;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.PASSWORD_KEY;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.USERNAME_KEY;
+import static oracle.idm.mobile.auth.OAuthConnectionsUtil.OAUTH_GRANT_TYPE_PASSWORD;
+import static oracle.idm.mobile.auth.OAuthConnectionsUtil.OAUTH_MS_DEVICE_PROFILE_REQ;
+import static oracle.idm.mobile.auth.OAuthConnectionsUtil.OAUTH_MS_PRE_AUTHZ_CODE_PARAM;
+import static oracle.idm.mobile.auth.OAuthConnectionsUtil.OAUTH_MS_PRE_AUTHZ_CODE_REQ;
+import static oracle.idm.mobile.auth.OAuthConnectionsUtil.OAUTH_MS_REQUESTED_ASSERTIONS_REQ;
+import static oracle.idm.mobile.auth.OAuthConnectionsUtil.OAUTH_TOKEN_TYPE_JWT_CLIENT_ASSERTION;
 
 /**
  * DYCR -> Dynamic Client Registration. This class is responsible for performing
  * dynamic client registration of a OAuth mobile client against the M&S OAuth
  * server. This class strictly follows the M&S OAuth server standards.
- *
  */
 abstract class OAuthMSDYCRService extends OAuthAuthenticationService {
     private static final String TAG = OAuthMSDYCRService.class.getName();
@@ -47,7 +54,12 @@ abstract class OAuthMSDYCRService extends OAuthAuthenticationService {
         payload.append((String) paramMap.get(USERNAME_KEY));
         payload.append(AMPERSAND);
         payload.append(OAuthConnectionsUtil.OAUTH_PASSWORD_REQ);
-        payload.append((String) paramMap.get(PASSWORD_KEY));
+        char[] passwordCharArray = (char[]) paramMap.get(PASSWORD_KEY_2);
+        if (!ArrayUtils.isEmpty(passwordCharArray)) {
+            payload.append(passwordCharArray);
+        } else {
+            payload.append((String) paramMap.get(PASSWORD_KEY));
+        }
         payload.append(AMPERSAND);
         updatePayloadWithClientID(payload);
         payload.append(OAUTH_MS_PRE_AUTHZ_CODE_REQ);

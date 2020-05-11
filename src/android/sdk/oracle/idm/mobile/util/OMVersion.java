@@ -14,9 +14,9 @@ package oracle.idm.mobile.util;
  */
 public class OMVersion
 {
-    private static final String OM_VERSION = "18.3.4-1.1.3";
+    private static final String OM_VERSION = "@@OM_VERSION@@";
     private static final String OM_VERSION_BANNER = "Oracle Access Management Mobile and Social SDK for Android";
-    private static final String OM_VERSION_LABEL = "18.3.4-1.1.3";
+    private static final String OM_VERSION_LABEL = "@@OM_VERSION@@";
 
     private static final String HYPHEN = " - ";
     private static final String OPEN_BRACKET = " (";

@@ -49,14 +49,10 @@ public interface OMAuthenticator {
 
 
     /**
-     * Updates auth data. It implements two behavior based on parameter passed to it.
-     * First parameter is mandatory and can’t be null. This data will overwrite to current one.
-     * If second parameter is passed then first it will use second parameter to authenticate
-     * itself and then update new one. If second parameter is null then it will directly update
-     * current auth data to new one. In second scenario, it is client’s responsibility to
-     * authenticate itself and then call update data API.
-     * @param currentAuthData
-     * @param newAuthData
+     * This method updates the old authData with new Auth data
+     *
+     * @param currentAuthData currently set auth data
+     * @param newAuthData     new auth data to replace the existing one
      */
     void updateAuthData(OMAuthData currentAuthData, OMAuthData newAuthData) throws OMKeyManagerException, OMAuthenticationManagerException;
 

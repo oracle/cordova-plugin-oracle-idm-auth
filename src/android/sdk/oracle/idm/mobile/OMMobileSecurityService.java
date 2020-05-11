@@ -803,7 +803,7 @@ public class OMMobileSecurityService {
      */
     public OMMobileSecurityService(Context context,
                                    String configurationPropertiesKey, OMMobileSecurityServiceCallback callback)
-            throws JSONException, OMMobileSecurityException {
+            throws OMMobileSecurityException {
         this(context, OMMobileSecurityConfiguration.getInitializationConfiguration(context,
                 configurationPropertiesKey), callback);
     }
@@ -930,6 +930,8 @@ public class OMMobileSecurityService {
                             .UNTRUSTED_SERVER_CERTIFICATE_AUTH_TYPE_KEY, sslEvent.getAuthType());
                     sslChallenge.addChallengeField(OMSecurityConstants.Challenge
                             .UNTRUSTED_SERVER_CERTIFICATE_CHAIN_KEY, sslEvent.getCertificateChain());
+                    sslChallenge.addChallengeField(OMSecurityConstants.Challenge
+                            .UNTRUSTED_SERVER_URL_KEY, sslEvent.getURL());
                     new Setup1WaySSLCompletionHandler(sMSS.getMobileSecurityConfig(), sMSS.getCallback()).createChallengeRequest(sMSS, sslChallenge, null);
                     //handle 1-way SSL
                     return;
@@ -1067,21 +1069,29 @@ public class OMMobileSecurityService {
 
     /**
      * This method removes all session cookies when authenticate is called for
-     * first time after app launch. This is done, because android sometimes
-     * retains some session cookies even after app restart. E.g: User is logged
-     * in using Federated Authentication, and then the app is force stopped. The
-     * next time app is launched, if the session cookies are not removed, the
+     * first time after app launch. This is done, because android webview
+     * retains session cookies even after app restart.
+     * Ref: https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies#Session_cookies
+     * E.g: User is logged in using Federated Authentication, and
+     * then the app is force stopped. The next time app is launched,
+     * if the session cookies are not removed, the
      * federated authentication flow will fail.
      */
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private void removeSessionCookies() {
         if (!authenticateCalledForFirstTime) {
             authenticateCalledForFirstTime = true;
-            if (!getMobileSecurityConfig().isAuthContextPersistenceAllowed()) {
-                OMLog.debug(TAG,
-                        "Authenticate API called for first time after app launch -> Removing session cookies");
-                OMCookieManager.getInstance().removeSessionCookies(getApplicationContext());
-            }
+            /*Session cookies are being cleared irrespective of
+            OM_PROP_SESSION_ACTIVE_ON_RESTART. This is because
+            once SDK indicates authContext is invalid after app-restart,
+            say based on access token expiry, authenticate() should prompt
+            for login screen. If session cookies are not cleared here,
+            user will not be prompted for authentication, if session cookies
+            are still valid. This will also make the behavior similar
+            to iOS.*/
+            OMLog.debug(TAG,
+                    "Authenticate API called for first time after app launch -> Removing session cookies");
+            OMCookieManager.getInstance().removeSessionCookies(getApplicationContext());
         }
     }
 
@@ -1325,6 +1335,20 @@ public class OMMobileSecurityService {
                 timeoutManager.stopTimers();
             }
             authenticationContext.deleteCookies();
+            /**This is called with all parameters passed as true
+             * to make sure that if authentication context is retrieved
+             * by app in onLogoutCompleted, it will be null. Actual
+             * authContext to be persisted is written in
+             * {@link OMAuthenticationContext#deleteAuthContext(boolean, boolean, boolean, boolean)}
+             * by calling {@link OMAuthenticationContext#deletePersistedAuthContext(boolean, boolean, boolean)}.
+             * This is done because before {@link OMMobileSecurityService#logout(boolean)}l is executed completely,
+             * onLogoutCompleted() can be called.
+             * e.g: Google OpenID logout, external browser flow.*/
+            boolean authContextPersistenceAllowed = getMobileSecurityConfig()
+                    .isAuthContextPersistenceAllowed();
+            if (authContextPersistenceAllowed) {
+                authenticationContext.deletePersistedAuthContext(true, true, true);
+            }
         }
         removeSessionCookiesOnLogout();
         resetAuthServiceManager();

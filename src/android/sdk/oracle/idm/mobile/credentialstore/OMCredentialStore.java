@@ -32,6 +32,7 @@ import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_APPNAME;
 import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_AUTH_KEY;
 import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_LOGIN_URL;
 import static oracle.idm.mobile.OMMobileSecurityService.OM_PROP_OAUTH_TOKEN_ENDPOINT;
+import static oracle.idm.mobile.OMSecurityConstants.OM_CREDENTIAL;
 
 /**
  * OMCredentialStore is storage class which stores all the data that needs
@@ -45,7 +46,7 @@ public class OMCredentialStore
     public static final String DEFAULT_AUTHENTICATOR_NAME = "idm_mobile_sdk_default_authenticator";
 
     private static final String TAG = OMCredentialStore.class.getSimpleName();
-    private static final String OM_CREDENTIAL = "_Credential";
+
     /**
      * This is appended with the key passed to store/retrieve/delete the authentication context.
      */
@@ -285,21 +286,33 @@ public class OMCredentialStore
         OMSecureStorageService sss = getSecureStorageService();
         if (!TextUtils.isEmpty(key) && sss != null)
         {
-            key = key + OM_CREDENTIAL;
+            String realKey = key + OM_CREDENTIAL;
             Serializable data = null;
             try {
-                data = sss.get(key);
+                data = sss.get(realKey);
             } catch (OMSecureStorageException e) {
                 OMLog.error(TAG, e.getMessage(), e);
                 return null;
             }
             if (data instanceof String) {
+                /* TODO Since OMCredential is now being serialized and stored, this instanceof check
+                * can be removed. Keeping this now probably for 1 or 2 years to maintain backward compatibility.
+                *
+                * JIRA task: OCIS-122693 ANDROID: SDK: Fortify Issue : Do not store sensitive data in immutable objects
+                * */
                 credentialStr = (String) data;
+            } else {
+                credential = (OMCredential) data;
             }
             if (credentialStr != null)
             {
                 // try to see whether it is a auth context
                 credential = new OMCredential(credentialStr);
+                /* The String representation of Credential object was stored in secure storage which
+                 * has issues as mentioned in javadoc of constructor OMCredential(String). So, deleting
+                 * this entry from secure storage and storing it again in serialized format.*/
+                deleteCredential(key);
+                addCredential(key, credential);
             }
 
         }
@@ -411,7 +424,7 @@ public class OMCredentialStore
     public void updateCredential(String key, OMCredential credential)
     {
         addCredential(key, credential.getUserName(),
-                credential.getRawUserPassword(),
+                credential.getRawUserPasswordAsCharArray(),
                 credential.getIdentityDomain(), credential.getProperties());
     }
 
@@ -429,7 +442,12 @@ public class OMCredentialStore
      *            "tenantname" or any of the user defined property name
      * @param propertyValue
      *            new value for the property
+     *
+     * @deprecated This accepts password as String which leads to security issues.
+     * Instead use {@link #updateCredential(String, OMCredential)} where you can
+     * update password using setter ({@link OMCredential#setUserPassword(char[])}).
      */
+    @Deprecated
     public void updateCredential(String key, String propertyName,
             String propertyValue)
     {
@@ -440,7 +458,8 @@ public class OMCredentialStore
             key = key + OM_CREDENTIAL;
             if (credential != null) {
                 credential.updateValue(propertyName, propertyValue);
-                storeInSecureStorage(key, credential.convertToJSONString());
+                storeInSecureStorage(key, credential);
+                credential.invalidateUserPassword();
             }
         }
     }
@@ -458,9 +477,34 @@ public class OMCredentialStore
      *            tenant name
      * @param properties
      *            set of properties
+     *
+     * @deprecated This accepts password as String as opposed to char[], which
+     * is a security concern. Instead use {@link #addCredential(String, String, char[], String, Map)}.
      */
+    @Deprecated
     public void addCredential(String key, String userName, String password,
             String tenantName, Map<String, String> properties)
+    {
+        addCredential(key, userName, password.toCharArray(), tenantName, properties);
+    }
+
+    /**
+     * Adds the new value into the credential store against the given key.
+     *
+     * @param key
+     *            key to be used for searching in the credential store.
+     * @param userName
+     *            user name
+     * @param password
+     *            password
+     * @param tenantName
+     *            tenant name
+     * @param properties
+     *            set of properties
+     *
+     */
+    public void addCredential(String key, String userName, char[] password,
+                              String tenantName, Map<String, String> properties)
     {
         if (key != null)
         {
@@ -469,7 +513,7 @@ public class OMCredentialStore
             OMCredential credential = new OMCredential(userName, password,
                     tenantName, properties);
 
-            storeInSecureStorage(key, credential.convertToJSONString());
+            storeInSecureStorage(key, credential);
         }
     }
 
@@ -486,7 +530,7 @@ public class OMCredentialStore
         if (key != null && credential != null)
         {
             key = key + OM_CREDENTIAL;
-            storeInSecureStorage(key, credential.convertToJSONString());
+            storeInSecureStorage(key, credential);
         }
     }
 

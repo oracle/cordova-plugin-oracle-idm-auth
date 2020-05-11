@@ -19,6 +19,16 @@ import java.net.URL;
 public class URLUtils {
     private static final String TAG = URLUtils.class.getSimpleName();
 
+    /**
+     * RFC1738 does not discuss whether parts of the URL other than scheme
+     * should be interpreted as case sensitive or not. Domain names
+     * are case insensitive according to RFC 4343. So, only scheme and
+     * host are matched case-insensitively. Other parts are to be treated
+     * as case-sensitive as mentioned in
+     * https://tools.ietf.org/html/rfc2616#section-3.2.3
+     * <p>
+     * Ref: https://stackoverflow.com/questions/7996919/should-url-be-case-sensitive
+     */
     public static boolean areUrlsEqual(URL currentURL, URL expectedURL) {
         try {
             URI currentURI = currentURL.toURI();
@@ -58,8 +68,13 @@ public class URLUtils {
 
             String currentScheme = currentURI.getScheme();
             String expectedScheme = expectedURI.getScheme();
+            /*scheme is already converted to small case when string is converted to URL
+            * during Config initialization as part of URI normalization:
+            * https://tools.ietf.org/html/rfc3986#section-6.2.2.1.
+            * So, equalsIgnoreCase is not really needed here.
+            * But, having it here to avoid any confusion.*/
             if (currentScheme == null || expectedScheme == null
-                    || !currentScheme.equals(expectedScheme))
+                    || !currentScheme.equalsIgnoreCase(expectedScheme))
             {
                 return false;
             }
@@ -67,7 +82,7 @@ public class URLUtils {
             String currentHost = currentURI.getHost();
             String expectedHost = expectedURI.getHost();
             if (currentHost == null || expectedHost == null
-                    || !currentHost.equals(expectedHost))
+                    || !currentHost.equalsIgnoreCase(expectedHost))
             {
                 return false;
             }

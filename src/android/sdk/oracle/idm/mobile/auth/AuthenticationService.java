@@ -26,6 +26,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,18 +46,22 @@ import oracle.idm.mobile.connection.OMConnectionHandler;
 import oracle.idm.mobile.connection.OMCookieManager;
 import oracle.idm.mobile.connection.OMHTTPResponse;
 import oracle.idm.mobile.connection.OMSSLSocketFactory;
+import oracle.idm.mobile.connection.SSLExceptionEvent;
 import oracle.idm.mobile.credentialstore.OMCredential;
 import oracle.idm.mobile.crypto.Base64;
 import oracle.idm.mobile.logging.OMLog;
+import oracle.idm.mobile.util.ArrayUtils;
 
 import static oracle.idm.mobile.OMSecurityConstants.Challenge.HTTP_AUTH_HOST;
 import static oracle.idm.mobile.OMSecurityConstants.Challenge.HTTP_AUTH_REALM;
 import static oracle.idm.mobile.OMSecurityConstants.Challenge.IDENTITY_DOMAIN_KEY;
 import static oracle.idm.mobile.OMSecurityConstants.Challenge.IS_FORCE_AUTHENTICATION;
 import static oracle.idm.mobile.OMSecurityConstants.Challenge.MOBILE_SECURITY_EXCEPTION;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.PASSWORD_KEY_2;
 import static oracle.idm.mobile.OMSecurityConstants.Challenge.PASSWORD_KEY;
 import static oracle.idm.mobile.OMSecurityConstants.Challenge.UNTRUSTED_SERVER_CERTIFICATE_AUTH_TYPE_KEY;
 import static oracle.idm.mobile.OMSecurityConstants.Challenge.UNTRUSTED_SERVER_CERTIFICATE_CHAIN_KEY;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.UNTRUSTED_SERVER_URL_KEY;
 import static oracle.idm.mobile.OMSecurityConstants.Challenge.USERNAME_KEY;
 import static oracle.idm.mobile.OMSecurityConstants.ConnectionConstants;
 import static oracle.idm.mobile.OMSecurityConstants.DOMAIN;
@@ -152,7 +157,8 @@ public abstract class AuthenticationService {
         REFRESH_TOKEN_SERVICE
     }
 
-    public static void onUntrustedServerCertificate(AuthenticationServiceManager asm, SslErrorHandler handler, SslError sslError) {
+    public static void onUntrustedServerCertificate(AuthenticationServiceManager asm,
+                                                    SslErrorHandler handler, SslError sslError) {
         final SslCertificate sslCertificate = sslError.getCertificate();
 
         /*Check if this certificate is already imported in App level trust store as this error would come
@@ -167,7 +173,8 @@ public abstract class AuthenticationService {
         boolean certificateUnTrusted = true;
         try {
             OMCertificateService certificateService = new OMCertificateService(asm.getApplicationContext());
-            OMSSLSocketFactory.OMTrustManager trustManager = new OMSSLSocketFactory.OMTrustManager(certificateService.getTrustStore());
+            OMSSLSocketFactory.OMTrustManager trustManager =
+                    new OMSSLSocketFactory.OMTrustManager(certificateService.getTrustStore());
             trustManager.checkServerTrustedLocally(chain, authType, null);
             certificateUnTrusted = false;
         } catch (CertificateException | KeyStoreException | NoSuchAlgorithmException e) {
@@ -179,13 +186,22 @@ public abstract class AuthenticationService {
             return;
         }
 
-        onUntrustedServerCertificate(asm, chain, authType, handler, null, null, null);
+        URL url = null;
+        try {
+            url = new URL(sslError.getUrl());
+        } catch (MalformedURLException e) {
+            Log.w(TAG, e.getMessage(), e);
+        }
+        SSLExceptionEvent sslExceptionEvent = new SSLExceptionEvent(chain, authType, url);
+        onUntrustedServerCertificate(asm, sslExceptionEvent, handler, null, null, null);
     }
 
-    public static void onUntrustedServerCertificate(AuthenticationServiceManager asm, final X509Certificate[] chain,
-                                                    final String authType, OMAuthenticationRequest request,
-                                                    AuthenticationService authService, OMAuthenticationContext authContext) {
-        onUntrustedServerCertificate(asm, chain, authType, null, request, authService, authContext);
+    public static void onUntrustedServerCertificate(AuthenticationServiceManager asm,
+                                                    SSLExceptionEvent sslExceptionEvent,
+                                                    OMAuthenticationRequest request,
+                                                    AuthenticationService authService,
+                                                    OMAuthenticationContext authContext) {
+        onUntrustedServerCertificate(asm, sslExceptionEvent, null, request, authService, authContext);
     }
 
     public static void onClientCertificateRequired(AuthenticationServiceManager asm, final ClientCertRequest clientCertRequest) {
@@ -205,6 +221,7 @@ public abstract class AuthenticationService {
         challenge.addChallengeField(HTTP_AUTH_REALM, realm);
         challenge.addChallengeField(USERNAME_KEY, null);
         challenge.addChallengeField(PASSWORD_KEY, null);
+        challenge.addChallengeField(PASSWORD_KEY_2, null);
 
         OMLog.info(TAG, "basicAuthChallenge : " + challenge.toString());
         BasicAuthCompletionHandler basicAuthCompletionHandler = new BasicAuthCompletionHandler(asm, appCallback, handler, inputParams);
@@ -212,12 +229,17 @@ public abstract class AuthenticationService {
                 new WebViewAuthServiceInputCallbackImpl(asm, asm.getASMInputController()));
     }
 
-    private static void onUntrustedServerCertificate(AuthenticationServiceManager asm, final X509Certificate[] chain, final String authType, SslErrorHandler handler,
-                                                     OMAuthenticationRequest request, AuthenticationService authService, OMAuthenticationContext authContext) {
+    private static void onUntrustedServerCertificate(AuthenticationServiceManager asm,
+                                                     SSLExceptionEvent sslExceptionEvent,
+                                                     SslErrorHandler handler,
+                                                     OMAuthenticationRequest request,
+                                                     AuthenticationService authService,
+                                                     OMAuthenticationContext authContext) {
         //ADD asm level completion handlers for this process, once done start the authentication process here.
         OMAuthenticationChallenge sslChallenge = new OMAuthenticationChallenge(OMAuthenticationChallengeType.UNTRUSTED_SERVER_CERTIFICATE);
-        sslChallenge.addChallengeField(UNTRUSTED_SERVER_CERTIFICATE_CHAIN_KEY, chain);
-        sslChallenge.addChallengeField(UNTRUSTED_SERVER_CERTIFICATE_AUTH_TYPE_KEY, authType);
+        sslChallenge.addChallengeField(UNTRUSTED_SERVER_CERTIFICATE_CHAIN_KEY, sslExceptionEvent.getCertificateChain());
+        sslChallenge.addChallengeField(UNTRUSTED_SERVER_CERTIFICATE_AUTH_TYPE_KEY, sslExceptionEvent.getAuthType());
+        sslChallenge.addChallengeField(UNTRUSTED_SERVER_URL_KEY, sslExceptionEvent.getURL());
         OMLog.info(TAG, "sslChallenge : " + sslChallenge.toString());
         OneWaySSLCompletionHandler sslHandler = new OneWaySSLCompletionHandler(asm, handler, request, authService, authContext);
         sslHandler.createChallengeRequest(asm.getMSS(), sslChallenge, null);
@@ -327,7 +349,12 @@ public abstract class AuthenticationService {
     }
 
     protected Map<String, Object> getRCChallengeFields() {
-        return mASM.getRCUtility().getRememberCredentialsChallengeFields();
+        OMAuthenticationContext authContext = mASM.getTemporaryAuthenticationContext();
+        Map<String, Object> challengeInputFromUser = null;
+        if (authContext != null) {
+            challengeInputFromUser = authContext.getInputParams();
+        }
+        return mASM.getRCUtility().getRememberCredentialsChallengeFields(challengeInputFromUser);
     }
 
     protected void storeRCUIPreferences(Map<String, Object> prefs) {
@@ -405,6 +432,7 @@ public abstract class AuthenticationService {
         OMAuthenticationChallenge challenge = new OMAuthenticationChallenge(OMAuthenticationChallengeType.USERNAME_PWD_REQUIRED);
         challenge.addChallengeField(USERNAME_KEY, null);
         challenge.addChallengeField(PASSWORD_KEY, null);
+        challenge.addChallengeField(PASSWORD_KEY_2, null);
         if (mASM.getMSS().getMobileSecurityConfig().isCollectIdentityDomain()) {
             challenge.addChallengeField(IDENTITY_DOMAIN_KEY, null);
         }
@@ -421,7 +449,10 @@ public abstract class AuthenticationService {
                 if (mASM.getMSS().getMobileSecurityConfig().isCollectIdentityDomain()) {
                     challenge.addChallengeField(IDENTITY_DOMAIN_KEY, authContext.getInputParams().get(IDENTITY_DOMAIN_KEY));
                 }
-                //resetting the exception before new challenge is thrown
+                /* Clearing the exception & password before new challenge is thrown.
+                 * If password is not cleared, previous possibly incorrect password
+                 * will be used for next authentication which resulted in bug IDCS-7133.*/
+                authContext.clearPassword();
                 authContext.getInputParams().remove(MOBILE_SECURITY_EXCEPTION);
                 authContext.setException(null);
             }
@@ -495,7 +526,6 @@ public abstract class AuthenticationService {
      * Accesses logout url in a separate thread; the tokens passed are sent
      * along with the request so that the server can terminate the session
      * corresponding to the tokens
-     *
      */
     protected class AccessLogoutUrlTask extends
             AsyncTask<Void, Void, OMMobileSecurityException> {
@@ -517,6 +547,7 @@ public abstract class AuthenticationService {
         @Override
         protected OMMobileSecurityException doInBackground(Void... params) {
             OMMobileSecurityException exception = null;
+            char[] pwd = null;
             try {
                 OMLog.debug(TAG, "Logout url is being invoked");
                 int logoutTimeout = authContext.getLogoutTimeout();
@@ -549,7 +580,6 @@ public abstract class AuthenticationService {
 
                     if (config.isSendAuthzHeaderInLogout()) {
                         String userName = null;
-                        String pwd = null;
                         if (config.isOfflineAuthenticationAllowed()) {
                             userName = authContext.getUserName();
                             pwd = authContext.getUserPassword();
@@ -559,12 +589,12 @@ public abstract class AuthenticationService {
                                 String rememberedCredUserName = rememberedCred.getUserName();
                                 if (!TextUtils.isEmpty(rememberedCredUserName) && rememberedCredUserName.equals(authContext.getUserName())) {
                                     userName = rememberedCredUserName;
-                                    pwd = rememberedCred.getRawUserPassword();
+                                    pwd = rememberedCred.getRawUserPasswordAsCharArray();
                                 }
                             }
                         }
                         if (!TextUtils.isEmpty(userName)
-                                && !TextUtils.isEmpty(pwd)) {
+                                && !ArrayUtils.isEmpty(pwd)) {
                             if (headers == null) {
                                 headers = new HashMap<>();
                             }
@@ -600,6 +630,10 @@ public abstract class AuthenticationService {
                         "Error occurred while invoking logout url: "
                                 + e.getMessage());
                 exception = e;
+            } finally {
+                if (pwd != null) {
+                    Arrays.fill(pwd, ' ');
+                }
             }
             return exception;
         }
@@ -610,12 +644,12 @@ public abstract class AuthenticationService {
             authContext.deleteCookies();
             OMLog.debug(TAG, "Deleted cookies locally after invoking logout url");
             /* To clear the cookies on idle timeout if offline authentication is disabled,
-            * SDK invokes logout url. mss.onLogoutCompleted() clears entire state including
-            * cancelling any pending timer. But, we need the session timer to be running
-            * so that we clear the remembered credentials on session timeout. So, it is not
-            * called unless this code is executed as part of mss.logout() call i.e.
-            * [isLogoutCall = true].
-            * */
+             * SDK invokes logout url. mss.onLogoutCompleted() clears entire state including
+             * cancelling any pending timer. But, we need the session timer to be running
+             * so that we clear the remembered credentials on session timeout. So, it is not
+             * called unless this code is executed as part of mss.logout() call i.e.
+             * [isLogoutCall = true].
+             * */
             if (isLogoutCall) {
                 OMMobileSecurityService mss = mASM.getMSS();
                 mss.onLogoutCompleted();

@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -50,11 +51,17 @@ import oracle.idm.mobile.connection.SSLExceptionEvent;
 import oracle.idm.mobile.credentialstore.OMCredential;
 import oracle.idm.mobile.credentialstore.OMCredentialStore;
 import oracle.idm.mobile.logging.OMLog;
+import oracle.idm.mobile.util.ArrayUtils;
 import oracle.idm.mobile.util.LogUtils;
 
 import static oracle.idm.mobile.OMSecurityConstants.COOKIE_EXPIRY_DATE_PATTERN;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.IDENTITY_DOMAIN_KEY;
 import static oracle.idm.mobile.OMSecurityConstants.Challenge.MOBILE_SECURITY_EXCEPTION;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.PASSWORD_KEY;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.PASSWORD_KEY_2;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.USERNAME_KEY;
 import static oracle.idm.mobile.OMSecurityConstants.OAUTH_MS_VALID_CLIENT_ASSERTION_PRESENT;
+import static oracle.idm.mobile.OMSecurityConstants.Param.CLEAR_PASSWORD;
 import static oracle.idm.mobile.OMSecurityConstants.Param.COLLECT_OFFLINE_CREDENTIAL;
 
 
@@ -166,7 +173,9 @@ public class AuthenticationServiceManager {
           Solution: Create new instance of AuthenticationHandler for every authentication attempt. Store FedAuthHandler alone in the map for cancel functionality. */
         mAuthServiceHandlers = new HashMap<>();
         if (isBasic)
-            mAuthServiceHandlers.put(AuthenticationService.Type.BASIC_SERVICE, new BasicAuthCompletionHandler(getMSS().getMobileSecurityConfig(), getCallback()));
+            mAuthServiceHandlers.put(AuthenticationService.Type.BASIC_SERVICE,
+                    new BasicAuthCompletionHandler(this, getMSS().getMobileSecurityConfig(),
+                            getCallback()));
         if (isOAuth) {
             //here lets put the right completion handler to be used as per the given grant type.
             OAuthAuthorizationGrantType grantType = ((OMOAuthMobileSecurityConfiguration) config).getOAuthzGrantType();
@@ -176,7 +185,8 @@ public class AuthenticationServiceManager {
                     mAuthServiceHandlers.put(AuthenticationService.Type.OAUTH20_AC_SERVICE, new OAuthAuthorizationCodeCompletionHandler(this, config, false, getCallback()));
                     break;
                 case RESOURCE_OWNER:
-                    mAuthServiceHandlers.put(AuthenticationService.Type.OAUTH20_RO_SERVICE, new OAuthResourceOwnerCompletionHandler(config, getCallback()));
+                    mAuthServiceHandlers.put(AuthenticationService.Type.OAUTH20_RO_SERVICE,
+                            new OAuthResourceOwnerCompletionHandler(this, config, getCallback()));
                     if (getMSS().getMobileSecurityConfig() instanceof OMMSOAuthMobileSecurityConfiguration) {
                         mAuthServiceHandlers.put(AuthenticationService.Type.OAUTH_MS_PREAUTHZ, new OAuthMSPreAuthzCodeAuthCompletionHandler(config, getCallback()));
                         mAuthServiceHandlers.put(AuthenticationService.Type.OAUTH_MS_DYCR, new OAuthMSPreAuthzCodeAuthCompletionHandler(config, getCallback()));
@@ -192,7 +202,9 @@ public class AuthenticationServiceManager {
             }
         }
         if (isOfflineAllowed)
-            mAuthServiceHandlers.put(AuthenticationService.Type.OFFLINE_SERVICE, new OfflineAuthCompletionHandler(getMSS().getMobileSecurityConfig(), getCallback()));
+            mAuthServiceHandlers.put(AuthenticationService.Type.OFFLINE_SERVICE,
+                    new OfflineAuthCompletionHandler(this, getMSS().getMobileSecurityConfig(),
+                            getCallback()));
         if (isFedAuth)
             mAuthServiceHandlers.put(AuthenticationService.Type.FED_AUTH_SERVICE, new FedAuthCompletionHandler(this, getMSS().getMobileSecurityConfig(), getCallback()));
         if (isCBAAllowed) {
@@ -404,12 +416,14 @@ public class AuthenticationServiceManager {
         boolean useRefreshToken = false;
         if (existingAuthContext != null) {
             boolean isValid;
-            if (authRequest.getAuthScheme() == OMAuthenticationScheme.OAUTH20
-                    || authRequest.getAuthScheme() == OMAuthenticationScheme.OPENIDCONNECT10) {
+            Set<String> scopes = null;
+            boolean oAuthOrOpenID = (authRequest.getAuthScheme() == OMAuthenticationScheme.OAUTH20
+                    || authRequest.getAuthScheme() == OMAuthenticationScheme.OPENIDCONNECT10);
+            if (oAuthOrOpenID) {
+                scopes = ((OMOAuthMobileSecurityConfiguration) getMSS().getMobileSecurityConfig())
+                        .getOAuthScopes();
                 // If authContext is not valid with local checks, SDK tries to use refresh token.
-                isValid = existingAuthContext.isValid(
-                        ((OMOAuthMobileSecurityConfiguration) getMSS().getMobileSecurityConfig()).getOAuthScopes(),
-                        false);
+                isValid = existingAuthContext.isValid(scopes, false);
             } else {
                 isValid = existingAuthContext.isValid(false);
             }
@@ -424,9 +438,7 @@ public class AuthenticationServiceManager {
                     return;
                 }
             } else {
-                if ((authRequest.getAuthScheme() == OMAuthenticationScheme.OAUTH20
-                        || authRequest.getAuthScheme() == OMAuthenticationScheme.OPENIDCONNECT10)
-                        && existingAuthContext.hasRefreshToken()) {
+                if (oAuthOrOpenID && existingAuthContext.hasRefreshToken(scopes)) {
                     newAuthContext.copyFromAuthContext(existingAuthContext);
                     useRefreshToken = true;
                 }
@@ -483,19 +495,18 @@ public class AuthenticationServiceManager {
                 // if yes replay them by adding them in the input param map
                 if (autoLoginCredential != null) {
                     String username = autoLoginCredential.getUserName();
-                    String password = autoLoginCredential.getUserPassword();
+                    char[] password = autoLoginCredential.getUserPasswordAsCharArray();
                     String identity = autoLoginCredential.getIdentityDomain();
-                    if ((username != null && username.length() > 0)
-                            && (password != null && password.length() > 0)) {
+                    if (!TextUtils.isEmpty(username) && !ArrayUtils.isEmpty(password)) {
                         OMLog.debug(TAG,
                                 "Replaying the username and password from the store");
                         OMLog.debug(TAG, "username : " + username);
                         OMLog.debug(TAG, "iddomain : " + identity);
-                        newAuthContext.getInputParams().put(OMSecurityConstants.Challenge.USERNAME_KEY, username);
-                        newAuthContext.getInputParams().put(OMSecurityConstants.Challenge.PASSWORD_KEY, password);
+                        newAuthContext.getInputParams().put(USERNAME_KEY, username);
+                        newAuthContext.getInputParams().put(PASSWORD_KEY_2, password);
+                        newAuthContext.getInputParams().put(CLEAR_PASSWORD, true);
                         if (identity != null && identity.length() > 0) {
-                            newAuthContext.getInputParams().put(OMSecurityConstants.Challenge.IDENTITY_DOMAIN_KEY,
-                                    identity);
+                            newAuthContext.getInputParams().put(IDENTITY_DOMAIN_KEY, identity);
                         }
                     }
                 }
@@ -655,10 +666,10 @@ public class AuthenticationServiceManager {
                 try {
                     return aAuthService.handleAuthentication(aAuthRequest, aAuthContext);
                 } catch (OMMobileSecurityException e) {
+                    OMLog.error(TAG, e.getMessage(), e);
                     aMSE = e;
                     aAuthContext.setStatus(OMAuthenticationContext.Status.FAILURE);
                     aAuthContext.setException(e);
-                    OMLog.error(TAG, e.getErrorMessage(), e);
                 }
             } else {
                 OMLog.info(TAG, "doInBackground authService: null");
@@ -678,10 +689,9 @@ public class AuthenticationServiceManager {
                     if (ee instanceof SSLExceptionEvent) {
                         //one way SSL
                         OMLog.info(TAG, "Untrusted server certificate scenario");
-                        SSLExceptionEvent sslEvent = (SSLExceptionEvent) ee;
                         aRequireAppInput = true;
-                        AuthenticationService.onUntrustedServerCertificate(AuthenticationServiceManager.this, sslEvent.getCertificateChain(),
-                                sslEvent.getAuthType(), aAuthRequest, aAuthService, aAuthContext);
+                        AuthenticationService.onUntrustedServerCertificate(AuthenticationServiceManager.this,
+                                (SSLExceptionEvent) ee, aAuthRequest, aAuthService, aAuthContext);
                         return;
                     } else if (ee instanceof InvalidCredentialEvent) {
                         aRequireAppInput = true;
@@ -850,7 +860,6 @@ public class AuthenticationServiceManager {
     /**
      * ASM impl for handling input received by the handler for each authentication service.
      * Should initialize this for each call to MSS#authenticate()
-     *
      */
     class ASMInputControllerImpl implements ASMInputController {
         private final String TAG = ASMInputControllerImpl.class.getSimpleName();
@@ -880,10 +889,27 @@ public class AuthenticationServiceManager {
                 return;
             }
             if (input != null) {
-                cAuthContext.getInputParams().putAll(input);
+                Map<String, Object> authContextInputParams = cAuthContext.getInputParams();
+                authContextInputParams.putAll(input);
+                char[] passwordCharArray = (char[]) authContextInputParams.get(PASSWORD_KEY_2);
+                if (ArrayUtils.isEmpty(passwordCharArray)) {
+                    /* "input" should not be modified by SDK as it is a Map passed by
+                     * app developer to SDK. Modification like adding char[] password
+                     * done below should only be done in the map created by SDK.
+                     */
+                    putCharArrayPasswordConvertedFromStringPassword(authContextInputParams);
+                }
             }
             cAuthTask = new AuthenticationAsyncTask(cCallback, cAuthRequest, cAuthService, cAuthContext);
             cAuthTask.execute();
+        }
+
+        private void putCharArrayPasswordConvertedFromStringPassword(Map<String, Object> inputParams) {
+            String passwordString = (String) inputParams.get(PASSWORD_KEY);
+            if (passwordString != null) {
+                inputParams.put(PASSWORD_KEY_2, passwordString.toCharArray());
+                inputParams.put(CLEAR_PASSWORD, true);
+            }
         }
 
         @Override
@@ -892,6 +918,10 @@ public class AuthenticationServiceManager {
             //based on this device whether we need to retry or simply error out.
             cAuthContext.setStatus(OMAuthenticationContext.Status.FAILURE);
             cAuthContext.setException(new OMMobileSecurityException(error));
+            OMAuthenticationContext tempAuthContext = getTemporaryAuthenticationContext();
+            if (tempAuthContext != null) {
+                cAuthContext.getInputParams().putAll(tempAuthContext.getInputParams());
+            }
             sendFailureAfterRetry(cCallback, cAuthContext);
         }
 
@@ -1275,6 +1305,7 @@ public class AuthenticationServiceManager {
         OMMobileSecurityException mse = authContext.getMobileException();
         String errorCode = mse.getErrorCode();
         if (mse != null && ((errorCode.equals(OMErrorCode.UN_PWD_INVALID.getErrorCode()))
+                || (errorCode.equals(OMErrorCode.UN_PWD_TENANT_INVALID.getErrorCode()))
                 || (Arrays.asList(OMErrorCode.getOAuthKnownErrorCodes()).contains(mse.getError())
                 && isInvalidCredentialErrorMessage(mse.getErrorMessage().toLowerCase())))) {
             failureCount = getFailureCount(authContext);

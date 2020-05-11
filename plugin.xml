@@ -6,7 +6,7 @@
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
         xmlns:android="http://schemas.android.com/apk/res/android"
         id="cordova-plugin-oracle-idm-auth"
-        version="1.4.0">
+        version="1.5.0">
   <name>cordova-plugin-oracle-idm-auth</name>
   <description>Provides authentication and authorization functionality using the Oracle IDM SDK, supporting standard protocols like Basic Auth, OAUTH, OpenID Connect and WebSSO</description>
   <keywords>cordova,idm,authentication,auth</keywords>
@@ -121,6 +121,7 @@
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/RefreshTokenAuthenticationService.java" target-dir="src/oracle/idm/mobile/auth/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/TimeoutManager.java" target-dir="src/oracle/idm/mobile/auth/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/TwoWaySSLCompletionHandler.java" target-dir="src/oracle/idm/mobile/auth/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/auth/UsernamePasswdAuthServiceInputCallbackImpl.java" target-dir="src/oracle/idm/mobile/auth/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/local/AndroidKeyStoreKeyProvider.java" target-dir="src/oracle/idm/mobile/auth/local/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/local/DefaultKeyProvider.java" target-dir="src/oracle/idm/mobile/auth/local/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/auth/local/KeyProvider.java" target-dir="src/oracle/idm/mobile/auth/local/"/>
@@ -178,6 +179,7 @@
     <source-file src="src/android/sdk/oracle/idm/mobile/connection/SSLExceptionEvent.java" target-dir="src/oracle/idm/mobile/connection/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/credentialstore/OMCredential.java" target-dir="src/oracle/idm/mobile/credentialstore/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/credentialstore/OMCredentialStore.java" target-dir="src/oracle/idm/mobile/credentialstore/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/credentialstore/OMClassicCredentialStore.java" target-dir="src/oracle/idm/mobile/credentialstore/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/crypto/Base64.java" target-dir="src/oracle/idm/mobile/crypto/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/crypto/CryptoException.java" target-dir="src/oracle/idm/mobile/crypto/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/crypto/CryptoScheme.java" target-dir="src/oracle/idm/mobile/crypto/"/>
@@ -202,6 +204,7 @@
     <source-file src="src/android/sdk/oracle/idm/mobile/util/OMVersion.java" target-dir="src/oracle/idm/mobile/util/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/util/StringUtils.java" target-dir="src/oracle/idm/mobile/util/"/>
     <source-file src="src/android/sdk/oracle/idm/mobile/util/URLUtils.java" target-dir="src/oracle/idm/mobile/util/"/>
+    <source-file src="src/android/sdk/oracle/idm/mobile/util/ArrayUtils.java" target-dir="src/oracle/idm/mobile/util/"/>
   </platform>
 
   <!-- ios -->

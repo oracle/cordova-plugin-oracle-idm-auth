@@ -134,8 +134,9 @@ public enum OMErrorCode {
      * This seems to be a bug in emulator. This should not arise in a device.
      */
     NO_FINGERPRINT_ENROLLED("10536", "At least one fingerprint must be enrolled to create keys requiring user authentication for every use"),
-    DISABLE_AUTHENTICATOR_INSTANCE("60014", "Disable Authentication for all instances of authenticator.");
+    DISABLE_AUTHENTICATOR_INSTANCE("60014", "Disable Authentication for all instances of authenticator."),
 
+    INCORRECT_CURRENT_AUTHDATA("70009", "Cannot authenticate using currentAuthData");
 
     String mErrorCode;
     String mErrorMessage;
@@ -179,7 +180,7 @@ public enum OMErrorCode {
         if (mRecoverableCodes == null) {
             mRecoverableCodes = new OMErrorCode[]{OMErrorCode.USERNAME_REQUIRED, OMErrorCode.PASSWORD_REQUIRED,
                     OMErrorCode.IDENTITY_DOMAIN_REQUIRED, OMErrorCode.USERNAME_AND_IDENTITY_DOMAIN_REQUIRED,
-                    OMErrorCode.UN_PWD_INVALID, OMErrorCode.UNABLE_TO_CONNECT_TO_SERVER};
+                    OMErrorCode.UN_PWD_INVALID, OMErrorCode.UN_PWD_TENANT_INVALID, OMErrorCode.UNABLE_TO_CONNECT_TO_SERVER};
         }
         return mRecoverableCodes;
     }

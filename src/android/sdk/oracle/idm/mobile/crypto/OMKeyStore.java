@@ -125,7 +125,11 @@ public class OMKeyStore implements Serializable {
      */
     public byte[] getDefaultKey() throws OMKeyManagerException {
         ensureValidState();
-        return getKey(DEFAULT_KEY_ID);
+        byte[] defaultKey = getKey(DEFAULT_KEY_ID);
+        if (OMSecurityConstants.DEBUG) {
+            OMLog.trace(TAG, "**** DefaultKey = " + Base64.encode(defaultKey));
+        }
+        return defaultKey;
     }
     /**
      * Create a new random key under default key id.

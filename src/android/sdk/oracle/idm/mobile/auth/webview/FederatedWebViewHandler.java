@@ -20,6 +20,7 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashSet;
@@ -321,12 +322,17 @@ public class FederatedWebViewHandler extends LoginWebViewHandler
             OMLog.trace(TAG, "onReceivedHttpError: Status Code: " + errorResponse.getStatusCode());
             super.onReceivedHttpError(view, request, errorResponse);
             String lastUrl = (String) ((CustomLinkedHashSet) visitedUrls).getLastElement();
-            /*This callback will be called for any resource (iframe, image, etc.),
+            /*
+             1. This callback will be called for any resource (iframe, image, etc.),
              not just for the main page. receivedErrorLoadingUrl needs to be set
              only for main page so that we don't indicate a false positive for
              authentication. Error for any resource need not hold back authentication
-             as there may be some small images which can result in 404 sometimes.*/
-            if (lastUrl != null && lastUrl.equals(request.getUrl().toString())) {
+             as there may be some small images which can result in 404 sometimes.
+
+             2. isTokenRelayError: Since token relay service returns 401 in webview
+             and SDK has to access anti-CSRF endpoint, treat this as not an error scenario.*/
+            if (lastUrl != null && lastUrl.equals(request.getUrl().toString())
+                    && !isTokenRelayError(errorResponse.getStatusCode())) {
                 receivedErrorLoadingUrl = true;
             }
         }
@@ -395,6 +401,10 @@ public class FederatedWebViewHandler extends LoginWebViewHandler
 
         void setTokenRelayResponse(String tokenRelayResponse) {
             inputParams.put(TOKEN_RELAY_RESPONSE, tokenRelayResponse);
+        }
+
+        private boolean isTokenRelayError(int errorCode) {
+            return parseTokenRelayResponse && errorCode == HttpURLConnection.HTTP_UNAUTHORIZED;
         }
     }
 

@@ -27,8 +27,10 @@ class OAuthResourceOwnerCompletionHandler extends OMAuthenticationCompletionHand
     //TODO config, or some light weight version of config
     private OMMobileSecurityConfiguration mConfig;
 
-    protected OAuthResourceOwnerCompletionHandler(OMMobileSecurityConfiguration config, OMMobileSecurityServiceCallback appCallback) {
-        super(config, appCallback);
+    protected OAuthResourceOwnerCompletionHandler(AuthenticationServiceManager asm,
+                                                  OMMobileSecurityConfiguration config,
+                                                  OMMobileSecurityServiceCallback appCallback) {
+        super(asm, config, appCallback);
         mConfig = config;
     }
 
@@ -48,6 +50,7 @@ class OAuthResourceOwnerCompletionHandler extends OMAuthenticationCompletionHand
             mAuthServiceCallback.onInput(responseFields);
         } catch (OMMobileSecurityException e) {
             OMLog.debug(TAG, "Response fields are not valid. Error : " + e.getErrorMessage());
+            storeChallengeInputTemporarily(responseFields);
             mAuthServiceCallback.onError(e.getError());
         }
     }

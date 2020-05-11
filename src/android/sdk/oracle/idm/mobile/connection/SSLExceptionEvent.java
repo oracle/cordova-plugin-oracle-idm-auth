@@ -6,6 +6,7 @@
 
 package oracle.idm.mobile.connection;
 
+import java.net.URL;
 import java.security.cert.X509Certificate;
 
 import oracle.idm.mobile.OMExceptionEvent;
@@ -21,10 +22,12 @@ public class SSLExceptionEvent implements OMExceptionEvent {
     private static final long serialVersionUID = -327329255478561342L;
     private X509Certificate[] mChain;
     private String mAuthType;
+    private URL mURL;
 
-    SSLExceptionEvent(X509Certificate[] chain, String authType) {
+    public SSLExceptionEvent(X509Certificate[] chain, String authType, URL url) {
         mChain = chain;
         mAuthType = authType;
+        mURL = url;
     }
 
     @Override
@@ -38,5 +41,9 @@ public class SSLExceptionEvent implements OMExceptionEvent {
 
     public String getAuthType() {
         return mAuthType;
+    }
+
+    public URL getURL() {
+        return mURL;
     }
 }

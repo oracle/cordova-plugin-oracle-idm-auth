@@ -10,6 +10,7 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
@@ -19,7 +20,6 @@ import java.util.Map;
 import oracle.idm.mobile.OMAuthenticationRequest;
 import oracle.idm.mobile.OMErrorCode;
 import oracle.idm.mobile.OMMobileSecurityException;
-import oracle.idm.mobile.OMSecurityConstants;
 import oracle.idm.mobile.auth.OMAuthenticationContext.AuthenticationMode;
 import oracle.idm.mobile.configuration.OMAuthenticationScheme;
 import oracle.idm.mobile.configuration.OMConnectivityMode;
@@ -31,9 +31,11 @@ import oracle.idm.mobile.crypto.CryptoException;
 import oracle.idm.mobile.crypto.CryptoScheme;
 import oracle.idm.mobile.crypto.OMCryptoService;
 import oracle.idm.mobile.logging.OMLog;
+import oracle.idm.mobile.util.ArrayUtils;
 
 import static oracle.idm.mobile.OMSecurityConstants.Challenge.IDENTITY_DOMAIN_KEY;
 import static oracle.idm.mobile.OMSecurityConstants.Challenge.MOBILE_SECURITY_EXCEPTION;
+import static oracle.idm.mobile.OMSecurityConstants.Challenge.PASSWORD_KEY_2;
 import static oracle.idm.mobile.OMSecurityConstants.Challenge.PASSWORD_KEY;
 import static oracle.idm.mobile.OMSecurityConstants.Challenge.USERNAME_KEY;
 import static oracle.idm.mobile.OMSecurityConstants.Param.COLLECT_OFFLINE_CREDENTIAL;
@@ -61,43 +63,8 @@ final class OfflineAuthenticationService extends AuthenticationService implement
         } else {
             Boolean collectCredential = (Boolean) inputParams.get(COLLECT_OFFLINE_CREDENTIAL);
             if (collectCredential != null && collectCredential) {
-                mAuthCompletionHandler.createChallengeRequest(mASM.getMSS(), createLoginChallenge(), new AuthServiceInputCallback() {
-                    @Override
-                    public void onInput(final Map<String, Object> inputs) {
-                        if (mASM.getMSS().getMobileSecurityConfig().isAnyRCFeatureEnabled()) {
-                            //lets update the RC UI preferences.
-
-                            OMLog.info(TAG, "Remember Cred feature is enabled, Storing UI prefs");
-                            //check for the password.
-                            //we already have the password.
-                            //usually in case of remember creds and auto login we check for this.
-                            OMMobileSecurityConfiguration config = mASM.getMSS().getMobileSecurityConfig();
-                            if (config.isAutoLoginEnabled() || config.isRememberCredentialsEnabled()) {
-                                String inputPWD = (String) inputs.get(OMSecurityConstants.Challenge.PASSWORD_KEY);
-                                RCUtility rcUtility = mASM.getRCUtility();
-                                OMCredential remCred = rcUtility.retrieveRememberedCredentials();
-                                if (remCred != null && !(TextUtils.isEmpty(remCred.getUserPassword())) && inputPWD.equalsIgnoreCase(RCUtility.OBFUSCATED_PWD)) {
-                                    //this means the creds are already persisted and the user did not change the password which was pre-filled in the login screen.
-                                    //TODO if possible we should change this impl.
-                                    OMLog.info(TAG, "Updating the obfuscated PWD with the one we have in the store.");
-                                    inputs.put(OMSecurityConstants.Challenge.PASSWORD_KEY, remCred.getUserPassword());
-                                }
-                            }
-                            storeRCUIPreferences(inputs);
-                        }
-                        controller.onInputAvailable(inputs);
-                    }
-
-                    @Override
-                    public void onError(final OMErrorCode error) {
-                        controller.onInputError(error);
-                    }
-
-                    @Override
-                    public void onCancel() {
-                        controller.onCancel();
-                    }
-                });
+                mAuthCompletionHandler.createChallengeRequest(mASM.getMSS(), createLoginChallenge(),
+                        new UsernamePasswdAuthServiceInputCallbackImpl(mASM, controller));
             } else {
                 controller.onInputAvailable(inputParams);
             }
@@ -180,7 +147,7 @@ final class OfflineAuthenticationService extends AuthenticationService implement
             Map<String, Object> inputParams = authContext.getInputParams();
             if (inputParams == null || inputParams.isEmpty()
                     || !inputParams.containsKey(USERNAME_KEY)
-                    || !inputParams.containsKey(PASSWORD_KEY)
+                    || (!inputParams.containsKey(PASSWORD_KEY_2) && !inputParams.containsKey(PASSWORD_KEY))
                     || inputParams.containsKey(MOBILE_SECURITY_EXCEPTION)) {
                     /*
                      * Check for username and pwd as the user need to be
@@ -366,30 +333,34 @@ final class OfflineAuthenticationService extends AuthenticationService implement
 
         boolean storeCredential = false;
         String username = (String) inputParams.get(USERNAME_KEY);
-        String passwordPlainText = (String) inputParams.get(PASSWORD_KEY);
+        char[] passwordCharArray = (char[]) inputParams.get(PASSWORD_KEY_2);
         String authenticationUrl = authRequest.getAuthenticationURL().toString();
-        if (!TextUtils.isEmpty(username) && !TextUtils.isEmpty(passwordPlainText)) {
+        if (!TextUtils.isEmpty(username) && !ArrayUtils.isEmpty(passwordCharArray)) {
             credObj.setUserName(username);
 
             // Here perform hashing when the algo is specified
             OMMobileSecurityConfiguration msc = mASM.getMSS().getMobileSecurityConfig();
             CryptoScheme scheme = msc.getCryptoScheme();
             OMCryptoService cryptoService = mASM.getMSS().getCryptoService();
-            String encodedValue = passwordPlainText;
+            char[] encodedValue = passwordCharArray;
+            byte[] passwordByteArray = ArrayUtils.toBytes(passwordCharArray);
             try {
                 if (CryptoScheme.isHashAlgorithm(scheme)) {
-                    encodedValue = cryptoService.hash(passwordPlainText,
-                            scheme, msc.getSaltLength(), true);
+                    String hashedPassword = cryptoService.hash(passwordByteArray,
+                            scheme, msc.getSaltLength(), null, true);
+                    encodedValue = hashedPassword.toCharArray();
                 } else {
                     /*Encryption is done by OMSecureStorageService. Hence, w.r.t OMCryptoService,
                     schemes other than hashing algorithm are to be treated as PLAINTEXT.*/
                     encodedValue = cryptoService.prefixAlgorithm(CryptoScheme.PLAINTEXT,
-                            passwordPlainText);
+                            passwordCharArray);
                 }
             } catch (CryptoException e) {
                 OMLog.error(TAG,
                         " - " + e.getLocalizedMessage());
                 Log.i(TAG, e.getLocalizedMessage(), e);
+            } finally {
+                Arrays.fill(passwordByteArray, (byte) 0);
             }
 
             credObj.setUserPassword(encodedValue);
@@ -459,7 +430,7 @@ final class OfflineAuthenticationService extends AuthenticationService implement
         Map<String, Object> inputParams = authContext.getInputParams();
         if (inputParams == null || inputParams.isEmpty()
                 || !inputParams.containsKey(USERNAME_KEY)
-                || !inputParams.containsKey(PASSWORD_KEY)
+                || (!inputParams.containsKey(PASSWORD_KEY_2) && !inputParams.containsKey(PASSWORD_KEY))
                 || (authContext.getMobileException() != null && inputParams.containsKey(MOBILE_SECURITY_EXCEPTION))) {
             // Check for input username and pwd
             authContext.setStatus(OMAuthenticationContext.Status.COLLECT_OFFLINE_CREDENTIALS);
@@ -470,7 +441,7 @@ final class OfflineAuthenticationService extends AuthenticationService implement
         inputParams.remove(COLLECT_OFFLINE_CREDENTIAL);
 
         String username = (String) inputParams.get(USERNAME_KEY);
-        String password = (String) inputParams.get(PASSWORD_KEY);
+        char[] passwordCharArray = (char[]) inputParams.get(PASSWORD_KEY_2);
         String tenantName = (String) inputParams.get(IDENTITY_DOMAIN_KEY);
         authContext.setUserName(username);
         String credentialKey = authContext.getStorageKey() != null ? authContext
@@ -508,20 +479,21 @@ final class OfflineAuthenticationService extends AuthenticationService implement
                     + debugUsername);
             // username and password stored in the cred store.
             String usernameStored = credObj.getUserName();
-            String passwordStored = credObj.getRawUserPassword();
+            char[] passwordStored = credObj.getRawUserPasswordAsCharArray();
             String tenantNameStored = credObj.getIdentityDomain();
             if (!TextUtils.isEmpty(tenantNameStored)) {
                 tenantAvailable = true;
                 usernameStored = tenantNameStored + "." + usernameStored;
             }
 
-            if (!TextUtils.isEmpty(username) && !TextUtils.isEmpty(password)) {
+            if (!TextUtils.isEmpty(username) && !ArrayUtils.isEmpty(passwordCharArray)) {
                 // find if password to be compared is to be hashed based on the
                 // algo
                 if (username.equals(usernameStored)) {
-                    boolean isMatches = mASM.getMSS().getCryptoService().match(password,
+                    boolean isMatches = mASM.getMSS().getCryptoService().match(passwordCharArray,
                             passwordStored,
-                            mASM.getMSS().getMobileSecurityConfig().getSaltLength());
+                            mASM.getMSS().getMobileSecurityConfig().getSaltLength(), null);
+                    credObj.invalidateUserPassword();
                     if (isMatches) {
                         OMLog.debug(TAG, "Offline Credentials match for user: " + debugUsername);
                         authContext.setAuthenticatedMode(AuthenticationMode.OFFLINE);

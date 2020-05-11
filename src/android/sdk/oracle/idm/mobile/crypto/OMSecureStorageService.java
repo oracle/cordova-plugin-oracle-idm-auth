@@ -7,6 +7,7 @@
 package oracle.idm.mobile.crypto;
 
 import android.content.Context;
+import android.text.TextUtils;
 
 import java.io.File;
 import java.io.Serializable;
@@ -29,6 +30,7 @@ public class OMSecureStorageService {
 
     /**
      * Initializes OMSecureStorageService instance with OMKeyStore instance.
+     *
      * @param context
      * @param keyStore
      * @param keyId
@@ -45,16 +47,19 @@ public class OMSecureStorageService {
         }
         this.keyStore = keyStore;
 
-        if (keyId == null) {
-            throw new NullPointerException("Key id cannot be null");
-        }
         this.keyId = keyId;
 
         this.filePathSupport = new FilePathSupport(context);
     }
 
     private Key getKey() throws OMKeyManagerException {
-        return keySupport.getKeyFromBytes(this.keyStore.getKey(keyId));
+        byte[] keyBytes;
+        if (TextUtils.isEmpty(keyId)) {
+            keyBytes = keyStore.getDefaultKey();
+        } else {
+            keyBytes = keyStore.getKey(keyId);
+        }
+        return keySupport.getKeyFromBytes(keyBytes);
     }
 
     /**
@@ -62,9 +67,9 @@ public class OMSecureStorageService {
      * under the given dataId.
      *
      * @param dataId
-     * @throws NullPointerException if the input parameter is null
-     * @throws OMSecureStorageException any exceptions thrown by underlying IO system
      * @return
+     * @throws NullPointerException     if the input parameter is null
+     * @throws OMSecureStorageException any exceptions thrown by underlying IO system
      */
     public Serializable get(String dataId) throws OMSecureStorageException, NullPointerException {
         if (dataId == null) {
@@ -87,6 +92,7 @@ public class OMSecureStorageService {
     /**
      * Stores data for specific dataId in secure storage. If we already have data stored under
      * the given id, it would be overwritten.
+     *
      * @param dataId the id under with the given data would be stored
      * @param data
      */
@@ -110,6 +116,7 @@ public class OMSecureStorageService {
 
     /**
      * Deletes data for specific dataId in secure storage.
+     *
      * @param dataId
      * @return Status of deletion of the data.
      */

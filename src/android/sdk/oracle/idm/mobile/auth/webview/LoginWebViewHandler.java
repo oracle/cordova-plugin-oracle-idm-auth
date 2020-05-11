@@ -157,7 +157,7 @@ public abstract class LoginWebViewHandler implements WebViewConfigurationHandler
         }
 
         LoginWebViewClient(WebViewClient origAppWebViewClient) {
-            super(origAppWebViewClient);
+            super(asm.getApplicationContext(), origAppWebViewClient);
         }
 
         @Override

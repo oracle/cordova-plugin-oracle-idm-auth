@@ -36,6 +36,7 @@ import java.security.cert.CertificateException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import javax.net.ssl.HostnameVerifier;
@@ -58,6 +59,7 @@ import oracle.idm.mobile.certificate.OMCertificateService;
 import oracle.idm.mobile.configuration.OMMobileSecurityConfiguration;
 import oracle.idm.mobile.configuration.OMMobileSecurityConfiguration.HostnameVerification;
 import oracle.idm.mobile.logging.OMLog;
+import oracle.idm.mobile.util.ArrayUtils;
 import oracle.idm.mobile.util.LogUtils;
 
 import static oracle.idm.mobile.configuration.OMMobileSecurityConfiguration.DEFAULT_HOSTNAME_VERIFICATION;
@@ -81,7 +83,11 @@ public class OMConnectionHandler {
     private static final String PROTOCOL_HTTPS = "https";
     private static final String HEADER_FIELD_LOCATION = "Location";
     private static final String HEADER_FIELD_CONTENT = "Content-Type";
-    private static final int DEFAULT_CONNECTION_TIMEOUT = 30;//in seconds
+    private static final String HEADER_FIELD_ACCEPT_LANGUAGE = "Accept-Language";
+
+    /* The connection timeout in Headed SDK was 20 seconds which is good enough.
+     * Ref: https://orareview.us.oracle.com/18809556/diff/18858112/18858188 */
+    private static final int DEFAULT_CONNECTION_TIMEOUT = 20;//in seconds
     private static String DEFAULT_SSL_PROTOCOL = "TLS";
     private int mConnectionTimeout = DEFAULT_CONNECTION_TIMEOUT * 1000;//in milli seconds
     private final int mReadTimeout = mConnectionTimeout;//for now.
@@ -135,10 +141,11 @@ public class OMConnectionHandler {
      * @param username
      * @param pwd
      * @param headers
+     * @deprecated This accepts password as String which leads to security issues.
+     * Instead use {@link #httpGet(URL, String, char[], Map, boolean, int)}.
      */
+    @Deprecated
     public String httpGet(URL url, String username, String pwd, Map<String, String> headers) throws OMMobileSecurityException {
-        validateURL(url);
-
         OMHTTPResponse response = httpGet(url, username, pwd, headers, false, (OMHTTPRequest.REQUIRE_RESPONSE_STRING | OMHTTPRequest.REQUIRE_RESPONSE_CODE));
         if (response != null) {
             if (response.isSuccess()) {
@@ -160,9 +167,17 @@ public class OMConnectionHandler {
      * @param flags        Refer to OMHTTPRequest for available flags.
      * @return
      * @hide
+     * @deprecated This accepts password as String which leads to security issues.
+     * Instead use {@link #httpGet(URL, String, char[], Map, boolean, int)}.
      */
-    public OMHTTPResponse httpGet(URL url, String username, String pwd, Map<String, String> headers, boolean retryRequest, int flags) throws OMMobileSecurityException {
-        validateURL(url);
+    @Deprecated
+    public OMHTTPResponse httpGet(URL url, String username, String pwd, Map<String, String> headers,
+                                  boolean retryRequest, int flags) throws OMMobileSecurityException {
+        return httpGet(url, username, pwd.toCharArray(), headers, retryRequest, flags);
+    }
+
+    public OMHTTPResponse httpGet(URL url, String username, char[] pwd, Map<String, String> headers,
+                                  boolean retryRequest, int flags) throws OMMobileSecurityException {
         return httpGet(url, username, pwd, headers, retryRequest, ((flags & OMHTTPRequest.AUTHENTICATION_REQUEST) != 0), ((flags & OMHTTPRequest.REQUIRE_RESPONSE_CODE) != 0), ((flags & OMHTTPRequest.REQUIRE_RESPONSE_STRING) != 0), ((flags & OMHTTPRequest.REQUIRE_RESPONSE_HEADERS) != 0));
     }
 
@@ -174,8 +189,6 @@ public class OMConnectionHandler {
      */
 
     public OMHTTPResponse httpGet(final URL url, Map<String, String> headers) throws OMMobileSecurityException {
-
-        validateURL(url);
         return httpGet(url, null, null, headers, false, false,
                 true, true, true);
 
@@ -272,9 +285,10 @@ public class OMConnectionHandler {
 
 
     //internal;
-    private OMHTTPResponse httpGet(final URL url, final String username, final String pwd, Map<String, String> headers,
+    private OMHTTPResponse httpGet(final URL url, final String username, final char[] pwd, Map<String, String> headers,
                                    boolean retryRequest, boolean isAuthMode, boolean requireResponseCode,
                                    boolean requireResponseString, boolean requireHeaders) throws OMMobileSecurityException {
+        validateURL(url);
         OMLog.trace(TAG, "httpGet URL              : " + url.toString());
         // extra info only to be logged if required.
         OMLog.info(TAG, "is authentication mode    : " + isAuthMode);
@@ -314,8 +328,8 @@ public class OMConnectionHandler {
             } catch (ProtocolException e) {
                 e.printStackTrace();
             }
-            if (!TextUtils.isEmpty(username) && !TextUtils.isEmpty(pwd)) {
-                mPwdAuthenticator = new OMAuthenticator(username, pwd.toCharArray());
+            if (!TextUtils.isEmpty(username) && !ArrayUtils.isEmpty(pwd)) {
+                mPwdAuthenticator = new OMAuthenticator(username, pwd);
                 //set authenticator impl for connection system.
                 Authenticator.setDefault(mPwdAuthenticator);
             }
@@ -333,7 +347,7 @@ public class OMConnectionHandler {
                         case HttpURLConnection.HTTP_CREATED:
                         case HttpURLConnection.HTTP_ACCEPTED:
                             process = false;
-                            if (isAuthMode && !mPwdAuthenticator.isAuthenticationRequired()) {
+                            if (isInvalidBasicAuthURL(isAuthMode)) {
                                 OMLog.error(TAG, "Invalid Basic Auth URL. InputStream: "
                                         + readInputStreamString(connection.getInputStream()));
                                 throw new OMMobileSecurityException(OMErrorCode.INVALID_BASIC_AUTHENTICATION_URL);
@@ -408,6 +422,19 @@ public class OMConnectionHandler {
                 OMLog.error(TAG, "Unable open secure connection.");
                 throw new OMMobileSecurityException(OMErrorCode.UNABLE_OPEN_SECURE_CONNECTION, gse);
             } finally {
+                if (response.isSuccess()) {
+                    /* PasswordAuthentication is created by cloning the char[]
+                     * password which is passed to its constructor. Hence, it
+                     * should be cleared once authentication is done as
+                     * shown below.*/
+                    if (mPwdAuthenticator != null) {
+                        PasswordAuthentication passwordAuthentication = mPwdAuthenticator.getPasswordAuthenticationUsed();
+                        if (passwordAuthentication != null &&
+                                passwordAuthentication.getPassword() != null) {
+                            Arrays.fill(passwordAuthentication.getPassword(), ' ');
+                        }
+                    }
+                }
                 if (inputStream != null) {
                     try {
                         inputStream.close();
@@ -425,13 +452,18 @@ public class OMConnectionHandler {
         }
     }
 
+    private boolean isInvalidBasicAuthURL(boolean isAuthMode) {
+        return isAuthMode && !mPwdAuthenticator.isAuthenticationRequired();
+    }
+
     private void handleSSLHandShakeException(HttpsURLConnection connection, SSLHandshakeException e) throws OMMobileSecurityException {
         OMLog.debug(TAG, "handling SSLHandShakeException");
         OMSSLSocketFactory socketFactory = ((OMSSLSocketFactory) connection.getSSLSocketFactory());
         if (socketFactory.isServerCertUntrusted()) {
             //handle one way ssl;
             OMLog.info(TAG, "Creating SSLExceptionEvent");
-            SSLExceptionEvent event = new SSLExceptionEvent(socketFactory.getUntrustedServerCertChain(), socketFactory.getAuthType());
+            SSLExceptionEvent event = new SSLExceptionEvent(socketFactory.getUntrustedServerCertChain(),
+                    socketFactory.getAuthType(), connection.getURL());
             throw new OMMobileSecurityException(OMErrorCode.SSL_EXCEPTION, event, e);
         } else if (socketFactory.isClientCertRequired()) {
             OMLog.info(TAG, "Creating CBAExceptionEvent");
@@ -494,7 +526,6 @@ public class OMConnectionHandler {
 
     /**
      * Authenticator impl for basic auth.
-     *
      */
     private class OMAuthenticator extends Authenticator {
 
@@ -502,6 +533,7 @@ public class OMConnectionHandler {
         private boolean isAuthenticationRequired = false;
         private final String aUsername;
         private final char[] aPassword;
+        private PasswordAuthentication passwordAuthentication;
 
         OMAuthenticator(String username, char[] pwd) {
             aUsername = username;
@@ -512,7 +544,8 @@ public class OMConnectionHandler {
         protected PasswordAuthentication getPasswordAuthentication() {
             if (!isAuthenticationRequired) {
                 isAuthenticationRequired = true;
-                return new PasswordAuthentication(aUsername, aPassword);
+                passwordAuthentication = new PasswordAuthentication(aUsername, aPassword);
+                return passwordAuthentication;
             } else {
                 return null;
             }
@@ -521,6 +554,10 @@ public class OMConnectionHandler {
         public boolean isAuthenticationRequired() {
             OMLog.trace(localTAG, "isAuthenticationRequired: " + isAuthenticationRequired);
             return isAuthenticationRequired;
+        }
+
+        public PasswordAuthentication getPasswordAuthenticationUsed() {
+            return passwordAuthentication;
         }
     }
 
@@ -693,7 +730,8 @@ public class OMConnectionHandler {
                     if (socketFactory.isServerCertUntrusted()) {
                         //handle one way ssl;
                         OMLog.info(TAG, "Creating SSLExceptionEvent");
-                        SSLExceptionEvent event = new SSLExceptionEvent(socketFactory.getUntrustedServerCertChain(), socketFactory.getAuthType());
+                        SSLExceptionEvent event = new SSLExceptionEvent(socketFactory.getUntrustedServerCertChain(),
+                                socketFactory.getAuthType(), connection.getURL());
                         throw new OMMobileSecurityException(OMErrorCode.UNABLE_TO_CONNECT_TO_SERVER, event, e);
                     } else if (socketFactory.isClientCertRequired()) {
                         OMLog.info(TAG, "Creating CBAExceptionEvent");
@@ -805,7 +843,7 @@ public class OMConnectionHandler {
         return mCertificateService;
     }
 
-    private OMSSLSocketFactory getSSLSocketFactory() throws GeneralSecurityException {
+    public OMSSLSocketFactory getSSLSocketFactory() throws GeneralSecurityException {
         if (mSocketFactory == null) {
             mSocketFactory = new OMSSLSocketFactory(getCertificateService(), mHandleClientCerts,
                     DEFAULT_SSL_PROTOCOL, mCorrectedProtocols, mEnabledCipherSuites);
@@ -848,6 +886,30 @@ public class OMConnectionHandler {
             }
             OMLog.info(TAG, "Added the custom headers to the client");
         }
+        connection.setRequestProperty(HEADER_FIELD_ACCEPT_LANGUAGE, getAcceptLanguageValue());
+    }
+
+    private String getAcceptLanguageValue() {
+        String acceptLang;
+        Locale locale = Locale.getDefault();
+        String language = locale.getLanguage();
+        /* Replace deprecated language codes with the new ones.
+         *  Ref: https://developer.android.com/reference/java/util/Locale.html#toLanguageTag()*/
+        if ("iw".equals(language)) {
+            language = "he";
+        } else if ("ji".equals(language)) {
+            language = "yi";
+        } else if ("in".equals(language)) {
+            language = "id";
+        }
+
+        String country = locale.getCountry();
+        if (TextUtils.isEmpty(country)) {
+            acceptLang = language;
+        } else {
+            acceptLang = language + "-" + country;
+        }
+        return acceptLang;
     }
 
     private void updateHttpProps(HttpURLConnection connection) {
@@ -887,7 +949,7 @@ public class OMConnectionHandler {
         NetworkInfo activeNetworkInfo = connectivityManager
                 .getActiveNetworkInfo();
 
-        if (activeNetworkInfo != null && host != null) {
+        if (activeNetworkInfo != null && activeNetworkInfo.isConnected() && host != null) {
             try {
                 URL url = new URL(host);
                 HttpURLConnection connection = getUrlConnection(url);

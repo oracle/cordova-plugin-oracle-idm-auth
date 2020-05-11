@@ -32,7 +32,6 @@ import oracle.idm.mobile.logging.OMLog;
 
 /**
  * PIN based authenticator.
- *
  */
 public class OMPinAuthenticator implements OMAuthenticator {
 
@@ -226,12 +225,16 @@ public class OMPinAuthenticator implements OMAuthenticator {
     @Override
     public void updateAuthData(OMAuthData currentAuthData, OMAuthData newAuthData) throws OMKeyManagerException, OMAuthenticationManagerException {
 
+        boolean authenticated;
+        try {
+            authenticated = authenticate(currentAuthData);
+        } catch (OMAuthenticationManagerException e) {
+            throw new OMAuthenticationManagerException(OMErrorCode.INCORRECT_CURRENT_AUTHDATA,
+                    "Cannot authenticate using currentAuthData", e);
+        }
         if (!authenticated) {
-            authenticate(currentAuthData);
-            if (!authenticated) {
-                throw new OMAuthenticationManagerException(OMErrorCode.INVALID_STATE,
-                        "Cannot authenticate using currentAuthData");
-            }
+            throw new OMAuthenticationManagerException(OMErrorCode.INCORRECT_CURRENT_AUTHDATA,
+                    "Cannot authenticate using currentAuthData");
         }
 
         if (newAuthData == null) {
@@ -282,19 +285,26 @@ public class OMPinAuthenticator implements OMAuthenticator {
         }
 
         try {
-            kek = getKeyFromPin(pin, salt);
+            Key localKek;
+            OMKeyStore localKeyStore;
+            localKek = getKeyFromPin(pin, salt);
             if (OMSecurityConstants.DEBUG) {
-                OMLog.trace(TAG, "**** Inside authenticate: KEK = " + Base64.encode(kek.getEncoded()));
+                OMLog.trace(TAG, "**** Inside authenticate: KEK = " + Base64.encode(localKek.getEncoded()));
             }
             OMKeyManager keyManager = new OMKeyManager(context);
-            keyStore = keyManager.getKeyStore(authenticatorId, kek.getEncoded());
-            OMSecureStorageService secureStorageService = new OMSecureStorageService(context, keyStore, authenticatorId);
+            localKeyStore = keyManager.getKeyStore(authenticatorId, localKek.getEncoded());
+            OMSecureStorageService secureStorageService = new OMSecureStorageService(context, localKeyStore, authenticatorId);
 
             String randomDataStorageKey = getSharedPreferencesKeyForPinValidationData();
             String validationData1 = getSharedPreferences().getString(randomDataStorageKey, null);
             String validationDate2 = (String) secureStorageService.get(randomDataStorageKey);
             if (validationData1 != null && validationData1.equals(validationDate2)) {
                 authenticated = true;
+                /* The new kek and keystore created in this method
+                 * should overwrite corres. member variables only
+                 * if authentication is successful.*/
+                kek = localKek;
+                keyStore = localKeyStore;
                 return true;
             }
             return false;

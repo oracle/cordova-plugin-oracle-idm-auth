@@ -43,7 +43,6 @@ import static oracle.idm.mobile.auth.OMAuthenticationContext.AuthenticationMode;
 
 /**
  * Base class for authentication service for each grant type in OAuth2.0
- *
  */
 abstract class OAuthAuthenticationService extends AuthenticationService {
     private static String TAG = OAuthAuthenticationService.class.getSimpleName();
@@ -444,10 +443,10 @@ abstract class OAuthAuthenticationService extends AuthenticationService {
     }
 
     /*
- * Internal API which will check the validity of the oAuth tokens if the
- * token which matches the request scopes is expired , we will refresh if
- * the refreshExpiredToken boolean is true
- */
+     * Internal API which will check the validity of the oAuth tokens if the
+     * token which matches the request scopes is expired , we will refresh if
+     * the refreshExpiredToken boolean is true
+     */
     // common for All OAuth Authentication Services.
     boolean isValid(OMAuthenticationContext authContext,
                     Set<String> requiredScopes, boolean refreshExpiredToken)
@@ -455,19 +454,16 @@ abstract class OAuthAuthenticationService extends AuthenticationService {
         OMLog.debug(TAG, "isValid(scopes)");
 
         OMAuthenticationContext.AuthenticationProvider provider = authContext.getAuthenticationProvider();
-        if (provider == OMAuthenticationContext.AuthenticationProvider.OPENIDCONNECT10 || provider == OMAuthenticationContext.AuthenticationProvider.OAUTH20) {
+        if (provider == OMAuthenticationContext.AuthenticationProvider.OPENIDCONNECT10
+                || provider == OMAuthenticationContext.AuthenticationProvider.OAUTH20) {
             boolean isValidResult = false;
             boolean triedRefreshing = false;
-        /*
-         * all the access tokens matching the passed scopes
-         */
-            List<OAuthToken> accessTokensWithPassedScopes = new ArrayList<>();
 
-        /*
-         * defensive copy of tokens from the authentication context to work
-         * with. Initially, access tokens with matching scopes will be removed from this list.
-         * Later, it will be added back after refresh is done.
-         */
+            /*
+             * defensive copy of tokens from the authentication context to work
+             * with. Initially, access tokens with matching scopes will be removed from this list.
+             * Later, it will be added back after refresh is done.
+             */
             List<OAuthToken> allAccessTokens = new ArrayList<>(
                     authContext.getOAuthTokenList());
             AuthenticationMode authMode = authContext.getAuthenticatedMode();
@@ -477,27 +473,11 @@ abstract class OAuthAuthenticationService extends AuthenticationService {
                 return false;
             }
             // common for both Remote and Offline.
-            Iterator<OAuthToken> itr = allAccessTokens.iterator();
-            while (itr.hasNext()) {
-                OAuthToken token = itr.next();
-                if (isAccessToken(token)) {
-                    // do this only for access tokens.
-                    if (requiredScopes != null && requiredScopes.size() > 0) {
-                        if (token.getScopes().size() > 0) {
-                            if (token.getScopes().containsAll(requiredScopes)) {
-                                accessTokensWithPassedScopes.add(token);
-                                // removing these tokens from context for now
-                                itr.remove();
-                            }
-                        }
-                    } else {
-                        // just add all the tokens if no scopes are passed.
-                        accessTokensWithPassedScopes.add(token);
-                        // remove this token from the context.
-                        itr.remove();
-                    }
-                }
-            }
+            /*
+             * all the access tokens matching the passed scopes
+             */
+            List<OAuthToken> accessTokensWithPassedScopes =
+                    getAccessTokensWithPassedScopes(allAccessTokens, requiredScopes);
             if (accessTokensWithPassedScopes.isEmpty()) {
                 OMLog.debug(TAG, "No Valid access tokens, so return false");
                 // no access tokens.
@@ -601,27 +581,62 @@ abstract class OAuthAuthenticationService extends AuthenticationService {
             (which do not have refresh token) being removed and / or  new token(s) being added.*/
             if (mASM.getMSS().getMobileSecurityConfig()
                     .isAuthContextPersistenceAllowed()) {
-                String key = authContext.getStorageKey() != null ?
-                        authContext.getStorageKey() : mASM.getAppCredentialKey();
-                String authContextString = authContext.toString(true);
-                mASM.getMSS()
-                        .getCredentialStoreService()
-                        .addAuthContext(key, authContextString);
-                OMLog.trace(TAG, "Stored the authContext persistently which is updated with expired access tokens" +
-                        "(which do not have refresh token) being removed and / or  new token(s) being added.");
-                if (authContextString != null && OMSecurityConstants.DEBUG) {
-                    try {
-                        LogUtils.log("AuthContext persisted: "
-                                + new JSONObject(authContextString).toString(3));
-                    } catch (JSONException e) {
-                        OMLog.error(TAG, e.getMessage(), e);
-                    }
-                }
+                storeAuthenticationContext(authContext);
             }
             return isValidResult;
         } else {
             OMLog.debug(TAG, "Not an openID or OAuth config returning true!");
             return true;
+        }
+    }
+
+    private List<OAuthToken> getAccessTokensWithPassedScopes(List<OAuthToken> allAccessTokens,
+                                                             Set<String> requiredScopes) {
+        List<OAuthToken> accessTokensWithPassedScopes = new ArrayList<>();
+        Iterator<OAuthToken> itr = allAccessTokens.iterator();
+        while (itr.hasNext()) {
+            OAuthToken token = itr.next();
+            if (isAccessToken(token)) {
+                // do this only for access tokens.
+                if (requiredScopes != null && requiredScopes.size() > 0) {
+                    if (token.getScopes().size() > 0) {
+                        if (token.getScopes().containsAll(requiredScopes)) {
+                            accessTokensWithPassedScopes.add(token);
+                            // removing these tokens from context for now
+                            itr.remove();
+                        }
+                    }
+                } else {
+                    // just add all the tokens if no scopes are passed.
+                    accessTokensWithPassedScopes.add(token);
+                    // remove this token from the context.
+                    itr.remove();
+                }
+            }
+        }
+        return accessTokensWithPassedScopes;
+    }
+
+    private void storeAuthenticationContext(OMAuthenticationContext authContext) {
+        if (!mASM.getMSS().getMobileSecurityConfig()
+                .isAuthContextPersistenceAllowed()) {
+            return;
+        }
+        String key = authContext.getStorageKey() != null ?
+                authContext.getStorageKey() : mASM.getAppCredentialKey();
+        String authContextString = authContext.toString(true);
+        mASM.getMSS()
+                .getCredentialStoreService()
+                .addAuthContext(key, authContextString);
+        OMLog.trace(TAG, "Stored the authContext persistently which is updated with expired access tokens" +
+                "(which do not have refresh token) being removed and / or  new token(s) being added.");
+        if (authContextString != null && OMSecurityConstants.DEBUG) {
+            try {
+                LogUtils.log("AuthContext persisted: "
+                        + new JSONObject(authContextString).toString(3));
+            } catch (JSONException e) {
+                OMLog.error(TAG, e.getMessage(), e);
+            }
         }
     }
 
@@ -813,7 +828,6 @@ abstract class OAuthAuthenticationService extends AuthenticationService {
 
     /**
      * Helper class to sort tokens holding scopes in ascending order.
-     *
      */
     private class OAuthTokenComparator implements Comparator<OAuthToken> {
         @Override

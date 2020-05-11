@@ -13,11 +13,11 @@ public class OMLogManager {
     }
 
     private static volatile OMLogManager mInstance;
-    private LogLevel mLevel;
     private static final LogLevel DEFAULT_LEVEL = LogLevel.TRACE;
+    private LogLevel mLevel;
+    private boolean mLoggingEnabled = true;
 
-    private OMLogManager()
-    {
+    private OMLogManager() {
         this.setLevel(DEFAULT_LEVEL);
     }
 
@@ -32,18 +32,28 @@ public class OMLogManager {
         return mInstance;
     }
 
-    public void setLevel(LogLevel level)
-    {
+    public void setLevel(LogLevel level) {
         mLevel = level;
     }
 
-    public LogLevel getLevel()
-    {
+    public LogLevel getLevel() {
         return mLevel;
     }
 
-    static boolean isInitialised()
-    {
+    /**
+     * By default, logging is enabled. It can be disabled using
+     * {@link #setLoggingEnabled(boolean)}.
+     *
+     */
+    public boolean isLoggingEnabled() {
+        return mLoggingEnabled;
+    }
+
+    public void setLoggingEnabled(boolean loggingEnabled) {
+        this.mLoggingEnabled = loggingEnabled;
+    }
+
+    static boolean isInitialised() {
         return (null != mInstance);
     }
 

@@ -96,6 +96,7 @@ public class SecretKeyWrapper {
 
     /**
      * Generate key pair.
+     *
      * @param context
      * @param alias
      * @throws GeneralSecurityException
@@ -109,10 +110,13 @@ public class SecretKeyWrapper {
                     .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_RSA_PKCS1)
                     .setUserAuthenticationRequired(true)
                     .build();
-            //TODO Update studio and build to Android N, then set jdk location in File->Project structure
-//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-//                builder.setInvalidatedByBiometricEnrollment(false);
-//            }
+            /*KeyGenParameterSpec.Builder#setInvalidatedByBiometricEnrollment(true)
+            * By default, this is true, so these keys are irreversibly invalidated when a new
+            * fingerprint is enrolled, or when all existing fingerprints are deleted.
+            * This is considered more secure. For more details, refer javadoc
+            * of setInvalidatedByBiometricEnrollment.
+            * */
+
             final KeyPairGenerator gen = KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_RSA, "AndroidKeyStore");
             gen.initialize(spec);
             gen.generateKeyPair();
