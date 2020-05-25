@@ -1,5 +1,8 @@
 # Release Notes
 
+## 1.5.1 (25 May, 2020)
+* Support for parsing password as character array.
+
 ## 1.5.0 (11 May, 2020)
 * Support for CSRF Protection for token relay service.
 

@@ -3,7 +3,7 @@
  * The Universal Permissive License (UPL), Version 1.0
  */
 /* jshint esversion: 6 */
-/* Plugin Version :  1.5.0 */
+/* Plugin Version :  1.5.1 */
 
 /**
  * @file {@link https://github.com/oracle/cordova-plugin-oracle-idm-auth|cordova-plugin-oracle-idm-auth}

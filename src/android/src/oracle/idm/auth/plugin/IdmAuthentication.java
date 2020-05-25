@@ -157,6 +157,14 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
         if (value == JSONObject.NULL)
           value = null;
 
+        if(key.equals(OMSecurityConstants.Challenge.PASSWORD_KEY_2))
+        {
+          String passwordAsString = (String) challengeFieldsJson.opt(OMSecurityConstants.Challenge.PASSWORD_KEY);
+          if(passwordAsString != null) {
+            char[] passwordAsCharArray = passwordAsString.toCharArray();
+            value = passwordAsCharArray;
+          }
+        }
         challengeFields.put(key, value);
       }
       _completionHandler.proceed(challengeFields);
