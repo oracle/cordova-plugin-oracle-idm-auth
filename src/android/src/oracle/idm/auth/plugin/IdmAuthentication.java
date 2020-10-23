@@ -415,7 +415,15 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
           fields.put(_CHALLENGE_ERROR, IdmAuthenticationPlugin.errorToMap(errorCode));
         }
 
-        _loginCallback.success(new JSONObject(fieldsMap));
+        if(fields.containsKey("http_auth_host_key")) {
+          _mainActivity.runOnUiThread(() -> {
+            _localBroadcastManager.sendBroadcast(new Intent(WebViewActivity.DISPLAY_LOGIN_DIALOG));
+          });
+        }
+        else {
+          _loginCallback.success(new JSONObject(fieldsMap));
+        }
+
         break;
       case EMBEDDED_WEBVIEW_REQUIRED:
         Log.d(TAG, "Handling embedded webview challenge.");

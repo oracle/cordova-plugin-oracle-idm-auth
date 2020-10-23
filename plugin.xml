@@ -6,7 +6,7 @@
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
         xmlns:android="http://schemas.android.com/apk/res/android"
         id="cordova-plugin-oracle-idm-auth"
-        version="1.5.1">
+        version="1.6.0">
   <name>cordova-plugin-oracle-idm-auth</name>
   <description>Provides authentication and authorization functionality using the Oracle IDM SDK, supporting standard protocols like Basic Auth, OAUTH, OpenID Connect and WebSSO</description>
   <keywords>cordova,idm,authentication,auth</keywords>
@@ -59,6 +59,7 @@
     <resource-file src="src/android/res/layout/activity_web_view.xml" target="res/layout/activity_web_view.xml"/>
     <resource-file src="src/android/res/layout/fingerprint_dialog_content.xml" target="res/layout/fingerprint_dialog_content.xml"/>
     <resource-file src="src/android/res/layout/fingerprint_dialog_container.xml" target="res/layout/fingerprint_dialog_container.xml"/>
+    <resource-file src="src/android/res/layout/login_dialog.xml" target="res/layout/login_dialog.xml"/>
     <resource-file src="src/android/res/values/colors.xml" target="res/values/colors.xml"/>
     <resource-file src="src/android/res/values/cordova-plugin-oracle-idm-auth_strings.xml" target="res/values/cordova-plugin-oracle-idm-auth_strings.xml"/>
     <resource-file src="src/android/res/drawable/ic_fingerprint_error.xml" target="res/drawable/ic_fingerprint_error.xml"/>

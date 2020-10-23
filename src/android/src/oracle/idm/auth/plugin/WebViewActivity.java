@@ -10,10 +10,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import oracle.idm.auth.plugin.util.ResourceHelper;
 import oracle.idm.mobile.OMSecurityConstants;
@@ -35,6 +38,7 @@ public class WebViewActivity extends Activity
   public static final String FINISH_WEB_VIEW_INTENT = "finishWebView";
   public static final String CANCEL_WEB_VIEW_INTENT = "cancelFromWebView";
   public static final String BUTTONS_WEB_VIEW_PROP = "buttonsAvailable";
+  public static final String DISPLAY_LOGIN_DIALOG = "displayLoginDialog";
 
   @Override
   protected void onCreate(Bundle savedInstanceState)
@@ -60,6 +64,7 @@ public class WebViewActivity extends Activity
     _broadcastReceiver = _createBroadcastReceiver();
     _localBroadcastManager = LocalBroadcastManager.getInstance(this);
     _localBroadcastManager.registerReceiver(_broadcastReceiver, new IntentFilter(FINISH_WEB_VIEW_INTENT));
+    _localBroadcastManager.registerReceiver(_broadcastReceiver, new IntentFilter(DISPLAY_LOGIN_DIALOG));
 
     _proceed(completionHandler);
     Log.d(TAG, "Created webview activity and passed on to IDM SDK.");
@@ -81,6 +86,42 @@ public class WebViewActivity extends Activity
     completionHandler.proceed(responseFields);
   }
 
+  private void _showLoginDialog()
+  {
+    Log.d(TAG, "Displaying Login Dialog.");
+    IdmAuthentication.CompletionHandler completionHandler = IdmAuthentication.getCompletionHandler();
+    final AlertDialog.Builder builder = new AlertDialog.Builder(WebViewActivity.this);
+
+    builder.setTitle("Please provide credentials").setCancelable(false)
+      .setPositiveButton("Submit", new DialogInterface.OnClickListener() {
+        @Override
+        public void onClick(DialogInterface dialog, int which) {
+          EditText usernameField = (EditText) _authView.findViewById(_R.getIdentifier(_HTTP_AUTH_USERNAME));
+          EditText passwordField = (EditText) _authView.findViewById(_R.getIdentifier(_HTTP_AUTH_PASSWORD));
+          String username = usernameField.getText().toString();
+          char[] password = new char[passwordField.getText().length()];
+          passwordField.getText().getChars(0, password.length, password, 0);
+
+          Map<String, Object> outParams = new HashMap<>();
+          outParams.put(OMSecurityConstants.Challenge.USERNAME_KEY, username);
+          outParams.put(OMSecurityConstants.Challenge.PASSWORD_KEY_2, password);
+          completionHandler.proceed(outParams);
+
+        }
+      })
+      .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+        @Override
+        public void onClick(DialogInterface dialog, int which) {
+          completionHandler.cancel();
+        }
+    });
+
+    AlertDialog alertDialog = builder.create();
+    _authView = alertDialog.getLayoutInflater().inflate(_R.getLayout("login_dialog"), null);
+    alertDialog.setView(_authView);
+    alertDialog.show();
+  }
+
   private BroadcastReceiver _createBroadcastReceiver()
   {
     return new BroadcastReceiver()
@@ -94,6 +135,10 @@ public class WebViewActivity extends Activity
             Log.d(TAG, "Finishing the activity.");
             _webView.destroy();
             finish();
+          }
+          else if (DISPLAY_LOGIN_DIALOG.equals(action))
+          {
+            _showLoginDialog();
           }
         }
     };
@@ -221,9 +266,11 @@ public class WebViewActivity extends Activity
   private WebViewClient _webViewClient;
   private BroadcastReceiver _broadcastReceiver;
   private LocalBroadcastManager _localBroadcastManager;
+  private View _authView;
 
   private static final String TAG = WebViewActivity.class.getSimpleName();
   private static final ResourceHelper _R = ResourceHelper.INSTANCE;
+  private static final String _LOGIN_DIALOG_LAYOUT = "login_dialog";
   private static final String _ACTIVITY_WEB_VIEW = "activity_web_view";
   private static final String _IDM_WEB_VIEW = "idmWebView";
   private static final String _BTN_LAYOUT = "button_layout";
@@ -237,4 +284,6 @@ public class WebViewActivity extends Activity
   private static final String _BACK_BTN_FLAG = "BACK";
   private static final String _ALL_BTN_FLAG = "ALL";
   private static final String _NO_BTN_FLAG = "NONE";
+  private static final String _HTTP_AUTH_USERNAME = "httpAuthUsername";
+  private static final String _HTTP_AUTH_PASSWORD = "httpAuthPassword";
 }
