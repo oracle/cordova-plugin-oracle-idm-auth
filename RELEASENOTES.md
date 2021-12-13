@@ -1,5 +1,8 @@
 # Release Notes
 
+## 1.7.0 (13 Dec, 2021)
+* Support for client certificate authentication flow.
+
 ## 1.6.0 (23 Oct, 2020)
 * Support for two legged flow - FedAuth followed by a Basic Auth with native prompt.
 

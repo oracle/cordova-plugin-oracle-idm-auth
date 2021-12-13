@@ -33,6 +33,7 @@ import oracle.idm.mobile.auth.OMToken;
 import oracle.idm.mobile.auth.logout.OMLogoutCompletionHandler;
 import oracle.idm.mobile.callback.OMAuthenticationContextCallback;
 import oracle.idm.mobile.callback.OMMobileSecurityServiceCallback;
+import oracle.idm.mobile.certificate.ClientCertificatePreference;
 import oracle.idm.mobile.configuration.OMMobileSecurityConfiguration;
 
 import org.apache.cordova.CallbackContext;
@@ -443,6 +444,9 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
         _finishWebView();
         IdmAuthenticationPlugin.invokeCallbackError(_loginCallback, PluginErrorCodes.UNTRUSTED_CHALLENGE);
         break;
+      case CLIENT_IDENTITY_CERTIFICATE_REQUIRED:
+        handleClientCertificateChallenge(fields);
+        break;
       default:
         Log.w(TAG, "Unhandled challenge type encountered: " + _challengeType);
         IdmAuthenticationPlugin.invokeCallbackError(_loginCallback, PluginErrorCodes.UNSUPPORTED_CHALLENGE);
@@ -488,6 +492,12 @@ public class IdmAuthentication implements OMMobileSecurityServiceCallback, OMAut
     {
       handleExternalBrowserChallenge(fields);
     }
+  }
+
+  private void handleClientCertificateChallenge(Map<String, Object> fields) {
+    fields.put(OMSecurityConstants.Challenge.CLIENT_CERTIFICATE_ALIAS_KEY, "OMDefaultAuthenticator_default_key");
+    fields.put(OMSecurityConstants.Challenge.CLIENT_CERTIFICATE_STORAGE_PREFERENCE_KEY, ClientCertificatePreference.Storage.APP_LEVEL_ANDROID_KEYSTORE);
+    _completionHandler.proceed(fields);
   }
 
   private void handleExternalBrowserChallenge(Map<String, Object> fields) {
