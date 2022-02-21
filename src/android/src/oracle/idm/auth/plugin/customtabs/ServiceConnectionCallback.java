@@ -14,7 +14,7 @@
 
 package oracle.idm.auth.plugin.customtabs;
 
-import android.support.customtabs.CustomTabsClient;
+import androidx.browser.customtabs.CustomTabsClient;
 
 /**
  * Callback for events when connecting and disconnecting from Custom Tabs Service.

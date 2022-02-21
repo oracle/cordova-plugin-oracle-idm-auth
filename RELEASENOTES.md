@@ -1,5 +1,8 @@
 # Release Notes
 
+## 1.8.0 (18 Feb, 2022)
+* Replacing the deprecated packages with latest androidx pacakge.
+
 ## 1.7.0 (13 Dec, 2021)
 * Support for client certificate authentication flow.
 
