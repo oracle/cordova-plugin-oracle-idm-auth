@@ -1,5 +1,8 @@
 # Release Notes
 
+## 1.8.1 (7 Mar, 2022)
+* Suppressing the error thrown over iOS platform on click of DONE button in safari browser over remote authentication flow.
+
 ## 1.8.0 (18 Feb, 2022)
 * Replacing the deprecated packages with latest androidx pacakge.
 

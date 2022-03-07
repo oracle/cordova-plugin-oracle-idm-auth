@@ -796,9 +796,6 @@ completedSetupWithConfiguration:(OMMobileSecurityConfiguration *)configuration
     return;
 
   [self cleanUpExternalAuthViewState];
-
-  // If we reach here, that means the login process was not completed successfully.
-  [self throwErrorCodeToLoginCallback:AUTHENTICATION_FAILED];
 }
 
 @end
