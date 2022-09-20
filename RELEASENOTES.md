@@ -1,5 +1,6 @@
 # Release Notes
-
+## 1.9.0 (20 Sep, 2022)
+* Handling the error scenario for Local Authentication initialization.
 ## 1.8.1 (7 Mar, 2022)
 * Suppressing the error thrown over iOS platform on click of DONE button in safari browser over remote authentication flow.
 

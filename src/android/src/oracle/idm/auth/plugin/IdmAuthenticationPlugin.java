@@ -35,7 +35,6 @@ public class IdmAuthenticationPlugin extends CordovaPlugin
   @Override
   public void initialize(CordovaInterface cordova, CordovaWebView webView) {
     super.initialize(cordova, webView);
-    _localAuth = new LocalAuthentication(cordova.getActivity());
     ResourceHelper.INSTANCE.init(cordova.getActivity().getResources(), cordova.getActivity().getPackageName());
   }
 
@@ -50,6 +49,16 @@ public class IdmAuthenticationPlugin extends CordovaPlugin
   @Override
   public boolean execute(String action, JSONArray args, CallbackContext callbackContext)
   {
+    try {
+      if(_localAuth == null) {
+        _localAuth = new LocalAuthentication(cordova.getActivity());
+      }
+    }
+    catch (Exception e) {
+      Log.e(TAG, "Error while enabling authenticator: " + e.getMessage(), e);
+      IdmAuthenticationPlugin.invokeCallbackError(callbackContext, PluginErrorCodes.INTERNAL_ERROR);
+    }
+
     if ("setup".equals(action))
     {
       _handleSetup(args, callbackContext);
