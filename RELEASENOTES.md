@@ -1,4 +1,7 @@
 # Release Notes
+## 2.0.0 (21 Oct, 2022)
+* Fixing incompatibilities with Cordova-Android 11
+
 ## 1.9.0 (20 Sep, 2022)
 * Handling the error scenario for Local Authentication initialization.
 ## 1.8.1 (7 Mar, 2022)
