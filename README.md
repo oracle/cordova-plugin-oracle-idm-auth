@@ -128,11 +128,15 @@ This is an apple issue discussed [here](https://stackoverflow.com/questions/3956
 and [here](https://forums.developer.apple.com/thread/51071). Work around for this issue is to [enable keychain sharing from xcode]
 (https://developer.apple.com/library/content/documentation/IDEs/Conceptual/AppDistributionGuide/AddingCapabilities/AddingCapabilities.html).
 
-### [Contributing](CONTRIBUTING.md)
-This is an open source project maintained by Oracle Corp. Pull Requests are currently not being accepted. See [CONTRIBUTING](CONTRIBUTING.md) for details.
+### Contributing
+This project is not accepting external contributions at this time. For bugs or enhancement requests, please file a GitHub issue unless it’s security related. When filing a bug remember that the better written the bug is, the more likely it is to be fixed. If you think you’ve found a security vulnerability, do not raise a GitHub issue and follow the instructions in our [security policy](./SECURITY.md).
 
-### [License](LICENSE.md)
-Copyright (c) 2017 Oracle and/or its affiliates
-The Universal Permissive License (UPL), Version 1.0
+### Security
+Please consult the [security guide](./SECURITY.md) for our responsible security vulnerability disclosure process
+
+### License
+Copyright (c) 2017, 2023 Oracle and/or its affiliates
+Released under the Universal Permissive License v1.0 as shown at
+<https://oss.oracle.com/licenses/upl/>.
 
 ### [Release Notes](RELEASENOTES.md)
