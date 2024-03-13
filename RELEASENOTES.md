@@ -1,4 +1,8 @@
 # Release Notes
+## 2.1.1 (13 March, 2024)
+* Documentation update
+## 2.1.0 (25 July, 2023)
+* Debug Drop containing logs for Canon app issue
 ## 2.0.0 (21 Oct, 2022)
 * Fixing incompatibilities with Cordova-Android 11
 
