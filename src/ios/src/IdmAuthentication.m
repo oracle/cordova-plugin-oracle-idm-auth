@@ -50,13 +50,13 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  * Callback details for returning the result for login or logout to javascript layer.
  */
-@property (nonatomic, strong, nullable) CDVCommandDelegateImpl*    loginLogoutCommandDelegate;
+@property (nonatomic, strong, nullable) id<CDVCommandDelegate>    loginLogoutCommandDelegate;
 @property (nonatomic, copy, nullable) NSString*                    loginLogoutCallbackId;
 
 /**
  * Callback details for returning the result for timeout to javascript layer.
  */
-@property (nonatomic, strong, nullable) CDVCommandDelegateImpl*    timeoutCommandDelegate;
+@property (nonatomic, strong, nullable) id<CDVCommandDelegate>    timeoutCommandDelegate;
 @property (nonatomic, copy, nullable) NSString*                    timeoutCallbackId;
 
 /**
@@ -157,7 +157,7 @@ SFSafariViewController *_safariVC;
  * @param commandDelegate: callback
  * @param callbackId: callback id
  */
--(void) startLogin:(CDVCommandDelegateImpl*) commandDelegate
+-(void) startLogin:(id<CDVCommandDelegate>) commandDelegate
         withCallbackId: (NSString*) callbackId {
   IdmLog(@"startLogin invoked");
   NSError* error = [self.ommss startAuthenticationProcess:nil];
@@ -186,7 +186,7 @@ SFSafariViewController *_safariVC;
  * @param commandDelegate: callback
  * @param callbackId: callback id
  */
--(void) cancelLogin:(CDVCommandDelegateImpl*) commandDelegate
+-(void) cancelLogin:(id<CDVCommandDelegate>) commandDelegate
         withCallbackId: (NSString*) callbackId {
   IdmLog(@"cancelLogin invoked");
   self.loginLogoutCommandDelegate = commandDelegate;
@@ -203,7 +203,7 @@ SFSafariViewController *_safariVC;
  * @param callbackId: callback id
  * @param challengeFields: The filled up challenge fields map.
  */
--(void) finishLogin:(CDVCommandDelegateImpl *)commandDelegate
+-(void) finishLogin:(id<CDVCommandDelegate>)commandDelegate
         withCallbackId:(NSString *)callbackId
         challengeResult: (NSDictionary*) challengeFields {
   IdmLog(@"Finish login received %@", challengeFields);
@@ -228,7 +228,7 @@ SFSafariViewController *_safariVC;
  * @param callbackId: callback id
  * @param properties: extra properties if any
  */
-- (void) isAuthenticated: (CDVCommandDelegateImpl*) commandDelegate
+- (void) isAuthenticated: (id<CDVCommandDelegate>) commandDelegate
          withCallbackId: (NSString*) callbackId
          withProperties: (NSDictionary*) properties {
   IdmLog(@"isAuthenticated invoked");
@@ -277,7 +277,7 @@ SFSafariViewController *_safariVC;
  * @param callbackId: callback id
  * @param fedAuthSecuredUrl: The secured URL for which cookies and headers have to be retrieved. Applicable only for Federated Auth usecase.
  */
-- (void) getHeaders: (CDVCommandDelegateImpl*) commandDelegate
+- (void) getHeaders: (id<CDVCommandDelegate>) commandDelegate
      withCallbackId: (NSString*) callbackId
 withFedAuthSecuredUrl: (NSString*) fedAuthSecuredUrl
     withOauthScopes: (NSSet*) scopes{
@@ -318,7 +318,7 @@ withFedAuthSecuredUrl: (NSString*) fedAuthSecuredUrl
  * @param commandDelegate: callback
  * @param callbackId: callback id
  */
--(void) logout:(CDVCommandDelegateImpl *)commandDelegate
+-(void) logout:(id<CDVCommandDelegate>)commandDelegate
 withCallbackId:(NSString *)callbackId
 withForgetOption:(BOOL) forget {
   IdmLog(@"logout invoked with forget %@", forget ? @"YES": @"NO");
@@ -337,7 +337,7 @@ withForgetOption:(BOOL) forget {
  * @param commandDelegate: callback
  * @param callbackId: callback id
  */
-- (void) addTimeoutCallback: (CDVCommandDelegateImpl*) commandDelegate
+- (void) addTimeoutCallback: (id<CDVCommandDelegate>) commandDelegate
          withCallbackId: (NSString*) callbackId {
   IdmLog(@"addTimeoutCallback invoked");
   self.timeoutCommandDelegate = commandDelegate;
@@ -352,7 +352,7 @@ withForgetOption:(BOOL) forget {
  * @param commandDelegate: callback
  * @param callbackId: callback id
  */
-- (void) resetIdleTimeout: (CDVCommandDelegateImpl*) commandDelegate
+- (void) resetIdleTimeout: (id<CDVCommandDelegate>) commandDelegate
          withCallbackId: (NSString*) callbackId {
   IdmLog(@"resetIdleTimeout invoked");
   OMAuthenticationContext* context = [self.ommss authenticationContext];

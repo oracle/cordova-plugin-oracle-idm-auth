@@ -105,7 +105,7 @@ NSMutableDictionary<NSString *, IdmAuthentication *>  *AUTH_CACHE;
     return;
   }
 
-  __weak CDVCommandDelegateImpl* delegate = self.commandDelegate;
+  __weak id<CDVCommandDelegate> delegate = self.commandDelegate;
 
   self.setupCompletionCallback = ^(IdmAuthentication * authFlow, NSError * error) {
     if (error != nil) {

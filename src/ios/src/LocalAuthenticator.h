@@ -4,20 +4,20 @@
  */
 #import <Foundation/Foundation.h>
 #import "IDMMobileSDKv2Library.h"
-#import <Cordova/CDVCommandDelegateImpl.h>
+#import <Cordova/CDVCommandDelegate.h>
 #import <Cordova/CDVPluginResult.h>
 
 @interface LocalAuthenticator : NSObject
 
 +(LocalAuthenticator*) sharedInstance;
 
--(void) enabledLocalAuthsPrimaryFirst:(CDVInvokedUrlCommand*)command delegate:(CDVCommandDelegateImpl*) commandDelegate;
--(void) enable:(CDVInvokedUrlCommand*)command delegate:(CDVCommandDelegateImpl*) commandDelegate;
--(void) disable:(CDVInvokedUrlCommand*)command delegate:(CDVCommandDelegateImpl*) commandDelegate;
--(void) authenticateBiometric:(CDVInvokedUrlCommand*)command delegate:(CDVCommandDelegateImpl*) commandDelegate;
--(void) authenticatePin:(CDVInvokedUrlCommand*)command delegate:(CDVCommandDelegateImpl*) commandDelegate;
--(void) changePin:(CDVInvokedUrlCommand*)command delegate:(CDVCommandDelegateImpl*) commandDelegate;
--(void) getLocalAuthSupportInfo:(CDVInvokedUrlCommand*)command delegate:(CDVCommandDelegateImpl*) commandDelegate;
--(void) getPreference:(CDVInvokedUrlCommand*)command delegate:(CDVCommandDelegateImpl*) commandDelegate;
--(void) setPreference:(CDVInvokedUrlCommand*)command delegate:(CDVCommandDelegateImpl*) commandDelegate;
+-(void) enabledLocalAuthsPrimaryFirst:(CDVInvokedUrlCommand*)command delegate:(id<CDVCommandDelegate>) commandDelegate;
+-(void) enable:(CDVInvokedUrlCommand*)command delegate:(id<CDVCommandDelegate>) commandDelegate;
+-(void) disable:(CDVInvokedUrlCommand*)command delegate:(id<CDVCommandDelegate>) commandDelegate;
+-(void) authenticateBiometric:(CDVInvokedUrlCommand*)command delegate:(id<CDVCommandDelegate>) commandDelegate;
+-(void) authenticatePin:(CDVInvokedUrlCommand*)command delegate:(id<CDVCommandDelegate>) commandDelegate;
+-(void) changePin:(CDVInvokedUrlCommand*)command delegate:(id<CDVCommandDelegate>) commandDelegate;
+-(void) getLocalAuthSupportInfo:(CDVInvokedUrlCommand*)command delegate:(id<CDVCommandDelegate>) commandDelegate;
+-(void) getPreference:(CDVInvokedUrlCommand*)command delegate:(id<CDVCommandDelegate>) commandDelegate;
+-(void) setPreference:(CDVInvokedUrlCommand*)command delegate:(id<CDVCommandDelegate>) commandDelegate;
 @end

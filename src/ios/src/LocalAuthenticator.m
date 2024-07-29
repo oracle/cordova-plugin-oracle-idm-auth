@@ -53,7 +53,7 @@ static OMLocalAuthenticationManager *sharedManager = nil;
 
 @property (nonatomic, strong) OMFallbackAuthenticationCompletionBlock fallbackHandler;
 
-@property (nonatomic, strong, nullable) CDVCommandDelegateImpl* biometricAuthDelegate;
+@property (nonatomic, strong, nullable) id<CDVCommandDelegate> biometricAuthDelegate;
 @property (nonatomic, copy, nullable) NSString* biometricAuthCallbackId;
 
 @end
@@ -72,7 +72,7 @@ static OMLocalAuthenticationManager *sharedManager = nil;
   return shared;
 }
 
--(void) enabledLocalAuthsPrimaryFirst:(CDVInvokedUrlCommand*)command delegate:(CDVCommandDelegateImpl*) commandDelegate {
+-(void) enabledLocalAuthsPrimaryFirst:(CDVInvokedUrlCommand*)command delegate:(id<CDVCommandDelegate>) commandDelegate {
   NSString* authId = command.arguments[0];
   CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
                                                messageAsArray:[self getEnabled:authId]];
@@ -110,7 +110,7 @@ static OMLocalAuthenticationManager *sharedManager = nil;
   return YES;
 }
 
--(void) enable:(CDVInvokedUrlCommand*)command delegate:(CDVCommandDelegateImpl*) commandDelegate {
+-(void) enable:(CDVInvokedUrlCommand*)command delegate:(id<CDVCommandDelegate>) commandDelegate {
   NSError* enableError = nil;
   NSString* authId = command.arguments[0];
   NSString* authenticatorName = command.arguments[1];
@@ -179,7 +179,7 @@ static OMLocalAuthenticationManager *sharedManager = nil;
   [commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK] callbackId:command.callbackId];
 }
 
--(void) disable:(CDVInvokedUrlCommand*)command delegate:(CDVCommandDelegateImpl*) commandDelegate {
+-(void) disable:(CDVInvokedUrlCommand*)command delegate:(id<CDVCommandDelegate>) commandDelegate {
   NSError* disableError = nil;
   NSString* authId = command.arguments[0];
   NSString* authenticatorName = command.arguments[1];
@@ -219,7 +219,7 @@ static OMLocalAuthenticationManager *sharedManager = nil;
                          callbackId:command.callbackId];
 }
 
--(void) getPreference:(CDVInvokedUrlCommand*)command delegate:(CDVCommandDelegateImpl*) commandDelegate {
+-(void) getPreference:(CDVInvokedUrlCommand*)command delegate:(id<CDVCommandDelegate>) commandDelegate {
     NSString* authId = command.arguments[0];
     NSString* key = command.arguments[1];
     NSString* result;
@@ -242,7 +242,7 @@ static OMLocalAuthenticationManager *sharedManager = nil;
     [commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:result] callbackId:command.callbackId];
 }
 
--(void) setPreference:(CDVInvokedUrlCommand*)command delegate:(CDVCommandDelegateImpl*) commandDelegate {
+-(void) setPreference:(CDVInvokedUrlCommand*)command delegate:(id<CDVCommandDelegate>) commandDelegate {
     NSString* authId = command.arguments[0];
     NSString* key = command.arguments[1];
     NSString* value = command.arguments[2];
@@ -300,7 +300,7 @@ static OMLocalAuthenticationManager *sharedManager = nil;
 }
 
 -(void) authenticateBiometric:(CDVInvokedUrlCommand*)command
-            delegate:(CDVCommandDelegateImpl*)commandDelegate {
+            delegate:(id<CDVCommandDelegate>)commandDelegate {
   NSString* authId = command.arguments[0];
   NSString* authType = command.arguments[1];
   NSDictionary* localizedStrings = command.arguments[2];
@@ -351,7 +351,7 @@ static OMLocalAuthenticationManager *sharedManager = nil;
 }
 
 -(void) authenticatePin:(CDVInvokedUrlCommand*)command
-            delegate:(CDVCommandDelegateImpl*)commandDelegate {
+            delegate:(id<CDVCommandDelegate>)commandDelegate {
   NSError *authError = nil;
   NSString* authId = command.arguments[0];
   NSString* pin = command.arguments[1];
@@ -387,7 +387,7 @@ static OMLocalAuthenticationManager *sharedManager = nil;
 }
 
 -(void) changePin:(CDVInvokedUrlCommand*)command
-         delegate:(CDVCommandDelegateImpl*)commandDelegate {
+         delegate:(id<CDVCommandDelegate>)commandDelegate {
   NSError* changePinError;
   NSString* authId = command.arguments[0];
   OMPinAuthenticator* pinAuthenticator = [self getPinAuthenticator:authId];
@@ -421,7 +421,7 @@ static OMLocalAuthenticationManager *sharedManager = nil;
 }
 
 -(void) getLocalAuthSupportInfo:(CDVInvokedUrlCommand*)command
-                       delegate:(CDVCommandDelegateImpl*)commandDelegate {
+                       delegate:(id<CDVCommandDelegate>)commandDelegate {
   NSMutableDictionary* auths = [[NSMutableDictionary alloc] init];
   auths[LOCAL_AUTH_PIN] = ENROLLED;
   auths[LOCAL_AUTH_FINGERPRINT] = [self getFingerprintSupportOnDevice];

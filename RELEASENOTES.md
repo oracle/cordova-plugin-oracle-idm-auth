@@ -1,4 +1,6 @@
 # Release Notes
+## 2.2.0 (29 July, 2024)
+* cordova-ios 7.0.3 related upgrade
 ## 2.1.1 (13 March, 2024)
 * Documentation update
 ## 2.1.0 (25 July, 2023)

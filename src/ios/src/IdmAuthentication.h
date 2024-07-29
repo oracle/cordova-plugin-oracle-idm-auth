@@ -3,7 +3,7 @@
  * The Universal Permissive License (UPL), Version 1.0
  */
 #import <Foundation/Foundation.h>
-#import <Cordova/CDVCommandDelegateImpl.h>
+#import <Cordova/CDVCommandDelegate.h>
 #import <Cordova/CDVPlugin.h>
 
 #import "IDMMobileSDKv2Library.h"
@@ -19,26 +19,26 @@ NS_ASSUME_NONNULL_BEGIN
 -(nullable instancetype) initWithProperties:(NSDictionary<NSString *, NSObject *> *) properties
                          baseViewController:(nonnull UIViewController *)baseVc
                                    callback:(void(^)(IdmAuthentication* authFlow, NSError* error))setupCompletion;
-- (void) startLogin: (CDVCommandDelegateImpl*) commandDelegate
+- (void) startLogin: (id<CDVCommandDelegate>) commandDelegate
      withCallbackId: (NSString*) callbackId;
-- (void) cancelLogin: (CDVCommandDelegateImpl*) commandDelegate
+- (void) cancelLogin: (id<CDVCommandDelegate>) commandDelegate
      withCallbackId: (NSString*) callbackId;
-- (void) finishLogin: (CDVCommandDelegateImpl*) commandDelegate
+- (void) finishLogin: (id<CDVCommandDelegate>) commandDelegate
       withCallbackId: (NSString*) callbackId
      challengeResult: (NSDictionary*) challengeFields;
-- (void) isAuthenticated: (CDVCommandDelegateImpl*) commandDelegate
+- (void) isAuthenticated: (id<CDVCommandDelegate>) commandDelegate
           withCallbackId: (NSString*) callbackId
           withProperties: (NSDictionary*) properties;
-- (void) getHeaders: (CDVCommandDelegateImpl*) commandDelegate
+- (void) getHeaders: (id<CDVCommandDelegate>) commandDelegate
      withCallbackId: (NSString*) callbackId
 withFedAuthSecuredUrl: (NSString*) fedAuthSecuredUrl
     withOauthScopes: (NSSet*) scopes;
-- (void) logout: (CDVCommandDelegateImpl*) commandDelegate
+- (void) logout: (id<CDVCommandDelegate>) commandDelegate
  withCallbackId: (NSString*) callbackId
  withForgetOption:(BOOL) forget;
-- (void) addTimeoutCallback: (CDVCommandDelegateImpl*) commandDelegate
+- (void) addTimeoutCallback: (id<CDVCommandDelegate>) commandDelegate
              withCallbackId: (NSString*) callbackId;
-- (void) resetIdleTimeout: (CDVCommandDelegateImpl*) commandDelegate
+- (void) resetIdleTimeout: (id<CDVCommandDelegate>) commandDelegate
            withCallbackId: (NSString*) callbackId;
 - (void) submitExternalBrowserChallengeResponse: (NSURL*) incomingUrl;
 @end

@@ -1,4 +1,4 @@
-# cordova-plugin-oracle-idm-auth 2.1.1
+# cordova-plugin-oracle-idm-auth 2.2.0
 
 ## About the cordova-plugin-oracle-idm-auth
 The plugin provides authentication and authorization functionality for cordova based mobile applications,
